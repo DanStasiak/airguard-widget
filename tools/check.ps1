@@ -47,10 +47,13 @@ if ($env:OS -eq 'Windows_NT' -and -not $env:LUFT_SKIP_SMOKE) {
     Copy-Item -Path (Join-Path $root 'CHANGELOG.md') -Destination $tmp
     $out = Join-Path $tmp 'smoke.txt'
     $p = Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile', '-STA', '-ExecutionPolicy', 'Bypass', '-File', ('"' + (Join-Path $tmp 'Luftwaechter.ps1') + '"'), '-SmokeTest') -RedirectStandardOutput $out -PassThru -WindowStyle Hidden
+    $null = $p.Handle   # keeps the exit code readable after WaitForExit(timeout)
     if (-not $p.WaitForExit(180000)) { try { $p.Kill() } catch {}; Bad 'smoke test hung (over 3 minutes)' }
     else {
         if (Test-Path $out) { Get-Content $out | ForEach-Object { Write-Host ('      ' + $_) } }
-        if ($p.ExitCode -eq 0) { Ok 'smoke test: widget runs with demo data in every view' } else { Bad ('smoke test failed, exit code ' + $p.ExitCode) }
+        $p.WaitForExit()
+        $passed = (Test-Path $out) -and ((Get-Content $out -Raw) -match 'Smoke test passed')
+        if ($p.ExitCode -eq 0 -and $passed) { Ok 'smoke test: widget runs with demo data in every view' } else { Bad ('smoke test failed, exit code ' + $p.ExitCode) }
     }
 }
 
