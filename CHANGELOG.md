@@ -2,6 +2,12 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [4.2.0] - 2026-11-22
+- New: rain-aware ventilation advice. The widget reads the hourly forecast from Home Assistant; when rain, snow or a thunderstorm is due within 6 hours it says so ("Ventilate soon: rain from 15:00") in the advice and in the weather tip.
+- Improved: the history curve zooms to the data you have, so a new curve is readable right away instead of squeezed to the right edge.
+- Improved: cleaner device names ("Plug 01 plug01 - Schalter" becomes "Plug 01"; a heater named like the room is called "Heating").
+- Fix: the blinds group icon no longer shows an empty box on older Windows fonts.
+
 ## [4.1.0] - 2026-11-22
 - New: hide devices. Right-click a device row and choose Hide; "n hidden - show all" at the bottom of the panel brings them back. Your choice is remembered.
 - New: typical setting switches from Home Assistant (child lock, internet access, calibration, notifications, display ...) are hidden automatically. Set "showAllDevices": true in config.json to see everything.

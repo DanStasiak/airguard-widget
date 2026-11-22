@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall)
 
 $appName = 'Luftwaechter'
-$appVersion = '4.1.0'
+$appVersion = '4.2.0'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -818,11 +818,16 @@ function Show-Spark([string]$room, [string]$col) {
         $ln.Stroke = Brush '#55FFFFFF'; $ln.StrokeThickness = 1; $dc = New-Object Windows.Media.DoubleCollection; $dc.Add(3.0); $dc.Add(4.0); $ln.StrokeDashArray = $dc
         [void]$ui.Spark.Children.Add($ln)
     }
+    $winSec = [double]$state.sparkHours * 3600.0
+    if ($pts.Count -ge 2) {
+        $span = $now - [double]$pts[0][0]
+        if ($span -lt $winSec) { $winSec = [Math]::Max(900.0, $span * 1.05) }
+    }
     if ($pts.Count -ge 2) {
         $poly = New-Object Windows.Shapes.Polygon
         $pc = New-Object Windows.Media.PointCollection
         foreach ($p in $pts) {
-            $x = $w - (($now - $p[0]) / ([double]$state.sparkHours * 3600.0)) * $w
+            $x = $w - (($now - $p[0]) / $winSec) * $w
             if ($x -lt 0) { continue }
             $pc.Add((New-Object Windows.Point($x, (& $yOf $p[1]))))
         }
@@ -936,7 +941,7 @@ function Build-Devices($devs) {
     $nRx = '(?i)internetzugang|internet access|child lock|kindersicherung|reversal|calibrat|kalibrier|bluetooth proxy|nicht stören|do not disturb|benachrichtigung|notification|schlafmodus|sleep mode|display|backlight|auto.?update|firmware|identify|restart|neustart|pairing|permit join'
     $devs = @($devs | Where-Object { ($hid -notcontains [string]$_.entity) -and -not ($script:haMode -and -not [bool]$cfg.showAllDevices -and ([string]$_.type -eq 'switch') -and (([string]$_.name) -match $nRx)) })
     $groups = @('Licht', 'Strom', 'Heizung', 'Rollo')
-    $gIcon = @{ Licht = ([char]::ConvertFromUtf32(0x1F4A1)); Strom = ([char]::ConvertFromUtf32(0x1F50C)); Heizung = ([char]::ConvertFromUtf32(0x1F321)); Rollo = ([char]::ConvertFromUtf32(0x1FA9F)) }
+    $gIcon = @{ Licht = ([char]::ConvertFromUtf32(0x1F4A1)); Strom = ([char]::ConvertFromUtf32(0x1F50C)); Heizung = ([char]::ConvertFromUtf32(0x1F321)); Rollo = ([string][char]0x25A5) }
     $any = $false
     foreach ($g in $groups) {
         $items = @($devs | Where-Object { $_.group -eq $g })
@@ -1259,7 +1264,7 @@ $script:HaTpl = @'
 {%- endfor -%}
 {%- set wl = states.weather | list -%}
 __WIDLINE__
-{{ {'r': rooms.l, 'L': lab, 'w': ({'t': state_attr(wid, 'temperature'), 'c': states(wid), 'h': state_attr(wid, 'humidity'), 'ws': state_attr(wid, 'wind_speed'), 'wu': state_attr(wid, 'wind_speed_unit'), 'wb': state_attr(wid, 'wind_bearing'), 'cl': state_attr(wid, 'cloud_coverage'), 'p': state_attr(wid, 'pressure')} if wid else none)} | tojson }}
+{{ {'r': rooms.l, 'L': lab, 'w': ({'id': wid, 't': state_attr(wid, 'temperature'), 'c': states(wid), 'h': state_attr(wid, 'humidity'), 'ws': state_attr(wid, 'wind_speed'), 'wu': state_attr(wid, 'wind_speed_unit'), 'wb': state_attr(wid, 'wind_bearing'), 'cl': state_attr(wid, 'cloud_coverage'), 'p': state_attr(wid, 'pressure')} if wid else none)} | tojson }}
 '@
 
 function Lx([string]$de, [string]$en) { if ($state.lang -eq 'en') { return $en } else { return $de } }
@@ -1298,6 +1303,32 @@ function Eval-HaRoom($r) {
     $worst = $null; if ($known.Count -gt 0) { $worst = ($known | Measure-Object -Maximum).Maximum }
     return [pscustomobject]@{ co2 = $co2; pm = $pm; t = $tt; h = $hh; lv = $lvl; worst = $worst; air = [bool]($eCo2 -or $ePm) }
 }
+$script:fcCache = $null
+$script:fcAt = [DateTime]::MinValue
+function Get-HaRain([string]$wid) {
+    # liefert die erste Stunde (lokale Uhrzeit, Text) in den nächsten 6 h mit Regen/Schnee/Gewitter, sonst ''
+    if (-not $wid) { return '' }
+    try {
+        if (((Get-Date) - $script:fcAt).TotalMinutes -gt 15) {
+            $script:fcAt = Get-Date
+            $body = (@{ entity_id = $wid; type = 'hourly' } | ConvertTo-Json -Compress)
+            $txt = Invoke-Ha $script:haUrl $script:haTok 'POST' '/api/services/weather/get_forecasts?return_response' $body
+            $js = $txt | ConvertFrom-Json
+            $resp = $js.service_response
+            $first = @($resp.PSObject.Properties)[0]
+            $script:fcCache = @($first.Value.forecast)
+        }
+        $now = [DateTimeOffset]::UtcNow
+        foreach ($f in @($script:fcCache)) {
+            $t = [DateTimeOffset]::Parse([string]$f.datetime, $inv)
+            if ($t -le $now) { continue }
+            if (($t - $now).TotalHours -gt 6) { break }
+            $c = [string]$f.condition; $pr = Num $f.precipitation
+            if (@('rainy', 'pouring', 'lightning-rainy', 'lightning', 'snowy', 'snowy-rainy', 'hail') -contains $c -or ($null -ne $pr -and $pr -ge 0.3)) { return $t.ToLocalTime().ToString('HH:mm') }
+        }
+    } catch { Write-Log ('Vorhersage: ' + $_.Exception.Message) }
+    return ''
+}
 function Build-HaData($data, [string]$wantRoom) {
     $en = ($state.lang -eq 'en')
     $colors = @('#2e9e5b', '#e8a317', '#d9472b')
@@ -1320,6 +1351,8 @@ function Build-HaData($data, [string]$wantRoom) {
     $condDe = @{ 'clear-night' = 'klar'; cloudy = 'bewölkt'; partlycloudy = 'teils bewölkt'; sunny = 'sonnig'; rainy = 'Regen'; pouring = 'Starkregen'; snowy = 'Schnee'; 'snowy-rainy' = 'Schneeregen'; fog = 'Nebel'; windy = 'windig'; 'windy-variant' = 'windig'; hail = 'Hagel'; lightning = 'Gewitter'; 'lightning-rainy' = 'Gewitter mit Regen'; exceptional = 'Unwetter' }
     $condEn = @{ 'clear-night' = 'clear'; cloudy = 'cloudy'; partlycloudy = 'partly cloudy'; sunny = 'sunny'; rainy = 'rain'; pouring = 'heavy rain'; snowy = 'snow'; 'snowy-rainy' = 'sleet'; fog = 'fog'; windy = 'windy'; 'windy-variant' = 'windy'; hail = 'hail'; lightning = 'thunderstorm'; 'lightning-rainy' = 'thunderstorm with rain'; exceptional = 'severe weather' }
     $iconCp = @{ 'clear-night' = 0x1F319; cloudy = 0x2601; partlycloudy = 0x26C5; sunny = 0x2600; rainy = 0x1F327; pouring = 0x1F327; snowy = 0x1F328; 'snowy-rainy' = 0x1F328; fog = 0x1F32B; windy = 0x1F4A8; 'windy-variant' = 0x1F4A8; hail = 0x1F328; lightning = 0x26C8; 'lightning-rainy' = 0x26C8; exceptional = 0x26A0 }
+    $rainAt = ''
+    if ($wx -and $cond -ne 'rainy' -and $cond -ne 'pouring') { $rainAt = Get-HaRain ([string]$wx.id) }
     $badOut = (@('pouring', 'lightning', 'lightning-rainy', 'hail', 'snowy-rainy', 'exceptional') -contains $cond)
 
     $rooms = @()
@@ -1363,6 +1396,7 @@ function Build-HaData($data, [string]$wantRoom) {
             $action = 'oeffnen'
             if ($hasWindow) { $headline = (Lx 'Bitte Fenster öffnen' 'Please open the window') } else { $headline = (Lx 'Bitte lüften' 'Please ventilate') }
             $detail = $howT
+            if ($rainAt) { $detail += (Lx (' Bald lüften: ab ' + $rainAt + ' Uhr kommt Regen.') (' Ventilate soon: rain from ' + $rainAt + '.')) }
             if (($null -ne $co2) -and ($co2 -ge 1500)) { $detail += (Lx ' Die Luft ist verbraucht.' ' The air is stale.') }
         }
     } elseif (($null -ne $pm) -and ($pm -ge 35)) {
@@ -1393,6 +1427,7 @@ function Build-HaData($data, [string]$wantRoom) {
         $oh = Num $wx.h
         $tip = (Lx 'Gute Zeit zum Lüften.' 'Good time to ventilate.')
         if ($cond -eq 'rainy' -or $cond -eq 'pouring') { $tip = (Lx 'Es regnet: Fenster nur kurz öffnen (Stoßlüften 3 Min) oder in einer Regenpause lüften.' 'It is raining: open the window only briefly (3 min burst) or wait for a break in the rain.') }
+        elseif ($rainAt) { $tip = (Lx ('Gute Zeit zum Lüften, ab ' + $rainAt + ' Uhr kommt Regen.') ('Good time to ventilate, rain from ' + $rainAt + '.')) }
         elseif ($ot -lt 5) { $tip = (Lx 'Es ist kalt: lieber kurz und ganz öffnen (Stoßlüften 5 Min), das spart Heizenergie.' 'It is cold: better open fully for a short time (5 min burst), it saves heating energy.') }
         elseif ($ot -ge 25) { $tip = (Lx 'Es ist warm draußen: morgens oder abends lüften, tagsüber Fenster zu lassen.' 'It is warm outside: ventilate in the morning or evening, keep windows closed during the day.') }
         elseif (($null -ne $oh) -and ($oh -gt 90)) { $tip = (Lx 'Draußen ist es feucht: kurz lüften, nicht dauerhaft kippen.' 'It is humid outside: ventilate briefly, do not leave the window tilted.') }
@@ -1415,6 +1450,10 @@ function Build-HaData($data, [string]$wantRoom) {
         if ($x.s -eq 'unavailable' -or $x.s -eq 'unknown') { continue }
         $nm = [string]$x.n
         if ($nm.StartsWith($chosen.name + ' ', [StringComparison]::OrdinalIgnoreCase) -and $nm.Length -gt ($chosen.name.Length + 1)) { $nm = $nm.Substring($chosen.name.Length + 1) }
+        $nm = ($nm -replace '\s+-\s+(Schalter|Switch)$', '')
+        $wds = @($nm -split '\s+')
+        if ($wds.Count -ge 3) { $pre = (($wds[0..($wds.Count - 2)] -join '').ToLower()); if ($pre.EndsWith($wds[$wds.Count - 1].ToLower())) { $nm = ($wds[0..($wds.Count - 2)] -join ' ') } }
+        if ($dom -eq 'climate' -and ($nm -ieq $chosen.name)) { $nm = (Lx 'Heizung' 'Heating') }
         $o = [pscustomobject]@{ group = $grp[$dom][0]; entity = [string]$x.i; name = $nm; type = $grp[$dom][1]; state = [string]$x.s; detail = ''; target = $null; value = '' }
         if ($dom -eq 'climate') {
             $tg = Num $x.t; $cu = Num $x.cu
