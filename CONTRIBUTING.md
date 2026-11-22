@@ -10,7 +10,7 @@ Contributions are welcome: bug reports, ideas, translations, backends for other 
 
 ## Releasing (maintainer)
 1. Update `$appVersion` in `src/Luftwaechter.ps1`, `VERSION`, and add a section to `CHANGELOG.md`.
-2. Commit, then `git tag vX.Y.Z && git push --tags`.
-3. The GitHub Action builds the ZIP + SHA256SUMS.txt and publishes the release; the changelog section becomes the release notes shown in the in-app update dialog.
+2. Commit and push to `main`.
+3. Push to `main`. The GitHub Action sees the new `VERSION`, builds the ZIP + SHA256SUMS.txt and publishes the release (it also works when you push a `vX.Y.Z` tag). The changelog section becomes the release notes shown in the in-app update dialog.
 
 By contributing you agree that your contribution is licensed under the MIT License.
