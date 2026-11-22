@@ -1,0 +1,32 @@
+name: Release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check versions match the tag
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          test "$(tr -d '\r\n ' < VERSION)" = "$TAG" || { echo "VERSION does not match tag $TAG"; exit 1; }
+          grep -q "^\$appVersion = '$TAG'" src/Luftwaechter.ps1 || { echo "appVersion in Luftwaechter.ps1 does not match tag $TAG"; exit 1; }
+      - name: Build package
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          D="Luftwaechter-$TAG"
+          mkdir -p "dist/$D"
+          cp src/* LICENSE README.md CHANGELOG.md VERSION "dist/$D/"
+          (cd dist && zip -r "../Luftwaechter-$TAG.zip" "$D")
+          sha256sum "Luftwaechter-$TAG.zip" > SHA256SUMS.txt
+          awk -v t="[$TAG]" 'index($0,"## " t)==1{f=1;next} /^## \[/{f=0} f' CHANGELOG.md > notes.md
+          test -s notes.md || echo "Release $TAG" > notes.md
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          gh release create "$GITHUB_REF_NAME" "Luftwaechter-$TAG.zip" SHA256SUMS.txt --title "Luftwaechter $TAG" --notes-file notes.md

@@ -1,0 +1,5 @@
+# Never commit your own server links or tokens
+config.json
+*.zip
+dist/
+backup-*/

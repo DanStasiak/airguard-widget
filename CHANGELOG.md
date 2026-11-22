@@ -1,0 +1,27 @@
+# Changelog
+
+All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
+
+## [3.13.0] - 2026-11-22
+First public release.
+- Open source under the MIT License (c) 2026 Dan Stasiak.
+- New: **Update button**. Checks GitHub for a newer release, shows what changed, installs it after your confirmation and restarts itself. Keeps your settings, makes a backup, verifies the download (SHA-256) and the script syntax first. Silent check every few hours turns the button green.
+- New: copyright / license / GitHub links next to the version label; clicking the version opens all releases.
+- New: setup state and "Open configuration" menu entry for first-time users; `config.example.json`.
+- New: generic configuration (`place`, `footer`, `roomShort`, `roomShortEn`). No personal data in the code.
+- New: reference backend for n8n + Home Assistant in `backend/n8n/`, API description in `docs/API.md`.
+
+## [3.12] - 2026-11-22
+- New: ? help panel, DE | EN language toggle (UI and server texts), crisper rendering.
+
+## [3.11] - 2026-11-22
+- New: daily summary (peak, average, share of time below 1000 ppm).
+
+## [3.10] - 2026-11-22
+- New: Pill mode (tiny colored dot with room and CO2 value).
+
+## [3.9] - 2026-11-22
+- New: error log and "Open log" menu entry.
+
+## [3.0 - 3.8] - 2026-11
+- Multi-room support, slide-out device panel (light, power, heating, blinds), weather row, CO2 curve with trend and forecast, ventilation timer, room overview strip, autostart with Windows, state restore, multi-monitor support, night dimming, version label.
