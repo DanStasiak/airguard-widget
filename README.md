@@ -22,6 +22,7 @@ A small always-on-top **Windows desktop widget** that shows how good the air is 
 - **Update button:** checks this repository by itself (every 60 minutes by default) and turns green with the new version number when one is waiting; one click shows what changed and updates after you confirm
 - **Welcome card** on first start explains the simple view in three sentences
 - **Demo mode:** right-click → *Try the demo* shows simulated rooms, so you can try the widget without Home Assistant
+- **Day and night design:** solid, crisp colours; the background gets deeper at night, switchable by right-click → *Theme* (automatic, day, night)
 - **Daily air score** in the simple view: "Today: good air 92 % of the time", counted from today's readings
 
 Made by **Dan Stasiak** · MIT License · [github.com/DanStasiak/airguard-widget](https://github.com/DanStasiak/airguard-widget)
@@ -53,7 +54,6 @@ Made by **Dan Stasiak** · MIT License · [github.com/DanStasiak/airguard-widget
 | `defaultRoom` | start room key (optional) |
 | `refreshSeconds` | refresh interval, 2 to 10 |
 | `updateCheckMinutes` | how often the widget looks for a new release, 15 to 1440 (default 60) |
-| `nightDim` | how much the content is dimmed between 22:00 and 07:00, 0 to 50 percent (default 8) |
 | `place` | place name shown in the weather row (optional) |
 | `footer` | source note at the bottom (optional) |
 | `roomShort`, `roomShortEn` | short names for the room overview, e.g. `{"living": "Living"}` |

@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall)
 
 $appName = 'Luftwaechter'
-$appVersion = '5.7.2'
+$appVersion = '5.8.0'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -326,8 +326,6 @@ $script:canSwitch = [bool]($script:haMode -or $switchUrl)
 $script:haDevs = @{}
 $interval = 10
 $updMinutes = 60
-$nightDim = 8
-if ($null -ne $cfg.nightDim) { $nightDim = [Math]::Max(0, [Math]::Min([int]$cfg.nightDim, 50)) }
 if ($cfg.updateCheckMinutes) { $updMinutes = [Math]::Max(15, [Math]::Min([int]$cfg.updateCheckMinutes, 1440)) }
 if ($cfg.refreshSeconds) { $interval = [Math]::Max(2, [Math]::Min([int]$cfg.refreshSeconds, 10)) }
 
@@ -341,7 +339,7 @@ function Write-Log([string]$m) {
         Add-Content -Path $logFile -Value ((Get-Date).ToString('yyyy-MM-dd HH:mm:ss') + '  ' + $m) -Encoding UTF8
     } catch {}
 }
-$state = @{ left = $null; top = $null; topmost = $false; topmostSet = $false; popup = $true; tray = $true; room = [string]$cfg.defaultRoom; size = 'M'; weatherOpen = $false; drawerOpen = $false; sound = $true; sparkHours = 3; metric = 0; hidden = @(); lang = 'de'; hist = @{}; hist7 = @{}; sensors = @{}; simple = $true; tourDone = $false; demo = $false }
+$state = @{ left = $null; top = $null; topmost = $false; topmostSet = $false; popup = $true; tray = $true; room = [string]$cfg.defaultRoom; size = 'M'; weatherOpen = $false; drawerOpen = $false; sound = $true; sparkHours = 3; metric = 0; hidden = @(); lang = 'de'; hist = @{}; hist7 = @{}; sensors = @{}; simple = $true; tourDone = $false; demo = $false; theme = 'auto' }
 try { if ((Get-Culture).TwoLetterISOLanguageName -ne 'de') { $state.lang = 'en' } } catch {}
 if (Test-Path $stateFile) {
     try {
@@ -357,6 +355,7 @@ if (Test-Path $stateFile) {
         if ($null -ne $s.drawerOpen) { $state.drawerOpen = [bool]$s.drawerOpen }
         if ($null -ne $s.sound) { $state.sound = [bool]$s.sound }
         if ($s.sparkHours -eq 24 -or $s.sparkHours -eq 168) { $state.sparkHours = [int]$s.sparkHours }
+        if ($s.theme) { $state.theme = [string]$s.theme }
         if ($null -ne $s.demo) { $state.demo = [bool]$s.demo }
         if ($null -ne $s.tourDone) { $state.tourDone = [bool]$s.tourDone }
         if ($null -ne $s.simple) { $state.simple = [bool]$s.simple }
@@ -374,7 +373,7 @@ $chipXaml = ''
 for ($i = 1; $i -le 4; $i++) {
     $r = [Math]::Floor(($i - 1) / 2); $c = ($i - 1) % 2
     $chipXaml += @"
-<Border x:Name="C$i" Cursor="Hand" Grid.Row="$r" Grid.Column="$c" CornerRadius="12" Background="#26FFFFFF" Margin="3" Padding="9,5">
+<Border x:Name="C$i" Cursor="Hand" Grid.Row="$r" Grid.Column="$c" CornerRadius="12" Background="#FF3C424C" Margin="3" Padding="9,5">
   <DockPanel>
     <Ellipse x:Name="D$i" Width="9" Height="9" Fill="#FF7A8594" DockPanel.Dock="Left" Margin="0,0,8,0"/>
     <StackPanel><TextBlock x:Name="V$i" Foreground="White" FontSize="19" FontWeight="Bold"/><TextBlock x:Name="K$i" Foreground="#FFB3BECD" FontSize="11"/></StackPanel>
@@ -519,6 +518,9 @@ $script:Strings = @{
     m_demo = @('Demo ausprobieren', 'Try the demo')
     m_demo_off = @('Demo beenden', 'Stop the demo')
     demo_tag = @('Demo', 'Demo')
+    m_theme_auto = @('Design: Automatisch (Tag/Nacht)', 'Theme: Automatic (day/night)')
+    m_theme_day = @('Design: Tag', 'Theme: Day')
+    m_theme_night = @('Design: Nacht', 'Theme: Night')
     m_bigger = @('Größer anzeigen', 'Make bigger')
     m_smaller = @('Kleiner anzeigen', 'Make smaller')
     upd_tip = @('Zuletzt geprüft: {0} · nächste Prüfung in ca. {1} Min.', 'Last checked: {0} · next check in about {1} min')
@@ -614,15 +616,15 @@ $xaml = @"
             <TextBlock x:Name="SzC" Text="kompakt" Foreground="#FFA9B4C4" FontSize="12" Cursor="Hand"/><TextBlock Text=" · " Foreground="#FFA9B4C4" FontSize="12"/>
             <TextBlock x:Name="SzP" Text="Pille" Foreground="#FFA9B4C4" FontSize="12" Cursor="Hand"/>
           </StackPanel>
-          <Border x:Name="BtnHelp" DockPanel.Dock="Left" Width="22" Height="22" CornerRadius="11" Background="#44FFFFFF" Cursor="Hand"><TextBlock Text="?" Foreground="White" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
-          <Border x:Name="BtnLang" DockPanel.Dock="Left" Height="22" CornerRadius="11" Background="#33FFFFFF" Padding="8,0" Margin="6,0,0,0" Cursor="Hand">
+          <Border x:Name="BtnHelp" DockPanel.Dock="Left" Width="22" Height="22" CornerRadius="11" Background="#FF585C64" Cursor="Hand"><TextBlock Text="?" Foreground="White" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+          <Border x:Name="BtnLang" DockPanel.Dock="Left" Height="22" CornerRadius="11" Background="#FF494E57" Padding="8,0" Margin="6,0,0,0" Cursor="Hand">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center"><TextBlock x:Name="LangDe" Text="DE" FontSize="12" Foreground="#FFA9B4C4"/><TextBlock Text=" | " FontSize="12" Foreground="#FFA9B4C4"/><TextBlock x:Name="LangEn" Text="EN" FontSize="12" Foreground="#FFA9B4C4"/></StackPanel>
           </Border>
-          <Border x:Name="BtnMode" DockPanel.Dock="Left" Height="22" CornerRadius="11" Background="#44FFFFFF" Padding="10,0" Margin="6,0,0,0" Cursor="Hand"><TextBlock x:Name="BtnModeT" Foreground="White" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/></Border>
+          <Border x:Name="BtnMode" DockPanel.Dock="Left" Height="22" CornerRadius="11" Background="#FF585C64" Padding="10,0" Margin="6,0,0,0" Cursor="Hand"><TextBlock x:Name="BtnModeT" Foreground="White" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/></Border>
           <TextBlock x:Name="Time" Foreground="#FFB4BFCE" FontSize="12" Margin="10,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
         </DockPanel>
       </StackPanel>
-      <Border x:Name="Tour" Visibility="Collapsed" CornerRadius="14" Background="#33FFFFFF" Padding="14,10" Margin="0,10,0,0">
+      <Border x:Name="Tour" Visibility="Collapsed" CornerRadius="14" Background="#FF494E57" Padding="14,10" Margin="0,10,0,0">
         <StackPanel>
           <TextBlock x:Name="TourH" Foreground="White" FontSize="16" FontWeight="Bold" TextWrapping="Wrap"/>
           <TextBlock x:Name="TourT" Foreground="#FFDFE5EE" FontSize="14" TextWrapping="Wrap" Margin="0,4,0,8"/>
@@ -640,7 +642,7 @@ $xaml = @"
           <TextBlock x:Name="Level" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center" Foreground="#FF7A8594"/>
           <TextBlock x:Name="Trend" FontSize="12" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="136" Foreground="#FFB4BFCE"/>
         </StackPanel>
-        <Border x:Name="Panel" Grid.Column="1" CornerRadius="16" Background="#26FFFFFF" Padding="12" Margin="4,0,0,0">
+        <Border x:Name="Panel" Grid.Column="1" CornerRadius="16" Background="#FF3C424C" Padding="12" Margin="4,0,0,0">
           <DockPanel VerticalAlignment="Center">
             <Grid Width="58" Height="58" DockPanel.Dock="Left" Margin="0,0,12,0" VerticalAlignment="Top">
               <Canvas x:Name="IcClosed" Width="58" Height="58">
@@ -659,7 +661,7 @@ $xaml = @"
               <TextBlock x:Name="Headline" Foreground="White" FontSize="22" FontWeight="Bold" TextWrapping="Wrap"/>
               <TextBlock x:Name="Detail" Foreground="#FFDFE5EE" FontSize="13" TextWrapping="Wrap" Margin="0,3,0,0"/>
               <TextBlock x:Name="DayScore" Foreground="#FFFFFFFF" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,6,0,0" Visibility="Collapsed"/>
-              <Border x:Name="BarTrack" Height="7" CornerRadius="4" Background="#33FFFFFF" Margin="0,8,0,0" Visibility="Collapsed"><Border x:Name="BarFill" HorizontalAlignment="Left" CornerRadius="4" Background="#FF2E9E5B" Width="0"/></Border>
+              <Border x:Name="BarTrack" Height="7" CornerRadius="4" Background="#FF494E57" Margin="0,8,0,0" Visibility="Collapsed"><Border x:Name="BarFill" HorizontalAlignment="Left" CornerRadius="4" Background="#FF2E9E5B" Width="0"/></Border>
             </StackPanel>
           </DockPanel>
         </Border>
@@ -681,14 +683,14 @@ $xaml = @"
         <WrapPanel x:Name="RoomStrip" Margin="0,8,0,0"/>
         <Border x:Name="WLine" CornerRadius="14" Background="#4D3A5F8A" BorderBrush="#556D8FB8" BorderThickness="1" Padding="12,8" Margin="0,10,0,0" Cursor="Hand">
           <DockPanel>
-            <Border x:Name="WMore" DockPanel.Dock="Right" CornerRadius="10" Background="#33FFFFFF" Padding="10,4" Margin="8,0,0,0"><TextBlock x:Name="WMoreT" Text="▾ Mehr" Foreground="White" FontSize="12" FontWeight="SemiBold"/></Border>
+            <Border x:Name="WMore" DockPanel.Dock="Right" CornerRadius="10" Background="#FF494E57" Padding="10,4" Margin="8,0,0,0"><TextBlock x:Name="WMoreT" Text="▾ Mehr" Foreground="White" FontSize="12" FontWeight="SemiBold"/></Border>
             <TextBlock x:Name="WLineText" Foreground="#FFDFE5EE" FontSize="14" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
           </DockPanel>
         </Border>
         <Border x:Name="WFull" CornerRadius="16" Background="#4D3A5F8A" BorderBrush="#556D8FB8" BorderThickness="1" Padding="12,8" Margin="0,10,0,0" Visibility="Collapsed">
           <StackPanel>
             <DockPanel>
-              <Border x:Name="WLess" DockPanel.Dock="Right" CornerRadius="10" Background="#33FFFFFF" Padding="10,3"><TextBlock x:Name="WLessT" Text="▴ Weniger" Foreground="White" FontSize="12" FontWeight="SemiBold"/></Border>
+              <Border x:Name="WLess" DockPanel.Dock="Right" CornerRadius="10" Background="#FF494E57" Padding="10,3"><TextBlock x:Name="WLessT" Text="▴ Weniger" Foreground="White" FontSize="12" FontWeight="SemiBold"/></Border>
               <TextBlock x:Name="WTitleT" Text="DRAUSSEN" Foreground="#FFB4BFCE" FontSize="11"/>
             </DockPanel>
             <Grid Margin="0,6,0,0">
@@ -707,7 +709,7 @@ $xaml = @"
         </Border>
         <DockPanel x:Name="GrpFoot" Margin="2,8,0,0"><TextBlock x:Name="Ver" Cursor="Hand" DockPanel.Dock="Right" Foreground="#FFB4BFCE" FontSize="11" FontWeight="SemiBold" Margin="8,0,0,0"/><TextBlock x:Name="Footer" Foreground="#FFA9B4C4" FontSize="11" TextTrimming="CharacterEllipsis"/></DockPanel>
         <DockPanel x:Name="GrpUpd" Margin="2,5,0,0">
-          <Border x:Name="BtnUpd" DockPanel.Dock="Right" CornerRadius="9" Background="#33FFFFFF" Padding="9,2" Margin="8,0,0,0" Cursor="Hand"><TextBlock x:Name="BtnUpdT" Text="⟳ Update" Foreground="White" FontSize="11" FontWeight="SemiBold"/></Border>
+          <Border x:Name="BtnUpd" DockPanel.Dock="Right" CornerRadius="9" Background="#FF494E57" Padding="9,2" Margin="8,0,0,0" Cursor="Hand"><TextBlock x:Name="BtnUpdT" Text="⟳ Update" Foreground="White" FontSize="11" FontWeight="SemiBold"/></Border>
           <TextBlock x:Name="Copy" Foreground="#FFA9B4C4" FontSize="11" Cursor="Hand" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
         </DockPanel>
       </StackPanel>
@@ -715,7 +717,7 @@ $xaml = @"
   </Border>
   <Border x:Name="Help" Visibility="Collapsed" Width="427" CornerRadius="24" Background="#FF1B222D" BorderThickness="2" BorderBrush="#FF7A8594">
     <StackPanel Margin="18,14,14,14">
-      <DockPanel><Border x:Name="HelpClose" DockPanel.Dock="Right" Width="26" Height="26" CornerRadius="13" Background="#33FFFFFF" Cursor="Hand"><TextBlock Text="✕" Foreground="White" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+      <DockPanel><Border x:Name="HelpClose" DockPanel.Dock="Right" Width="26" Height="26" CornerRadius="13" Background="#FF494E57" Cursor="Hand"><TextBlock Text="✕" Foreground="White" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
         <TextBlock x:Name="HelpTitle" Foreground="White" FontSize="24" FontWeight="Bold"/></DockPanel>
       <ScrollViewer x:Name="HelpScroll" MaxHeight="470" VerticalScrollBarVisibility="Auto" Margin="0,8,0,0"><StackPanel x:Name="HelpBody" Margin="0,0,10,0"/></ScrollViewer>
       <TextBlock x:Name="HelpVer" Foreground="#FFA9B4C4" FontSize="11" Margin="0,8,0,0"/>
@@ -726,7 +728,7 @@ $xaml = @"
   </Border>
   <Border x:Name="Drawer" Width="340" CornerRadius="0,24,24,0" Background="#FF1B222D" BorderThickness="0,2,2,2" BorderBrush="#FF7A8594" Margin="-2,0,0,0" Visibility="Collapsed">
     <StackPanel Margin="16,14,16,12">
-      <DockPanel><Border x:Name="DrawerClose" DockPanel.Dock="Right" CornerRadius="10" Background="#33FFFFFF" Padding="10,0" Cursor="Hand"><TextBlock Text="‹" Foreground="White" FontSize="22" FontWeight="Bold"/></Border>
+      <DockPanel><Border x:Name="DrawerClose" DockPanel.Dock="Right" CornerRadius="10" Background="#FF494E57" Padding="10,0" Cursor="Hand"><TextBlock Text="‹" Foreground="White" FontSize="22" FontWeight="Bold"/></Border>
         <TextBlock x:Name="DrawerTitle" Foreground="White" FontSize="19" FontWeight="Bold" TextTrimming="CharacterEllipsis"/></DockPanel>
       <StackPanel x:Name="DevPanel" Margin="0,6,0,0"/>
     </StackPanel>
@@ -847,7 +849,7 @@ $script:helpOpen = $false
 
 function Save-State {
     try {
-        $o = @{ left = $win.Left; top = $win.Top; topmost = $state.topmost; topmostSet = $state.topmostSet; popup = $state.popup; tray = $state.tray; room = $state.room; size = $state.size; weatherOpen = $state.weatherOpen; drawerOpen = $state.drawerOpen; sound = $state.sound; sparkHours = $state.sparkHours; metric = $state.metric; hidden = @($state.hidden); lang = $state.lang; hist = $state.hist; hist7 = $state.hist7; sensors = $state.sensors; simple = $state.simple; tourDone = $state.tourDone; demo = $state.demo }
+        $o = @{ left = $win.Left; top = $win.Top; topmost = $state.topmost; topmostSet = $state.topmostSet; popup = $state.popup; tray = $state.tray; room = $state.room; size = $state.size; weatherOpen = $state.weatherOpen; drawerOpen = $state.drawerOpen; sound = $state.sound; sparkHours = $state.sparkHours; metric = $state.metric; hidden = @($state.hidden); lang = $state.lang; hist = $state.hist; hist7 = $state.hist7; sensors = $state.sensors; simple = $state.simple; tourDone = $state.tourDone; demo = $state.demo; theme = $state.theme }
         ($o | ConvertTo-Json -Depth 4) | Set-Content -Path $stateFile -Encoding UTF8
     } catch { Write-Log ('Speichern: ' + $_.Exception.Message) }
 }
@@ -942,7 +944,7 @@ function Add-Hist([string]$room, $co2, $extra) {
 function Show-Spark([string]$room, [string]$col) {
     $ui.Spark.Children.Clear()
     $m = [int]$state.metric
-    for ($k = 0; $k -lt 4; $k++) { $ui.('C' + ($k + 1)).Background = Brush $(if ($k -eq $m) { '#55FFFFFF' } else { '#26FFFFFF' }) }
+    for ($k = 0; $k -lt 4; $k++) { $ui.('C' + ($k + 1)).Background = Brush $(if ($k -eq $m) { '#FF686C72' } else { '#FF3C424C' }) }
     $lblKey = @('spark_co2', 'spark_dust', 'spark_temp', 'spark_hum')[$m]
     $unit = @('ppm', 'µg', '°C', '%')[$m]
     $lbl = (T $lblKey $state.sparkHours)
@@ -976,7 +978,7 @@ function Show-Spark([string]$room, [string]$col) {
         $ln = New-Object Windows.Shapes.Line
         $y1 = & $yOf $rv
         $ln.X1 = 0; $ln.X2 = $w; $ln.Y1 = $y1; $ln.Y2 = $y1
-        $ln.Stroke = Brush '#55FFFFFF'; $ln.StrokeThickness = 1; $dc = New-Object Windows.Media.DoubleCollection; $dc.Add(3.0); $dc.Add(4.0); $ln.StrokeDashArray = $dc
+        $ln.Stroke = Brush '#FF686C72'; $ln.StrokeThickness = 1; $dc = New-Object Windows.Media.DoubleCollection; $dc.Add(3.0); $dc.Add(4.0); $ln.StrokeDashArray = $dc
         [void]$ui.Spark.Children.Add($ln)
     }
     $winSec = [double]$state.sparkHours * 3600.0
@@ -1088,7 +1090,7 @@ function New-Text([string]$t, [double]$size, [string]$fg, [bool]$bold) {
 }
 function New-Btn([string]$t, $tag) {
     $b = New-Object Windows.Controls.Border
-    $b.Background = Brush '#33FFFFFF'; $b.CornerRadius = New-Object Windows.CornerRadius(9)
+    $b.Background = Brush '#FF494E57'; $b.CornerRadius = New-Object Windows.CornerRadius(9)
     $b.Padding = New-Object Windows.Thickness(10, 4, 10, 4); $b.Margin = New-Object Windows.Thickness(3, 0, 0, 0); $b.Cursor = 'Hand'
     $b.Child = (New-Text $t 14 '#FFFFFFFF' $true)
     $b.Tag = $tag
@@ -1113,7 +1115,7 @@ function Build-Devices($devs) {
         [void]$ui.DevPanel.Children.Add($hd)
         foreach ($dv in $items) {
             $row = New-Object Windows.Controls.Border
-            $row.Background = Brush '#1FFFFFFF'; $row.CornerRadius = New-Object Windows.CornerRadius(14)
+            $row.Background = Brush '#FF373C46'; $row.CornerRadius = New-Object Windows.CornerRadius(14)
             $row.Padding = New-Object Windows.Thickness(10, 6, 10, 6); $row.Margin = New-Object Windows.Thickness(0, 2, 0, 2)
             $dp = New-Object Windows.Controls.DockPanel
             $row.Child = $dp
@@ -1214,8 +1216,8 @@ function Build-Strip {
         $pill.Margin = New-Object Windows.Thickness(0, 0, 5, 4)
         $pill.Cursor = 'Hand'
         $pill.BorderThickness = New-Object Windows.Thickness(1.5)
-        if ($key -eq [string]$state.room) { $pill.Background = Brush '#55FFFFFF'; $pill.BorderBrush = Brush '#FFFFFFFF' }
-        else { $pill.Background = Brush '#26FFFFFF'; $pill.BorderBrush = Brush '#00FFFFFF' }
+        if ($key -eq [string]$state.room) { $pill.Background = Brush '#FF686C72'; $pill.BorderBrush = Brush '#FFFFFFFF' }
+        else { $pill.Background = Brush '#FF3C424C'; $pill.BorderBrush = Brush '#00FFFFFF' }
         $sp = New-Object Windows.Controls.StackPanel; $sp.Orientation = 'Horizontal'
         $dot = New-Object Windows.Shapes.Ellipse; $dot.Width = 9; $dot.Height = 9; $dot.Margin = New-Object Windows.Thickness(0, 0, 6, 0); $dot.VerticalAlignment = 'Center'
         $c = '#FF7A8594'; if ($r.color) { $c = [string]$r.color }
@@ -1306,7 +1308,7 @@ function Show-Data($d) {
     $ui.Glow.Color = ([Windows.Media.ColorConverter]::ConvertFromString($col))
     $ui.Card.Background = New-Object Windows.Media.LinearGradientBrush ((([Windows.Media.ColorConverter]::ConvertFromString((Blend $col '#1B222D' 0.22)))), ([Windows.Media.ColorConverter]::ConvertFromString('#FF1B222D')), 90)
     $ui.Drawer.Background = Brush '#FF1B222D'
-    $ui.Panel.Background = Brush ('#33' + $col.Substring($col.Length - 6))
+    $ui.Panel.Background = Brush (Blend-Hex $col 0.2)
     $ui.Level.Foreground = $b
     $ui.RoomSub.Text = [string]$d.room.name
     $ui.DrawerTitle.Text = (T 'dev_title') + [string]$d.room.name
@@ -1455,7 +1457,7 @@ function Show-Setup {
     $g = Brush $grey
     $ui.Card.BorderBrush = $g; $ui.Level.Text = '–'; $ui.Level.Foreground = $g; $ui.Face.Text = [char]::ConvertFromUtf32(0x1F527)
     $ui.PillText.Text = (T 'setup'); $ui.PillDot.Foreground = $g; Set-Ring 0.06 $g
-    $ui.Panel.Background = Brush '#33FFFFFF'; if ($script:haMode) { $ui.Headline.Text = (T 'ha_norooms'); $ui.Detail.Text = (T 'ha_norooms_d') } else { $ui.Headline.Text = (T 'setup'); $ui.Detail.Text = (T 'setup_d') }
+    $ui.Panel.Background = Brush '#FF494E57'; if ($script:haMode) { $ui.Headline.Text = (T 'ha_norooms'); $ui.Detail.Text = (T 'ha_norooms_d') } else { $ui.Headline.Text = (T 'setup'); $ui.Detail.Text = (T 'setup_d') }
     $ui.RoomSub.Text = ''; $ui.Time.Text = ''; $script:pulse = $false
 }
 
@@ -1923,6 +1925,24 @@ function Get-DemoData([string]$wantRoom) {
         updated = (Get-Date).ToString('HH:mm:ss')
     }
 }
+function Blend-Hex([string]$hex, [double]$a) {
+    $h = $hex.Substring($hex.Length - 6)
+    $base = @(27, 34, 45)
+    $o = '#FF'
+    for ($i = 0; $i -lt 3; $i++) {
+        $c = [Convert]::ToInt32($h.Substring($i * 2, 2), 16)
+        $o += ([int][Math]::Round($base[$i] + $a * ($c - $base[$i]))).ToString('X2')
+    }
+    return $o
+}
+function Apply-Theme {
+    $night = $false
+    $hh = (Get-Date).Hour
+    switch ([string]$state.theme) { 'night' { $night = $true } 'day' { $night = $false } default { $night = ($hh -ge 22 -or $hh -lt 7) } }
+    $bg = $(if ($night) { '#FF0E1218' } else { '#FF1B222D' })
+    foreach ($b in @($ui.Card, $ui.Drawer, $ui.Pill)) { if ($b) { $b.Background = Brush $bg } }
+    $script:nightOn = $night
+}
 function Update-Widget {
     if ($state.demo) { try { $d = Get-DemoData ([string]$state.room); $script:fails = 0; $script:last = $d; Show-Data $d } catch { Write-Log ('Demo: ' + $_.Exception.Message) }; return }
     if (-not $script:haMode -and $url -notmatch '^https?://') { Show-Setup; return }
@@ -1948,7 +1968,7 @@ function Update-Widget {
             $ui.Level.Text = (T 'offline'); $ui.PillText.Text = (T 'offline'); $ui.PillDot.Foreground = $g; $ui.Level.Foreground = $g
             $ui.Face.Text = [char]::ConvertFromUtf32(0x1F50C)
             Set-Ring 0.06 $g
-            $ui.Panel.Background = Brush '#33FFFFFF'
+            $ui.Panel.Background = Brush '#FF494E57'
             $ui.Headline.Text = (T 'no_conn')
             $script:pulse = $false
             if ($script:last) { $ui.Detail.Text = (T 'stale'); $ui.Time.Text = (T 'asof') + [string]$script:last.updated }
@@ -2019,6 +2039,7 @@ $miHa = New-Object System.Windows.Controls.MenuItem
 $miMode = New-Object System.Windows.Controls.MenuItem
 $miBig = New-Object System.Windows.Controls.MenuItem
 $miSmall = New-Object System.Windows.Controls.MenuItem
+$miTheme = New-Object System.Windows.Controls.MenuItem
 $miDemo = New-Object System.Windows.Controls.MenuItem
 $miHaSup = New-Object System.Windows.Controls.MenuItem
 $miSens = New-Object System.Windows.Controls.MenuItem
@@ -2036,6 +2057,7 @@ $miSound.Add_Click({ $state.sound = $miSound.IsChecked; Save-State })
 $miExit.Add_Click({ Exit-App })
 $miHa.Add_Click({ Show-HaDialog })
 $miMode.Add_Click({ Toggle-Mode })
+$miTheme.Add_Click({ $state.theme = $(switch ([string]$state.theme) { 'auto' { 'day' } 'day' { 'night' } default { 'auto' } }); Apply-Theme; Save-State; Apply-Lang })
 $miDemo.Add_Click({ $state.demo = -not [bool]$state.demo; $state.room = ''; Save-State; Apply-Lang; Update-Widget })
 $miHaSup.Add_Click({ try { Start-Process 'https://www.home-assistant.io/' } catch {} })
 function Step-Size([int]$dir) {
@@ -2052,7 +2074,7 @@ $miSens.Add_Click({ Show-SensorDialog })
 $miHelp.Add_Click({ $script:helpOpen = $true; Apply-View })
 $miCfg.Add_Click({ try { if (-not (Test-Path $cfgFile)) { Copy-Item (Join-Path $dir 'config.example.json') $cfgFile }; Start-Process notepad.exe -ArgumentList ('"' + $cfgFile + '"') } catch { Write-Log ('Konfig: ' + $_.Exception.Message) } })
 $miUpd.Add_Click({ Invoke-UpdateFlow $true })
-[void]$menu.Items.Add($miMode); [void]$menu.Items.Add($miBig); [void]$menu.Items.Add($miDemo); [void]$menu.Items.Add($miHaSup); [void]$menu.Items.Add($miSmall); [void]$menu.Items.Add($miRefresh); [void]$menu.Items.Add($miTop); [void]$menu.Items.Add($miPop); [void]$menu.Items.Add($miTray); [void]$menu.Items.Add($miSound); [void]$menu.Items.Add($miReset); [void]$menu.Items.Add($miLog); [void]$menu.Items.Add($miHa); [void]$menu.Items.Add($miSens); [void]$menu.Items.Add($miHelp); [void]$menu.Items.Add($miCfg); [void]$menu.Items.Add($miUpd); [void]$menu.Items.Add((New-Object System.Windows.Controls.Separator)); [void]$menu.Items.Add($miExit)
+[void]$menu.Items.Add($miMode); [void]$menu.Items.Add($miBig); [void]$menu.Items.Add($miTheme); [void]$menu.Items.Add($miDemo); [void]$menu.Items.Add($miHaSup); [void]$menu.Items.Add($miSmall); [void]$menu.Items.Add($miRefresh); [void]$menu.Items.Add($miTop); [void]$menu.Items.Add($miPop); [void]$menu.Items.Add($miTray); [void]$menu.Items.Add($miSound); [void]$menu.Items.Add($miReset); [void]$menu.Items.Add($miLog); [void]$menu.Items.Add($miHa); [void]$menu.Items.Add($miSens); [void]$menu.Items.Add($miHelp); [void]$menu.Items.Add($miCfg); [void]$menu.Items.Add($miUpd); [void]$menu.Items.Add((New-Object System.Windows.Controls.Separator)); [void]$menu.Items.Add($miExit)
 $win.ContextMenu = $menu
 
 
@@ -2077,7 +2099,7 @@ function Apply-Lang {
     $ui.BtnHelp.ToolTip = (T 'help_tip'); $ui.BtnLang.ToolTip = (T 'lang_tip')
     foreach ($k in 'De', 'En') { $ui.('Lang' + $k).Foreground = Brush '#FFA9B4C4'; $ui.('Lang' + $k).FontWeight = 'Normal' }
     if ($state.lang -eq 'en') { $ui.LangEn.Foreground = Brush '#FFFFFFFF'; $ui.LangEn.FontWeight = 'Bold' } else { $ui.LangDe.Foreground = Brush '#FFFFFFFF'; $ui.LangDe.FontWeight = 'Bold' }
-    $miDemo.Header = $(if ($state.demo) { T 'm_demo_off' } else { T 'm_demo' }); $miHaSup.Header = (T 'm_ha_support'); $miBig.Header = (T 'm_bigger'); $miSmall.Header = (T 'm_smaller'); $miRefresh.Header = (T 'm_refresh'); $miTop.Header = (T 'm_top'); $miPop.Header = (T 'm_pop'); $miTray.Header = (T 'm_tray'); if ($script:trayMiOpen) { $script:trayMiOpen.Text = (T 'tray_open'); $script:trayMiExit.Text = (T 'm_exit') }; $miSound.Header = (T 'm_sound'); $miReset.Header = (T 'm_reset'); $miLog.Header = (T 'm_log'); $miHelp.Header = (T 'm_help'); $miHa.Header = (T 'm_ha'); $miMode.Header = $(if ($state.simple) { T 'm_mode_full' } else { T 'm_mode_simple' }); $miSens.Header = (T 'm_sens'); $miCfg.Header = (T 'm_cfg'); $miUpd.Header = (T 'm_upd'); $miExit.Header = (T 'm_exit')
+    $miTheme.Header = $(switch ([string]$state.theme) { 'day' { T 'm_theme_day' } 'night' { T 'm_theme_night' } default { T 'm_theme_auto' } }); $miDemo.Header = $(if ($state.demo) { T 'm_demo_off' } else { T 'm_demo' }); $miHaSup.Header = (T 'm_ha_support'); $miBig.Header = (T 'm_bigger'); $miSmall.Header = (T 'm_smaller'); $miRefresh.Header = (T 'm_refresh'); $miTop.Header = (T 'm_top'); $miPop.Header = (T 'm_pop'); $miTray.Header = (T 'm_tray'); if ($script:trayMiOpen) { $script:trayMiOpen.Text = (T 'tray_open'); $script:trayMiExit.Text = (T 'm_exit') }; $miSound.Header = (T 'm_sound'); $miReset.Header = (T 'm_reset'); $miLog.Header = (T 'm_log'); $miHelp.Header = (T 'm_help'); $miHa.Header = (T 'm_ha'); $miMode.Header = $(if ($state.simple) { T 'm_mode_full' } else { T 'm_mode_simple' }); $miSens.Header = (T 'm_sens'); $miCfg.Header = (T 'm_cfg'); $miUpd.Header = (T 'm_upd'); $miExit.Header = (T 'm_exit')
     $ui.RoomName.Text = 'Luftwächter'; $ui.TitleTag.Text = (T 'tagline'); $ui.TitleBox.ToolTip = (T 'copy_tip')
     $ui.Footer.Text = (Get-FooterText)
     $ui.Copy.Text = $copyright + ' · GitHub'; $ui.Copy.ToolTip = (T 'copy_tip'); $ui.Ver.ToolTip = (T 'ver_tip')
@@ -2100,7 +2122,7 @@ foreach ($k in 'De', 'En') {
 $script:newVer = $null
 function Set-UpdateButton {
     if ($script:newVer) { $ui.BtnUpdT.Text = (T 'upd_new' ('v' + $script:newVer)); $ui.BtnUpd.Background = Brush '#FF2E9E5B' }
-    else { $ui.BtnUpdT.Text = (T 'upd_btn'); $ui.BtnUpd.Background = Brush '#33FFFFFF' }
+    else { $ui.BtnUpdT.Text = (T 'upd_btn'); $ui.BtnUpd.Background = Brush '#FF494E57' }
     if ($script:newVer) { $ui.BtnUpd.ToolTip = (T 'upd_tip_new' ('v' + $script:newVer)) }
     elseif ($script:lastUpdCheck) { $ui.BtnUpd.ToolTip = (T 'upd_tip' $script:lastUpdCheck.ToString('HH:mm') $updMinutes) }
     else { $ui.BtnUpd.ToolTip = (T 'upd_tip_never') }
@@ -2284,14 +2306,11 @@ $pulseTimer = New-Object System.Windows.Threading.DispatcherTimer
 $pulseTimer.Interval = [TimeSpan]::FromMilliseconds(1000)
 $pulseTimer.Add_Tick({
     $h = (Get-Date).Hour
-    # Nachtmodus: Inhalt dimmen, Fensterhintergrund bleibt deckend (kein Durchscheinen des Desktop-Hintergrunds)
+    # Tag-/Nachtdesign: Fenster bleibt immer deckend, nur die Farbe wechselt
     $win.Opacity = 1.0
-    $nt = ($h -ge 22 -or $h -lt 7)
-    if ($nt -ne $script:nightOn) {
-        $script:nightOn = $nt
-        $lv = $(if ($nt) { 1.0 - ($nightDim / 100.0) } else { 1.0 })
-        foreach ($b in @($ui.Card, $ui.Drawer, $ui.Pill)) { if ($b -and $b.Child) { $b.Child.Opacity = $lv } }
-    }
+    $nt = $false
+    switch ([string]$state.theme) { 'night' { $nt = $true } 'day' { $nt = $false } default { $nt = ($h -ge 22 -or $h -lt 7) } }
+    if ($nt -ne $script:nightOn) { Apply-Theme }
     if ($script:newVer -and $ui.BtnUpd) { $script:updOn = -not $script:updOn; if ($script:updOn) { $ui.BtnUpd.Background = Brush '#FF2E9E5B' } else { $ui.BtnUpd.Background = Brush '#FF237A47' } }
     if ($script:pulse) { $script:pulseOn = -not $script:pulseOn; if ($script:pulseOn) { $ui.Glow.Opacity = 0.95 } else { $ui.Glow.Opacity = 0.25 } }
     else { $ui.Glow.Opacity = 0.5 }

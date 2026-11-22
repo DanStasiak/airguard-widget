@@ -2,6 +2,10 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [5.8.0] - 2026-11-22
+- New: a crisper look and a real day/night design. The window is always solid; night mode no longer fades anything. Tiles, room buttons and the advice panel use solid colours instead of see-through white, which removes the milky look. At night (22:00 to 07:00) the background switches to a deeper, darker tone. Right-click, "Theme" cycles Automatic, Day and Night.
+- Removed: the `nightDim` setting from 5.7.2.
+
 ## [5.7.2] - 2026-11-22
 - Improved: crisper at night. Night mode (22:00 to 07:00) now dims the content by only 8 % instead of 38 %, so text and colours stay sharp. Set `nightDim` in config.json (0 to 50, percent; 0 = no dimming).
 
