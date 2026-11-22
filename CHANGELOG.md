@@ -2,6 +2,9 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [5.7.2] - 2026-11-22
+- Improved: crisper at night. Night mode (22:00 to 07:00) now dims the content by only 8 % instead of 38 %, so text and colours stay sharp. Set `nightDim` in config.json (0 to 50, percent; 0 = no dimming).
+
 ## [5.7.1] - 2026-11-22
 - Fixed: the milky, see-through look at night (22:00 to 07:00). Night mode made the whole window transparent, so a busy desktop wallpaper shone through. Now the window stays solid and only the content is dimmed.
 

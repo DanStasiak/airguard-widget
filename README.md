@@ -53,6 +53,7 @@ Made by **Dan Stasiak** · MIT License · [github.com/DanStasiak/airguard-widget
 | `defaultRoom` | start room key (optional) |
 | `refreshSeconds` | refresh interval, 2 to 10 |
 | `updateCheckMinutes` | how often the widget looks for a new release, 15 to 1440 (default 60) |
+| `nightDim` | how much the content is dimmed between 22:00 and 07:00, 0 to 50 percent (default 8) |
 | `place` | place name shown in the weather row (optional) |
 | `footer` | source note at the bottom (optional) |
 | `roomShort`, `roomShortEn` | short names for the room overview, e.g. `{"living": "Living"}` |

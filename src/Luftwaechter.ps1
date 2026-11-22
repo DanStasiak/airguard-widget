@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall)
 
 $appName = 'Luftwaechter'
-$appVersion = '5.7.1'
+$appVersion = '5.7.2'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -326,6 +326,8 @@ $script:canSwitch = [bool]($script:haMode -or $switchUrl)
 $script:haDevs = @{}
 $interval = 10
 $updMinutes = 60
+$nightDim = 8
+if ($null -ne $cfg.nightDim) { $nightDim = [Math]::Max(0, [Math]::Min([int]$cfg.nightDim, 50)) }
 if ($cfg.updateCheckMinutes) { $updMinutes = [Math]::Max(15, [Math]::Min([int]$cfg.updateCheckMinutes, 1440)) }
 if ($cfg.refreshSeconds) { $interval = [Math]::Max(2, [Math]::Min([int]$cfg.refreshSeconds, 10)) }
 
@@ -2287,7 +2289,7 @@ $pulseTimer.Add_Tick({
     $nt = ($h -ge 22 -or $h -lt 7)
     if ($nt -ne $script:nightOn) {
         $script:nightOn = $nt
-        $lv = $(if ($nt) { 0.62 } else { 1.0 })
+        $lv = $(if ($nt) { 1.0 - ($nightDim / 100.0) } else { 1.0 })
         foreach ($b in @($ui.Card, $ui.Drawer, $ui.Pill)) { if ($b -and $b.Child) { $b.Child.Opacity = $lv } }
     }
     if ($script:newVer -and $ui.BtnUpd) { $script:updOn = -not $script:updOn; if ($script:updOn) { $ui.BtnUpd.Background = Brush '#FF2E9E5B' } else { $ui.BtnUpd.Background = Brush '#FF237A47' } }
