@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall)
 
 $appName = 'Luftwaechter'
-$appVersion = '5.0.1'
+$appVersion = '5.1.0'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -337,7 +337,7 @@ function Write-Log([string]$m) {
         Add-Content -Path $logFile -Value ((Get-Date).ToString('yyyy-MM-dd HH:mm:ss') + '  ' + $m) -Encoding UTF8
     } catch {}
 }
-$state = @{ left = $null; top = $null; topmost = $false; topmostSet = $false; popup = $true; tray = $true; room = [string]$cfg.defaultRoom; size = 'M'; weatherOpen = $false; drawerOpen = $false; sound = $true; sparkHours = 3; metric = 0; hidden = @(); lang = 'de'; hist = @{}; hist7 = @{}; sensors = @{}; simple = $true }
+$state = @{ left = $null; top = $null; topmost = $false; topmostSet = $false; popup = $true; tray = $true; room = [string]$cfg.defaultRoom; size = 'M'; weatherOpen = $false; drawerOpen = $false; sound = $true; sparkHours = 3; metric = 0; hidden = @(); lang = 'de'; hist = @{}; hist7 = @{}; sensors = @{}; simple = $true; tourDone = $false }
 try { if ((Get-Culture).TwoLetterISOLanguageName -ne 'de') { $state.lang = 'en' } } catch {}
 if (Test-Path $stateFile) {
     try {
@@ -353,6 +353,7 @@ if (Test-Path $stateFile) {
         if ($null -ne $s.drawerOpen) { $state.drawerOpen = [bool]$s.drawerOpen }
         if ($null -ne $s.sound) { $state.sound = [bool]$s.sound }
         if ($s.sparkHours -eq 24 -or $s.sparkHours -eq 168) { $state.sparkHours = [int]$s.sparkHours }
+        if ($null -ne $s.tourDone) { $state.tourDone = [bool]$s.tourDone }
         if ($null -ne $s.simple) { $state.simple = [bool]$s.simple }
         if ($s.hist7) { foreach ($p in $s.hist7.PSObject.Properties) { $state.hist7[$p.Name] = @($p.Value) } }
         if ($s.hidden) { $state.hidden = @($s.hidden | ForEach-Object { [string]$_ }) }
@@ -477,6 +478,9 @@ $script:Strings = @{
     sens_save = @('Speichern', 'Save')
     m_mode_full = @('Alle Details anzeigen', 'Show all details')
     m_mode_simple = @('Einfache Ansicht', 'Simple view')
+    tour_h = @('Willkommen bei Luftwächter', 'Welcome to Luftwächter')
+    tour_t = @('Das Gesicht zeigt, wie die Luft in deinem Raum ist. Der große Satz sagt dir, was zu tun ist, zum Beispiel „Bitte Fenster öffnen“. Mit „Details“ oben links siehst du alle Messwerte.', 'The face shows how the air in your room is. The big sentence tells you what to do, for example "Please open the window". With "Details" at the top left you can see all the readings.')
+    tour_ok = @('Verstanden', 'Got it')
     mode_more = @('Details', 'Details')
     mode_simple = @('Einfach', 'Simple')
     mode_tip = @('Zwischen einfacher Ansicht und allen Details wechseln', 'Switch between the simple view and all details')
@@ -598,6 +602,13 @@ $xaml = @"
           <TextBlock x:Name="Time" Foreground="#FFB4BFCE" FontSize="12" Margin="10,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
         </DockPanel>
       </StackPanel>
+      <Border x:Name="Tour" Visibility="Collapsed" CornerRadius="14" Background="#33FFFFFF" Padding="14,10" Margin="0,10,0,0">
+        <StackPanel>
+          <TextBlock x:Name="TourH" Foreground="White" FontSize="16" FontWeight="Bold" TextWrapping="Wrap"/>
+          <TextBlock x:Name="TourT" Foreground="#FFDFE5EE" FontSize="14" TextWrapping="Wrap" Margin="0,4,0,8"/>
+          <Border x:Name="TourOk" HorizontalAlignment="Right" CornerRadius="12" Background="#FF2E9E5B" Padding="18,5" Cursor="Hand"><TextBlock x:Name="TourOkT" Foreground="White" FontSize="14" FontWeight="SemiBold"/></Border>
+        </StackPanel>
+      </Border>
       <Grid Margin="0,10,0,0">
         <Grid.ColumnDefinitions><ColumnDefinition Width="140"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
         <StackPanel Grid.Column="0" HorizontalAlignment="Center">
@@ -707,7 +718,7 @@ $xaml = @"
 $win = [Windows.Markup.XamlReader]::Load((New-Object System.Xml.XmlNodeReader ([xml]$xaml)))
 $conv = New-Object Windows.Media.BrushConverter
 function Brush([string]$hex) { return $conv.ConvertFromString($hex) }
-$names = @('GrpTiles', 'GrpFoot', 'GrpUpd', 'SzBox', 'BtnMode', 'BtnModeT', 'TabArr', 'TabLbl', 'Scaler', 'Card', 'Ver', 'RoomStrip', 'SparkBox', 'SparkLabel', 'Glow', 'WOut', 'WOutB', 'TitleBox', 'RoomName', 'RoomSub', 'TitleTag', 'Time', 'SzS', 'SzM', 'SzL', 'SzC', 'SzP', 'BtnHelp', 'BtnLang', 'LangDe', 'LangEn', 'WMoreT', 'WLessT', 'WTitleT', 'Help', 'HelpClose', 'HelpTitle', 'HelpScroll', 'HelpBody', 'HelpVer', 'BtnUpd', 'BtnUpdT', 'Copy', 'Pill', 'PillDot', 'PillText', 'Arc', 'Face', 'Level', 'Trend', 'Panel', 'IcClosed', 'IcOpen', 'Headline', 'Detail', 'BarTrack', 'BarFill', 'Details', 'Spark', 'SparkR', 'Peak', 'WLine', 'WMore', 'WLineText', 'WFull', 'WLess', 'WIcon', 'WTemp', 'WCond', 'WTip', 'Footer', 'Tab', 'Drawer', 'DrawerClose', 'DrawerTitle', 'DevPanel')
+$names = @('Tour', 'TourH', 'TourT', 'TourOk', 'TourOkT', 'GrpTiles', 'GrpFoot', 'GrpUpd', 'SzBox', 'BtnMode', 'BtnModeT', 'TabArr', 'TabLbl', 'Scaler', 'Card', 'Ver', 'RoomStrip', 'SparkBox', 'SparkLabel', 'Glow', 'WOut', 'WOutB', 'TitleBox', 'RoomName', 'RoomSub', 'TitleTag', 'Time', 'SzS', 'SzM', 'SzL', 'SzC', 'SzP', 'BtnHelp', 'BtnLang', 'LangDe', 'LangEn', 'WMoreT', 'WLessT', 'WTitleT', 'Help', 'HelpClose', 'HelpTitle', 'HelpScroll', 'HelpBody', 'HelpVer', 'BtnUpd', 'BtnUpdT', 'Copy', 'Pill', 'PillDot', 'PillText', 'Arc', 'Face', 'Level', 'Trend', 'Panel', 'IcClosed', 'IcOpen', 'Headline', 'Detail', 'BarTrack', 'BarFill', 'Details', 'Spark', 'SparkR', 'Peak', 'WLine', 'WMore', 'WLineText', 'WFull', 'WLess', 'WIcon', 'WTemp', 'WCond', 'WTip', 'Footer', 'Tab', 'Drawer', 'DrawerClose', 'DrawerTitle', 'DevPanel')
 for ($i = 1; $i -le 4; $i++) { $names += @("C$i", "D$i", "V$i", "K$i", "WK$i", "WV$i") }
 $ui = @{}
 foreach ($n in $names) { $ui[$n] = $win.FindName($n) }
@@ -815,7 +826,7 @@ $script:helpOpen = $false
 
 function Save-State {
     try {
-        $o = @{ left = $win.Left; top = $win.Top; topmost = $state.topmost; topmostSet = $state.topmostSet; popup = $state.popup; tray = $state.tray; room = $state.room; size = $state.size; weatherOpen = $state.weatherOpen; drawerOpen = $state.drawerOpen; sound = $state.sound; sparkHours = $state.sparkHours; metric = $state.metric; hidden = @($state.hidden); lang = $state.lang; hist = $state.hist; hist7 = $state.hist7; sensors = $state.sensors; simple = $state.simple }
+        $o = @{ left = $win.Left; top = $win.Top; topmost = $state.topmost; topmostSet = $state.topmostSet; popup = $state.popup; tray = $state.tray; room = $state.room; size = $state.size; weatherOpen = $state.weatherOpen; drawerOpen = $state.drawerOpen; sound = $state.sound; sparkHours = $state.sparkHours; metric = $state.metric; hidden = @($state.hidden); lang = $state.lang; hist = $state.hist; hist7 = $state.hist7; sensors = $state.sensors; simple = $state.simple; tourDone = $state.tourDone }
         ($o | ConvertTo-Json -Depth 4) | Set-Content -Path $stateFile -Encoding UTF8
     } catch { Write-Log ('Speichern: ' + $_.Exception.Message) }
 }
@@ -1206,6 +1217,8 @@ function Apply-Simple {
     $ui.BtnModeT.Text = $(if ($sm) { T 'mode_more' } else { T 'mode_simple' })
     $ui.BtnMode.ToolTip = (T 'mode_tip')
     $ui.TabLbl.Text = (T 'tab_lbl')
+    $ui.TourH.Text = (T 'tour_h'); $ui.TourT.Text = (T 'tour_t'); $ui.TourOkT.Text = (T 'tour_ok')
+    if ($sm -and -not $state.tourDone -and -not $script:compact) { $ui.Tour.Visibility = 'Visible' } else { $ui.Tour.Visibility = 'Collapsed' }
     if ($script:compact) { return }
     $hide = $(if ($sm) { 'Collapsed' } else { 'Visible' })
     foreach ($n in 'GrpTiles', 'Peak', 'GrpFoot', 'SzBox', 'Time') { $ui.$n.Visibility = $hide }
@@ -1907,6 +1920,7 @@ for ($k = 0; $k -lt 4; $k++) {
     $cb.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; $state.metric = [int]$s.Tag; if ($script:last) { Show-Data $script:last }; Save-State })
 }
 $ui.SparkBox.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; if ($state.sparkHours -eq 3) { $state.sparkHours = 24 } elseif ($state.sparkHours -eq 24) { $state.sparkHours = 168 } else { $state.sparkHours = 3 }; if ($script:last) { Show-Data $script:last }; Save-State })
+$ui.TourOk.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; $state.tourDone = $true; $ui.Tour.Visibility = 'Collapsed'; Save-State; Apply-View })
 $ui.BtnMode.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; Toggle-Mode })
 $ui.Tab.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; $state.drawerOpen = $true; Apply-View; Save-State })
 $ui.DrawerClose.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; $state.drawerOpen = $false; Apply-View; Save-State })

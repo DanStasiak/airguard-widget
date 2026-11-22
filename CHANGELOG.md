@@ -2,6 +2,9 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [5.1.0] - 2026-11-22
+- New: a short welcome card in the simple view explains in three sentences what the face, the big sentence and the "Details" button are. It shows once and goes away with "Got it".
+
 ## [5.0.1] - 2026-11-22
 - Fix: the "Details" button (and the clickable title and sensor warning) did not react, because the window grabbed the mouse for dragging. They work now.
 - Fix: the Update button stays visible in the simple view.
