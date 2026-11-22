@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall)
 
 $appName = 'Luftwaechter'
-$appVersion = '4.4.0'
+$appVersion = '4.5.0'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -568,6 +568,7 @@ $xaml = @"
                 $tileXaml
               </Grid>
             </Grid>
+            <Border x:Name="WOutB" CornerRadius="10" Background="#33000000" Padding="4,6" Margin="3,6,3,0" Visibility="Collapsed"><UniformGrid x:Name="WOut" Columns="6"/></Border>
             <Border CornerRadius="10" Background="#33000000" Padding="10,6" Margin="3,6,3,0"><TextBlock x:Name="WTip" Foreground="White" FontSize="13" TextWrapping="Wrap"/></Border>
           </StackPanel>
         </Border>
@@ -605,7 +606,7 @@ $xaml = @"
 $win = [Windows.Markup.XamlReader]::Load((New-Object System.Xml.XmlNodeReader ([xml]$xaml)))
 $conv = New-Object Windows.Media.BrushConverter
 function Brush([string]$hex) { return $conv.ConvertFromString($hex) }
-$names = @('Scaler', 'Card', 'Ver', 'RoomStrip', 'SparkBox', 'SparkLabel', 'Glow', 'TitleBox', 'RoomName', 'RoomSub', 'TitleTag', 'Time', 'SzS', 'SzM', 'SzL', 'SzC', 'SzP', 'BtnHelp', 'BtnLang', 'LangDe', 'LangEn', 'WMoreT', 'WLessT', 'WTitleT', 'Help', 'HelpClose', 'HelpTitle', 'HelpScroll', 'HelpBody', 'HelpVer', 'BtnUpd', 'BtnUpdT', 'Copy', 'Pill', 'PillDot', 'PillText', 'Arc', 'Face', 'Level', 'Trend', 'Panel', 'IcClosed', 'IcOpen', 'Headline', 'Detail', 'BarTrack', 'BarFill', 'Details', 'Spark', 'SparkR', 'Peak', 'WLine', 'WMore', 'WLineText', 'WFull', 'WLess', 'WIcon', 'WTemp', 'WCond', 'WTip', 'Footer', 'Tab', 'Drawer', 'DrawerClose', 'DrawerTitle', 'DevPanel')
+$names = @('Scaler', 'Card', 'Ver', 'RoomStrip', 'SparkBox', 'SparkLabel', 'Glow', 'WOut', 'WOutB', 'TitleBox', 'RoomName', 'RoomSub', 'TitleTag', 'Time', 'SzS', 'SzM', 'SzL', 'SzC', 'SzP', 'BtnHelp', 'BtnLang', 'LangDe', 'LangEn', 'WMoreT', 'WLessT', 'WTitleT', 'Help', 'HelpClose', 'HelpTitle', 'HelpScroll', 'HelpBody', 'HelpVer', 'BtnUpd', 'BtnUpdT', 'Copy', 'Pill', 'PillDot', 'PillText', 'Arc', 'Face', 'Level', 'Trend', 'Panel', 'IcClosed', 'IcOpen', 'Headline', 'Detail', 'BarTrack', 'BarFill', 'Details', 'Spark', 'SparkR', 'Peak', 'WLine', 'WMore', 'WLineText', 'WFull', 'WLess', 'WIcon', 'WTemp', 'WCond', 'WTip', 'Footer', 'Tab', 'Drawer', 'DrawerClose', 'DrawerTitle', 'DevPanel')
 for ($i = 1; $i -le 4; $i++) { $names += @("C$i", "D$i", "V$i", "K$i", "WK$i", "WV$i") }
 $ui = @{}
 foreach ($n in $names) { $ui[$n] = $win.FindName($n) }
@@ -1221,7 +1222,17 @@ function Show-Data($d) {
         $val = @(([string]$o.wind + ' km/h ' + [string]$o.windDir), ([string]$o.hum + ' %'), ([string]$o.cloud + ' %'), ([string]$o.press + ' hPa'))
         for ($i = 0; $i -lt 4; $i++) { $ui.('WK' + ($i + 1)).Text = $lab[$i]; $ui.('WV' + ($i + 1)).Text = $val[$i] }
         $ui.WTip.Text = [string]$o.tip
-    } else { $ui.WLineText.Text = (T 'w_na'); $ui.WTip.Text = '' }
+        $ui.WOut.Children.Clear()
+        foreach ($q in @($o.out)) {
+            $sp = New-Object Windows.Controls.StackPanel; $sp.HorizontalAlignment = 'Center'
+            $t1 = New-Object Windows.Controls.TextBlock; $t1.Text = ([string]$q.h + ' h'); $t1.FontSize = 11; $t1.Foreground = Brush '#FFB4BFCE'; $t1.HorizontalAlignment = 'Center'
+            $t2 = New-Object Windows.Controls.TextBlock; $t2.Text = [string]$q.ic; $t2.FontSize = 17; $t2.Foreground = Brush '#FFFFFFFF'; $t2.HorizontalAlignment = 'Center'; $t2.FontFamily = New-Object Windows.Media.FontFamily('Segoe UI Emoji')
+            $t3 = New-Object Windows.Controls.TextBlock; $t3.Text = ([string]$q.tp + '°'); $t3.FontSize = 13; $t3.FontWeight = 'SemiBold'; $t3.Foreground = Brush '#FFFFFFFF'; $t3.HorizontalAlignment = 'Center'
+            [void]$sp.Children.Add($t1); [void]$sp.Children.Add($t2); [void]$sp.Children.Add($t3)
+            [void]$ui.WOut.Children.Add($sp)
+        }
+        if (@($o.out).Count -gt 0) { $ui.WOutB.Visibility = 'Visible' } else { $ui.WOutB.Visibility = 'Collapsed' }
+    } else { $ui.WLineText.Text = (T 'w_na'); $ui.WTip.Text = ''; $ui.WOutB.Visibility = 'Collapsed' }
 
     $ui.Time.Text = [string]$d.updated
     $ui.Footer.Text = (Get-FooterText)
@@ -1385,7 +1396,21 @@ function Build-HaData($data, [string]$wantRoom) {
     $condEn = @{ 'clear-night' = 'clear'; cloudy = 'cloudy'; partlycloudy = 'partly cloudy'; sunny = 'sunny'; rainy = 'rain'; pouring = 'heavy rain'; snowy = 'snow'; 'snowy-rainy' = 'sleet'; fog = 'fog'; windy = 'windy'; 'windy-variant' = 'windy'; hail = 'hail'; lightning = 'thunderstorm'; 'lightning-rainy' = 'thunderstorm with rain'; exceptional = 'severe weather' }
     $iconCp = @{ 'clear-night' = 0x1F319; cloudy = 0x2601; partlycloudy = 0x26C5; sunny = 0x2600; rainy = 0x1F327; pouring = 0x1F327; snowy = 0x1F328; 'snowy-rainy' = 0x1F328; fog = 0x1F32B; windy = 0x1F4A8; 'windy-variant' = 0x1F4A8; hail = 0x1F328; lightning = 0x26C8; 'lightning-rainy' = 0x26C8; exceptional = 0x26A0 }
     $rainAt = ''
-    if ($wx -and $cond -ne 'rainy' -and $cond -ne 'pouring') { $rainAt = Get-HaRain ([string]$wx.id) }
+    if ($wx) { $rainAt = Get-HaRain ([string]$wx.id) }
+    if ($cond -eq 'rainy' -or $cond -eq 'pouring') { $rainAt = '' }
+    $outlook = @()
+    if ($wx -and $script:fcCache) {
+        $nowO = [DateTimeOffset]::UtcNow; $nO = 0
+        foreach ($f in @($script:fcCache)) {
+            try { $t = [DateTimeOffset]::Parse([string]$f.datetime, $inv) } catch { continue }
+            if ($t -le $nowO) { continue }
+            $nO++
+            if ($nO % 2 -ne 0) { continue }
+            $fi = ''; if ($iconCp.ContainsKey([string]$f.condition)) { $fi = [char]::ConvertFromUtf32([int]$iconCp[[string]$f.condition]) }
+            $outlook += [pscustomobject]@{ h = $t.ToLocalTime().ToString('HH'); ic = $fi; tp = (Fmt (Num $f.temperature) 0) }
+            if ($outlook.Count -ge 6) { break }
+        }
+    }
     $badOut = (@('pouring', 'lightning', 'lightning-rainy', 'hail', 'snowy-rainy', 'exceptional') -contains $cond)
 
     $rooms = @()
@@ -1466,7 +1491,7 @@ function Build-HaData($data, [string]$wantRoom) {
         elseif (($null -ne $oh) -and ($oh -gt 90)) { $tip = (Lx 'Draußen ist es feucht: kurz lüften, nicht dauerhaft kippen.' 'It is humid outside: ventilate briefly, do not leave the window tilted.') }
         $cn = $(if ($en) { $condEn[$cond] } else { $condDe[$cond] }); if (-not $cn) { $cn = $cond }
         $ic = ''; if ($iconCp.ContainsKey($cond)) { $ic = [char]::ConvertFromUtf32([int]$iconCp[$cond]) }
-        $outside = [pscustomobject]@{ temp = (Fmt $ot 0); cond = [string]$cn; icon = $ic; wind = (Fmt $ws 0); windDir = $windDir; hum = (Fmt $oh 0); cloud = (Fmt (Num $wx.cl) 0); press = (Fmt (Num $wx.p) 0); tip = $tip }
+        $outside = [pscustomobject]@{ temp = (Fmt $ot 0); cond = [string]$cn; icon = $ic; wind = (Fmt $ws 0); windDir = $windDir; hum = (Fmt $oh 0); cloud = (Fmt (Num $wx.cl) 0); press = (Fmt (Num $wx.p) 0); tip = $tip; out = $outlook }
     }
 
     # Geräte des Raums

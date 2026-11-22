@@ -2,6 +2,9 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [4.5.0] - 2026-11-22
+- New: weather outlook. "More" now shows the next 12 hours (every 2 hours: time, weather symbol, temperature) from your Home Assistant weather entity.
+
 ## [4.4.0] - 2026-11-22
 - Fix: a room's temperature could jump to nonsense (a dew-point sensor of the room showed 9.4 °C and turned the whole ring red). Dew point, device (chip) temperature, absolute humidity and sensors that stopped reporting are now ignored.
 - New: with several sensors of one kind in a room, the widget shows their average (a sensor labelled "airguard" still takes priority).
