@@ -1,7 +1,7 @@
 ﻿# Luftwächter / Airguard – indoor air quality, ventilation advice, weather and room devices (Windows widget)
 # Copyright (c) 2026 Dan Stasiak. Licensed under the MIT License (see LICENSE). SPDX-License-Identifier: MIT
 # Source: https://github.com/DanStasiak/airguard-widget
-param([switch]$Install, [switch]$Uninstall)
+param([switch]$Install, [switch]$Uninstall, [switch]$SmokeTest)
 
 $appName = 'Luftwaechter'
 $appVersion = '5.12.0'
@@ -13,6 +13,7 @@ $repoUrl = 'https://github.com/' + $repoOwner + '/' + $repoName
 $copyright = '© 2026 Dan Stasiak · MIT'
 $installDir = Join-Path $env:LOCALAPPDATA $appName
 $stateDir = Join-Path $env:APPDATA $appName
+if ($SmokeTest) { $stateDir = Join-Path $env:TEMP ('luft-smoke-' + [guid]::NewGuid().ToString('N')) }
 $startupLnk = Join-Path ([Environment]::GetFolderPath('Startup')) 'Luftwaechter.lnk'
 
 # ---------- Home Assistant: Verbindung (Adresse in config.json, Token verschlüsselt per Windows-Konto) ----------
@@ -302,8 +303,8 @@ if ($Uninstall) {
 
 # nur eine Instanz
 $created = $false
-$mutex = New-Object System.Threading.Mutex($true, 'Local\LuftwaechterWidget', [ref]$created)
-if (-not $created) { exit 0 }
+$mutex = New-Object System.Threading.Mutex($true, $(if ($SmokeTest) { 'Local\LuftwaechterSmoke' } else { 'Local\LuftwaechterWidget' }), [ref]$created)
+if (-not $created) { if ($SmokeTest) { exit 3 }; exit 0 }
 
 Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase
 try { Add-Type -AssemblyName System.Windows.Forms, System.Drawing; Add-Type -Namespace LW -Name Native -MemberDefinition '[System.Runtime.InteropServices.DllImport("user32.dll")] public static extern bool DestroyIcon(System.IntPtr h);' } catch {}
@@ -1339,7 +1340,8 @@ function Export-History {
         $docs = [Environment]::GetFolderPath('MyDocuments')
         $file = Join-Path $docs ('Luftwaechter-Verlauf-' + (Get-Date).ToString('yyyyMMdd-HHmm') + '.csv')
         [System.IO.File]::WriteAllLines($file, $lines, (New-Object System.Text.UTF8Encoding($true)))
-        Start-Process 'explorer.exe' -ArgumentList ('/select,"' + $file + '"')
+        $script:lastExport = $file
+        if (-not $SmokeTest) { Start-Process 'explorer.exe' -ArgumentList ('/select,"' + $file + '"') }
     } catch { Write-Log ('Export: ' + $_.Exception.Message) }
 }
 $script:snoozeUntil = $null
@@ -2388,6 +2390,46 @@ Apply-Lang
 Apply-View
 Write-Log ('Start ' + $version)
 Update-Widget
+if ($SmokeTest) {
+    # Selbsttest ohne Home Assistant: Fenster zeigen, alle Ansichten mit Demo-Daten durchspielen, Fehler melden (für GitHub Actions)
+    $script:smokeFail = New-Object System.Collections.ArrayList
+    $l0 = 0; if (Test-Path $logFile) { $l0 = @(Get-Content -Path $logFile -Encoding UTF8).Count }
+    function Smoke([string]$n, [scriptblock]$b) {
+        try { $r = & $b; if ($r -eq $false) { throw 'check returned false' }; Write-Host ('ok    ' + $n) }
+        catch { [void]$script:smokeFail.Add($n); Write-Host ('FAIL  ' + $n + ': ' + $_.Exception.Message + ' @line ' + $_.InvocationInfo.ScriptLineNumber) }
+    }
+    $script:firstRun = $false
+    $script:snoozeUntil = (Get-Date).AddDays(1)
+    Smoke 'window shows' { $win.Show(); $win.UpdateLayout(); $true }
+    Smoke 'demo data, all rooms' { $state.demo = $true; foreach ($k in 'living', 'office', 'bed') { $state.room = $k; Update-Widget }; ($ui.Headline.Text.Length -gt 0) }
+    Smoke 'simple view' { $state.simple = $true; Apply-View; Apply-Lang; $win.UpdateLayout(); $true }
+    Smoke 'details view' { $state.simple = $false; Apply-View; Apply-Lang; Update-Widget; $win.UpdateLayout(); $true }
+    Smoke 'English' { $state.lang = 'en'; Apply-Lang; Update-Widget; $state.lang = 'de'; Apply-Lang; $true }
+    Smoke 'themes day/night/auto' { foreach ($t in 'day', 'night', 'auto') { $state.theme = $t; Apply-Theme }; ($null -ne $script:themeBg) }
+    Smoke 'sizes S M L XL compact pill' { foreach ($z in 'S', 'M', 'L', 'XL', 'C', 'P', 'M') { $state.size = $z; Apply-View; $win.UpdateLayout() }; $true }
+    Smoke 'bigger/smaller' { Step-Size 1; Step-Size -1; $true }
+    Smoke 'daily score' {
+        $now = [int][DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+        $state.hist['smoke'] = @(for ($i = 0; $i -lt 30; $i++) { '{0}:{1}:5:21.0:45' -f ($now - $i * 60), (700 + $i * 20) })
+        $v = Get-DayScore 'smoke'; ($null -eq $v -or ($v -ge 0 -and $v -le 100))
+    }
+    Smoke 'help' { $script:helpOpen = $true; Apply-View; Build-Help; $script:helpOpen = $false; Apply-View; $true }
+    Smoke 'update button states' { $script:newVer = '99.0.0'; Set-UpdateButton; $script:newVer = $null; Set-UpdateButton; $true }
+    Smoke 'quiet time' { Apply-Lang; (Test-Snooze) }
+    Smoke 'what is new card' { $state.simple = $true; $state.tourDone = $true; $state.seenVer = ''; $script:newsText = $null; Apply-View; $true }
+    Smoke 'CSV export' { $state.hist7['smoke'] = $state.hist['smoke']; Export-History; ($script:lastExport -and (Test-Path $script:lastExport)) }
+    Smoke 'no errors logged' {
+        $new = @(); if (Test-Path $logFile) { $new = @(Get-Content -Path $logFile -Encoding UTF8 | Select-Object -Skip $l0 | Where-Object { $_ -notmatch 'Start v' }) }
+        foreach ($x in $new) { Write-Host ('      log: ' + $x) }
+        ($new.Count -eq 0)
+    }
+    try { if ($script:lastExport) { Remove-Item $script:lastExport -Force } } catch {}
+    try { $win.Close() } catch {}
+    try { Close-Tray } catch {}
+    try { $mutex.ReleaseMutex() } catch {}
+    if ($script:smokeFail.Count -gt 0) { Write-Host ($script:smokeFail.Count.ToString() + ' smoke step(s) failed'); [Environment]::Exit(1) }
+    Write-Host 'Smoke test passed'; [Environment]::Exit(0)
+}
 $timer.Start(); $pulseTimer.Start(); $saveTimer.Start(); $firstCheck.Start(); $checkTimer.Start()
 [void]$win.ShowDialog()
 Exit-App

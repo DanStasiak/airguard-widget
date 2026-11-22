@@ -1,4 +1,4 @@
-# Quality checks for Luftwaechter. Run locally:  powershell -File tools\check.ps1
+﻿# Quality checks for Luftwaechter. Run locally:  powershell -File tools\check.ps1
 # Also runs in GitHub Actions before every release. Needs Windows PowerShell 5.1 or newer.
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
@@ -38,6 +38,21 @@ $bad = @(Get-ChildItem -Path $root -Recurse -File -Force | Where-Object { $_.Ful
 if ($bad.Count -gt 0) { Bad ('private file in repository: ' + ($bad.Name -join ', ')) } else { Ok 'no private files' }
 $hits = @(Get-ChildItem -Path $root -Recurse -File -Force -Include *.ps1, *.md, *.json, *.bat, *.vbs, *.yml | Where-Object { $_.FullName -notmatch '\\\.git\\' -and (Select-String -Path $_.FullName -Pattern 'eyJ[A-Za-z0-9_-]{30,}' -Quiet) })
 if ($hits.Count -gt 0) { Bad ('token-like text in: ' + ($hits.Name -join ', ')) } else { Ok 'no token-like text' }
+
+# 6. Smoke test: start the widget with demo data, walk through every view, fail on any error (Windows only)
+if ($env:OS -eq 'Windows_NT' -and -not $env:LUFT_SKIP_SMOKE) {
+    $tmp = Join-Path $env:TEMP ('luft-check-' + [guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Force -Path $tmp | Out-Null
+    Copy-Item -Path (Join-Path $root 'src\*') -Destination $tmp -Recurse
+    Copy-Item -Path (Join-Path $root 'CHANGELOG.md') -Destination $tmp
+    $out = Join-Path $tmp 'smoke.txt'
+    $p = Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile', '-STA', '-ExecutionPolicy', 'Bypass', '-File', ('"' + (Join-Path $tmp 'Luftwaechter.ps1') + '"'), '-SmokeTest') -RedirectStandardOutput $out -PassThru -WindowStyle Hidden
+    if (-not $p.WaitForExit(180000)) { try { $p.Kill() } catch {}; Bad 'smoke test hung (over 3 minutes)' }
+    else {
+        if (Test-Path $out) { Get-Content $out | ForEach-Object { Write-Host ('      ' + $_) } }
+        if ($p.ExitCode -eq 0) { Ok 'smoke test: widget runs with demo data in every view' } else { Bad ('smoke test failed, exit code ' + $p.ExitCode) }
+    }
+}
 
 if ($fail.Count -gt 0) { Write-Host ('')
     Write-Host ($fail.Count.ToString() + ' check(s) failed') -ForegroundColor Red; exit 1 }
