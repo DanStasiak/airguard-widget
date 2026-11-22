@@ -2,6 +2,9 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [5.7.1] - 2026-11-22
+- Fixed: the milky, see-through look at night (22:00 to 07:00). Night mode made the whole window transparent, so a busy desktop wallpaper shone through. Now the window stays solid and only the content is dimmed.
+
 ## [5.7.0] - 2026-11-22
 - Improved: the "not set up yet" screen now points to the demo, so first-time users see there is a way to look around before connecting Home Assistant.
 - Docs: the demo is highlighted at the top of the GitHub page.

@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall)
 
 $appName = 'Luftwaechter'
-$appVersion = '5.7.0'
+$appVersion = '5.7.1'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -2282,7 +2282,14 @@ $pulseTimer = New-Object System.Windows.Threading.DispatcherTimer
 $pulseTimer.Interval = [TimeSpan]::FromMilliseconds(1000)
 $pulseTimer.Add_Tick({
     $h = (Get-Date).Hour
-    if ($h -ge 22 -or $h -lt 7) { $win.Opacity = 0.62 } else { $win.Opacity = 1.0 }
+    # Nachtmodus: Inhalt dimmen, Fensterhintergrund bleibt deckend (kein Durchscheinen des Desktop-Hintergrunds)
+    $win.Opacity = 1.0
+    $nt = ($h -ge 22 -or $h -lt 7)
+    if ($nt -ne $script:nightOn) {
+        $script:nightOn = $nt
+        $lv = $(if ($nt) { 0.62 } else { 1.0 })
+        foreach ($b in @($ui.Card, $ui.Drawer, $ui.Pill)) { if ($b -and $b.Child) { $b.Child.Opacity = $lv } }
+    }
     if ($script:newVer -and $ui.BtnUpd) { $script:updOn = -not $script:updOn; if ($script:updOn) { $ui.BtnUpd.Background = Brush '#FF2E9E5B' } else { $ui.BtnUpd.Background = Brush '#FF237A47' } }
     if ($script:pulse) { $script:pulseOn = -not $script:pulseOn; if ($script:pulseOn) { $ui.Glow.Opacity = 0.95 } else { $ui.Glow.Opacity = 0.25 } }
     else { $ui.Glow.Opacity = 0.5 }
