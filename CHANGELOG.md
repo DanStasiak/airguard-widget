@@ -2,6 +2,9 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [4.7.1] - 2026-11-22
+- Docs: README with screenshot, badges, a section on choosing sensors and a troubleshooting table. Issue and pull request templates on GitHub. No change to the program itself.
+
 ## [4.7.0] - 2026-11-22
 - New: version history. The Update button now always opens a window with what is new (if an update is waiting) and the full history: every release of the current major version with its changes, and one summary paragraph for each earlier major version.
 

@@ -1,5 +1,9 @@
 # Luftwächter (airguard-widget)
 
+[![Latest release](https://img.shields.io/github/v/release/DanStasiak/airguard-widget)](https://github.com/DanStasiak/airguard-widget/releases/latest) [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE) ![Windows 10/11](https://img.shields.io/badge/Windows-10%2F11-blue) ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-direct-41BDF5)
+
+![Luftwächter widget (illustration with sample data)](docs/screenshot.png)
+
 A small always-on-top **Windows desktop widget** that shows how good the air is in your rooms and tells you in plain words whether to ventilate. Free and open source (MIT).
 
 - Traffic-light ring (CO₂), the four readings (CO₂, fine dust, temperature, humidity), a 3 h / 24 h curve with trend, forecast and daily summary
@@ -8,6 +12,8 @@ A small always-on-top **Windows desktop widget** that shows how good the air is 
 - Slide-out device panel: lights, plugs (watts), heating, blinds
 - Starts with Windows and restores its look and place exactly; sizes S / M / L / compact / pill
 - German and English UI (toggle in the widget), built-in help (`?`)
+- Pick the sensor per reading, or let the widget average all suitable sensors in a room; it warns when a sensor stops reporting
+- Hourly weather outlook, rain-aware advice, tray icon with notifications
 - **Update button:** checks this repository for a newer release, shows what changed, updates itself after you confirm
 
 Made by **Dan Stasiak** · MIT License · [github.com/DanStasiak/airguard-widget](https://github.com/DanStasiak/airguard-widget)
@@ -42,6 +48,20 @@ Made by **Dan Stasiak** · MIT License · [github.com/DanStasiak/airguard-widget
 | `footer` | source note at the bottom (optional) |
 | `roomShort`, `roomShortEn` | short names for the room overview, e.g. `{"living": "Living"}` |
 
+## Choosing sensors
+
+If a room has several sensors of one kind, the widget shows their **average** and ignores dew-point, device (chip) temperature, absolute humidity and sensors that stopped reporting. To use exactly one sensor per reading: right-click → **Choose sensors for this room…**. Give the label `airguard` to the sensors you prefer to make them win automatically. If a sensor goes silent for 20 minutes or more, the footer turns amber and names it.
+
+## Troubleshooting
+
+| Problem | What to do |
+| --- | --- |
+| "Not connected" / no rooms | Right-click → **Connect to Home Assistant…**, press **Find**, paste a new long-lived token. Rooms need an *area* with a CO₂ or fine-dust sensor. |
+| A value looks wrong | Right-click → **Choose sensors for this room…** and pick the sensor you trust. |
+| A device is missing | Give it the label `airguard` in Home Assistant, or right-click a device row → Hide / "show all". |
+| Window closed, cannot restart | Use the Start menu entry **Luftwächter**; it also ends stuck old copies. |
+| Anything else | Right-click → **Open log**, then open an [issue](https://github.com/DanStasiak/airguard-widget/issues/new/choose) (remove personal data from the log). |
+
 ## Updating
 
 Press **⟳ Update** at the bottom right (or right-click → *Check for updates*). The widget compares its version with the latest GitHub release, shows the changes and asks whether to proceed. It then downloads the release, verifies the SHA-256 checksum and the script syntax, keeps a backup of the old version and restarts itself. Your `config.json` and state are untouched. A silent check runs every few hours; the button turns green when a new version exists.
@@ -61,6 +81,8 @@ MIT License, Copyright (c) 2026 Dan Stasiak. You may use, change and share it fr
 **Luftwächter** ist ein kleines Windows-Widget, das zeigt, wie gut die Luft in deinen Räumen ist, und in einfachen Worten sagt, ob du lüften sollst. Kostenlos und quelloffen (MIT).
 
 **Installieren:** ZIP von der [aktuellen Version](https://github.com/DanStasiak/airguard-widget/releases/latest) laden, entpacken, `Installieren.bat` doppelklicken. Der Installer sucht Home Assistant im Netzwerk, fragt nach einem langlebigen Zugangstoken (Home Assistant → Profil → Sicherheit) und speichert ihn verschlüsselt. Räume (Bereiche mit CO₂- oder Feinstaub-Sensor), Messwerte, Fenster und Geräte werden automatisch gefunden (siehe [`docs/HOME-ASSISTANT.md`](docs/HOME-ASSISTANT.md)). Optional gibt es einen Servermodus ([`docs/API.md`](docs/API.md)).
+
+**Sensoren wählen:** Hat ein Raum mehrere Sensoren derselben Art, zeigt das Widget den Mittelwert (Taupunkt, Geräte-Temperatur und veraltete Sensoren werden ignoriert). Rechtsklick → „Sensoren für diesen Raum wählen…“ legt je Messwert genau einen Sensor fest. Meldet ein Sensor 20 Minuten nichts, warnt die Fußzeile in Gelb.
 
 **Aktualisieren:** Knopf **⟳ Update** unten rechts. Das Widget vergleicht seine Version mit GitHub, zeigt die Änderungen, fragt nach deiner Bestätigung, prüft den Download und tauscht sich selbst aus. Einstellungen bleiben erhalten.
 
