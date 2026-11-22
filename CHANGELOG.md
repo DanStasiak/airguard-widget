@@ -2,6 +2,11 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [4.4.0] - 2026-11-22
+- Fix: a room's temperature could jump to nonsense (a dew-point sensor of the room showed 9.4 °C and turned the whole ring red). Dew point, device (chip) temperature, absolute humidity and sensors that stopped reporting are now ignored.
+- New: with several sensors of one kind in a room, the widget shows their average (a sensor labelled "airguard" still takes priority).
+- New: right-click, "Choose sensors for this room": pick exactly which sensor delivers CO2, fine dust, temperature and humidity, or leave it on Automatic. Saved per room.
+
 ## [4.3.0] - 2026-11-22
 - Fix: when a room has several sensors of the same kind (e.g. an old and a new CO2 sensor), the widget now uses the one with the label "airguard", otherwise the one that reported most recently. Before, it could show a stale sensor (1051 ppm instead of 1258 ppm).
 - New: the room drop-down in the header is gone (rooms are switched with the chips). The header now shows the app name "Luftwächter", the current room and "free & open source - by Dan Stasiak"; click it to open the project page.

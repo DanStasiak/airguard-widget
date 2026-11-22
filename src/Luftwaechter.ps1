@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall)
 
 $appName = 'Luftwaechter'
-$appVersion = '4.3.0'
+$appVersion = '4.4.0'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -249,7 +249,7 @@ function Write-Log([string]$m) {
         Add-Content -Path $logFile -Value ((Get-Date).ToString('yyyy-MM-dd HH:mm:ss') + '  ' + $m) -Encoding UTF8
     } catch {}
 }
-$state = @{ left = $null; top = $null; topmost = $false; topmostSet = $false; popup = $true; tray = $true; room = [string]$cfg.defaultRoom; size = 'M'; weatherOpen = $false; drawerOpen = $false; sound = $true; sparkHours = 3; metric = 0; hidden = @(); lang = 'de'; hist = @{} }
+$state = @{ left = $null; top = $null; topmost = $false; topmostSet = $false; popup = $true; tray = $true; room = [string]$cfg.defaultRoom; size = 'M'; weatherOpen = $false; drawerOpen = $false; sound = $true; sparkHours = 3; metric = 0; hidden = @(); lang = 'de'; hist = @{}; sensors = @{} }
 try { if ((Get-Culture).TwoLetterISOLanguageName -ne 'de') { $state.lang = 'en' } } catch {}
 if (Test-Path $stateFile) {
     try {
@@ -268,6 +268,7 @@ if (Test-Path $stateFile) {
         if ($s.hidden) { $state.hidden = @($s.hidden | ForEach-Object { [string]$_ }) }
         if ($null -ne $s.metric -and [int]$s.metric -ge 0 -and [int]$s.metric -le 3) { $state.metric = [int]$s.metric }
         if ($s.lang -eq 'en' -or $s.lang -eq 'de') { $state.lang = [string]$s.lang }
+        if ($s.sensors) { foreach ($p in $s.sensors.PSObject.Properties) { $h0 = @{}; foreach ($q in $p.Value.PSObject.Properties) { if ($q.Value) { $h0[$q.Name] = [string]$q.Value } }; $state.sensors[$p.Name] = $h0 } }
         if ($s.hist) { foreach ($p in $s.hist.PSObject.Properties) { $state.hist[$p.Name] = @($p.Value) } }
     } catch {}
 }
@@ -375,6 +376,15 @@ $script:Strings = @{
     setup_d = @('Rechtsklick, dann "Mit Home Assistant verbinden…". Siehe Hilfe.', 'Right-click, then "Connect to Home Assistant…". See Help.')
     ha_norooms = @('Keine Räume gefunden', 'No rooms found')
     ha_norooms_d = @('In Home Assistant braucht ein Bereich (Area) einen CO₂- oder Feinstaub-Sensor (Geräteklasse carbon_dioxide oder pm25). Siehe Hilfe.', 'In Home Assistant an area needs a CO₂ or fine-dust sensor (device class carbon_dioxide or pm25). See Help.')
+    m_sens = @('Sensoren für diesen Raum wählen…', 'Choose sensors for this room…')
+    sens_title = @('Sensoren · {0}', 'Sensors · {0}')
+    sens_intro = @('Woher kommen die vier Messwerte? „Automatisch“ bildet den Mittelwert aller passenden Sensoren im Raum (Taupunkt, Geräte-Temperatur und veraltete Sensoren werden ausgelassen).', 'Where do the four readings come from? "Automatic" averages all suitable sensors in the room (dew point, device temperature and stale sensors are skipped).')
+    sens_co2 = @('CO₂', 'CO₂')
+    sens_pm = @('Feinstaub', 'Fine dust')
+    sens_t = @('Temperatur', 'Temperature')
+    sens_h = @('Luftfeuchte', 'Humidity')
+    sens_none = @('keine Sensoren', 'no sensors')
+    sens_save = @('Speichern', 'Save')
     m_ha = @('Mit Home Assistant verbinden…', 'Connect to Home Assistant…')
     ha_title = @('Mit Home Assistant verbinden', 'Connect to Home Assistant')
     ha_intro = @('Trage die Adresse deines Home Assistant und einen langlebigen Zugangstoken ein. Den Token erstellst du in Home Assistant unter Profil → Sicherheit → Langlebige Zugangstoken. Er wird verschlüsselt auf diesem PC gespeichert (nur für dein Windows-Konto).', 'Enter the address of your Home Assistant and a long-lived access token. Create the token in Home Assistant under Profile → Security → Long-lived access tokens. It is stored encrypted on this PC (only for your Windows account).')
@@ -703,7 +713,7 @@ $script:helpOpen = $false
 
 function Save-State {
     try {
-        $o = @{ left = $win.Left; top = $win.Top; topmost = $state.topmost; topmostSet = $state.topmostSet; popup = $state.popup; tray = $state.tray; room = $state.room; size = $state.size; weatherOpen = $state.weatherOpen; drawerOpen = $state.drawerOpen; sound = $state.sound; sparkHours = $state.sparkHours; metric = $state.metric; hidden = @($state.hidden); lang = $state.lang; hist = $state.hist }
+        $o = @{ left = $win.Left; top = $win.Top; topmost = $state.topmost; topmostSet = $state.topmostSet; popup = $state.popup; tray = $state.tray; room = $state.room; size = $state.size; weatherOpen = $state.weatherOpen; drawerOpen = $state.drawerOpen; sound = $state.sound; sparkHours = $state.sparkHours; metric = $state.metric; hidden = @($state.hidden); lang = $state.lang; hist = $state.hist; sensors = $state.sensors }
         ($o | ConvertTo-Json -Depth 4) | Set-Content -Path $stateFile -Encoding UTF8
     } catch { Write-Log ('Speichern: ' + $_.Exception.Message) }
 }
@@ -1285,30 +1295,45 @@ function Fmt($v, [int]$dg) {
 }
 function LvAbove($v, $g, $f) { if ($null -eq $v) { return $null }; if ($v -lt $g) { return 0 }; if ($v -lt $f) { return 1 }; return 2 }
 function LvRange($v, $g1, $g2, $f1, $f2) { if ($null -eq $v) { return $null }; if (($v -ge $g1) -and ($v -le $g2)) { return 0 }; if (($v -ge $f1) -and ($v -le $f2)) { return 1 }; return 2 }
-function Pick-Ent($ents, [string]$dom, [string]$dc, $lab) {
-    $c = @($ents | Where-Object { $_.d -eq $dom -and $_.c -eq $dc })
-    if ($c.Count -eq 0) { return $null }
-    $ok = @($c | Where-Object { $null -ne (Num $_.s) })
-    if ($ok.Count -eq 0) { return $c[0] }
-    # mehrere Sensoren gleicher Art im Raum: mit Label "airguard" zuerst, sonst der, der zuletzt etwas gemeldet hat
-    $lb = @($ok | Where-Object { @($lab) -contains [string]$_.i })
-    if ($lb.Count -gt 0) { $ok = $lb }
-    return @($ok | Sort-Object { [double]$_.lr } -Descending)[0]
+function Test-Cand($e, [string]$dc) {
+    $v = Num $e.s
+    if ($null -eq $v) { return $false }
+    $t = (([string]$e.i) + ' ' + ([string]$e.n)).ToLower()
+    if ($dc -eq 'temperature') { if ($t -match 'taupunkt|dew|device_temp|ger[aä]tetemp|chip|cpu|prozessor|battery|batterie') { return $false }; return ($v -gt -30 -and $v -lt 60) }
+    if ($dc -eq 'humidity') { if ($t -match 'absolut') { return $false }; return ($v -ge 0 -and $v -le 100) }
+    if ($dc -eq 'carbon_dioxide') { return ($v -ge 250 -and $v -le 10000) }
+    return ($v -ge 0 -and $v -le 2000)
 }
-function Eval-HaRoom($r, $lab) {
+function Get-Cands($ents, [string]$dc) {
+    return @($ents | Where-Object { $_.d -eq 'sensor' -and $_.c -eq $dc -and (Test-Cand $_ $dc) })
+}
+# liefert den Wert eines Raums: gewählter Sensor, sonst Mittelwert der Sensoren (Label "airguard" bevorzugt, veraltete ausgenommen)
+function Pick-Val($ents, [string]$dc, $lab, [string]$selId) {
+    $c = @(Get-Cands $ents $dc)
+    if ($c.Count -eq 0) { return $null }
+    if ($selId) { $one = @($c | Where-Object { [string]$_.i -eq $selId }); if ($one.Count -gt 0) { return [pscustomobject]@{ v = (Num $one[0].s); n = 1 } } }
+    $lb = @($c | Where-Object { @($lab) -contains [string]$_.i })
+    if ($lb.Count -gt 0) { $c = $lb }
+    $mx = ($c | ForEach-Object { [double]$_.lr } | Measure-Object -Maximum).Maximum
+    if ($mx -gt 0) { $fresh = @($c | Where-Object { [double]$_.lr -ge ($mx - 1800) }); if ($fresh.Count -gt 0) { $c = $fresh } }
+    $sum = 0.0; foreach ($e in $c) { $sum += (Num $e.s) }
+    return [pscustomobject]@{ v = ($sum / $c.Count); n = $c.Count }
+}
+function Eval-HaRoom($r, $lab, $sel) {
     $ents = @($r.e)
-    $eCo2 = Pick-Ent $ents 'sensor' 'carbon_dioxide' $lab
-    $ePm = Pick-Ent $ents 'sensor' 'pm25' $lab
-    $eT = Pick-Ent $ents 'sensor' 'temperature' $lab
-    $eH = Pick-Ent $ents 'sensor' 'humidity' $lab
-    $co2 = $null; if ($eCo2) { $co2 = Num $eCo2.s }
-    $pm = $null; if ($ePm) { $pm = Num $ePm.s }
-    $tt = $null; if ($eT) { $tt = Num $eT.s }
-    $hh = $null; if ($eH) { $hh = Num $eH.s }
+    $vCo2 = Pick-Val $ents 'carbon_dioxide' $lab ([string]$sel.co2)
+    $vPm = Pick-Val $ents 'pm25' $lab ([string]$sel.pm)
+    $vT = Pick-Val $ents 'temperature' $lab ([string]$sel.t)
+    $vH = Pick-Val $ents 'humidity' $lab ([string]$sel.h)
+    $co2 = $null; if ($vCo2) { $co2 = $vCo2.v }
+    $pm = $null; if ($vPm) { $pm = $vPm.v }
+    $tt = $null; if ($vT) { $tt = $vT.v }
+    $hh = $null; if ($vH) { $hh = $vH.v }
+    $hasAir = (@($ents | Where-Object { $_.d -eq 'sensor' -and ($_.c -eq 'carbon_dioxide' -or $_.c -eq 'pm25') }).Count -gt 0)
     $lvl = @((LvAbove $co2 1000 1500), (LvAbove $pm 20 50), (LvRange $tt 17 23 13 25), (LvRange $hh 30 60 25 70))
     $known = @($lvl | Where-Object { $null -ne $_ })
     $worst = $null; if ($known.Count -gt 0) { $worst = ($known | Measure-Object -Maximum).Maximum }
-    return [pscustomobject]@{ co2 = $co2; pm = $pm; t = $tt; h = $hh; lv = $lvl; worst = $worst; air = [bool]($eCo2 -or $ePm) }
+    return [pscustomobject]@{ co2 = $co2; pm = $pm; t = $tt; h = $hh; lv = $lvl; worst = $worst; air = $hasAir }
 }
 $script:fcCache = $null
 $script:fcAt = [DateTime]::MinValue
@@ -1337,12 +1362,13 @@ function Get-HaRain([string]$wid) {
     return ''
 }
 function Build-HaData($data, [string]$wantRoom) {
+    $script:haData = $data
     $en = ($state.lang -eq 'en')
     $colors = @('#2e9e5b', '#e8a317', '#d9472b')
     $lnames = @('gut', 'mittel', 'schlecht')
     $list = @()
     foreach ($r in @($data.r)) {
-        $ev = Eval-HaRoom $r @($data.L)
+        $ev = Eval-HaRoom $r @($data.L) $state.sensors[[string]$r.a]
         if ($ev.air) { $list += [pscustomobject]@{ key = [string]$r.a; name = [string]$r.n; raw = $r; ev = $ev } }
     }
     if ($list.Count -eq 0) { return $null }
@@ -1518,6 +1544,64 @@ function Send-HaCommand($body) {
     [void](Invoke-Ha $script:haUrl $script:haTok 'POST' ('/api/services/' + $svc) ($payload | ConvertTo-Json -Compress))
 }
 
+function Show-SensorDialog {
+    if (-not $script:haData) { return }
+    $room = @($script:haData.r | Where-Object { [string]$_.a -eq [string]$state.room })[0]
+    if (-not $room) { return }
+    $x = @"
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Luftwächter" Width="520" SizeToContent="Height" WindowStartupLocation="CenterScreen" Topmost="True" ResizeMode="NoResize" Background="#FF1B222D" FontFamily="Segoe UI">
+  <StackPanel Margin="22">
+    <TextBlock x:Name="STitle" Foreground="White" FontSize="21" FontWeight="Bold" TextWrapping="Wrap"/>
+    <TextBlock x:Name="SIntro" Foreground="#FFB3BECD" FontSize="13" TextWrapping="Wrap" Margin="0,6,0,14"/>
+    <TextBlock x:Name="SL0" Foreground="White" FontSize="13" FontWeight="SemiBold"/><ComboBox x:Name="SC0" Margin="0,4,0,10" Padding="6,4" FontSize="13"/>
+    <TextBlock x:Name="SL1" Foreground="White" FontSize="13" FontWeight="SemiBold"/><ComboBox x:Name="SC1" Margin="0,4,0,10" Padding="6,4" FontSize="13"/>
+    <TextBlock x:Name="SL2" Foreground="White" FontSize="13" FontWeight="SemiBold"/><ComboBox x:Name="SC2" Margin="0,4,0,10" Padding="6,4" FontSize="13"/>
+    <TextBlock x:Name="SL3" Foreground="White" FontSize="13" FontWeight="SemiBold"/><ComboBox x:Name="SC3" Margin="0,4,0,14" Padding="6,4" FontSize="13"/>
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"><Button x:Name="SNo" Padding="16,6" Margin="0,0,8,0"/><Button x:Name="SYes" Padding="16,6" IsDefault="True"/></StackPanel>
+  </StackPanel>
+</Window>
+"@
+    $d = [Windows.Markup.XamlReader]::Load((New-Object System.Xml.XmlNodeReader ([xml]$x)))
+    $script:sdDlg = $d
+    $d.FindName('STitle').Text = (T 'sens_title' ([string]$room.n)); $d.FindName('SIntro').Text = (T 'sens_intro')
+    $d.FindName('SNo').Content = (T 'ha_cancel'); $d.FindName('SYes').Content = (T 'sens_save')
+    $defs = @(@('co2', 'carbon_dioxide', 'sens_co2', 0), @('pm', 'pm25', 'sens_pm', 0), @('t', 'temperature', 'sens_t', 1), @('h', 'humidity', 'sens_h', 0))
+    $cur = $state.sensors[[string]$state.room]
+    $nowE = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+    $script:sdBoxes = @()
+    for ($k = 0; $k -lt 4; $k++) {
+        $df = $defs[$k]
+        $d.FindName('SL' + $k).Text = (T $df[2])
+        $cb = $d.FindName('SC' + $k)
+        $cands = @(Get-Cands @($room.e) $df[1])
+        $a = New-Object System.Windows.Controls.ComboBoxItem
+        $a.Tag = ''
+        if ($cands.Count -eq 0) { $a.Content = (T 'sens_none') } elseif ($cands.Count -eq 1) { $a.Content = (Lx 'Automatisch' 'Automatic') } else { $a.Content = (Lx ('Automatisch (Mittelwert aus ' + $cands.Count + ')') ('Automatic (average of ' + $cands.Count + ')')) }
+        [void]$cb.Items.Add($a)
+        $cb.SelectedItem = $a
+        foreach ($c in $cands) {
+            $age = ''
+            if ([double]$c.lr -gt 0) { $m = [int][Math]::Max(0, ($nowE - [double]$c.lr) / 60); if ($m -ge 5) { $age = ' · ' + (Lx ('vor ' + $m + ' min') ($m.ToString() + ' min ago')) } }
+            $it = New-Object System.Windows.Controls.ComboBoxItem
+            $it.Content = ([string]$c.n + ' · ' + (Fmt (Num $c.s) $df[3]) + $age); $it.Tag = [string]$c.i
+            [void]$cb.Items.Add($it)
+            if ($cur -and [string]$cur[$df[0]] -eq [string]$c.i) { $cb.SelectedItem = $it }
+        }
+        $cb.Tag = $df[0]
+        $script:sdBoxes += $cb
+    }
+    $d.FindName('SNo').Add_Click({ $script:sdDlg.DialogResult = $false })
+    $d.FindName('SYes').Add_Click({
+        $h = @{}
+        foreach ($b in $script:sdBoxes) { $sel = $b.SelectedItem; if ($sel -and [string]$sel.Tag) { $h[[string]$b.Tag] = [string]$sel.Tag } }
+        if ($h.Count -gt 0) { $state.sensors[[string]$state.room] = $h } else { $state.sensors.Remove([string]$state.room) }
+        Save-State
+        $script:sdDlg.DialogResult = $true
+    })
+    $res = $d.ShowDialog()
+    if ($res) { $script:devSig = ''; Update-Widget }
+}
 function Show-HaDialog {
     $x = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -1655,6 +1739,7 @@ $miReset = New-Object System.Windows.Controls.MenuItem; $miReset.Header = 'Fenst
 $miSound = New-Object System.Windows.Controls.MenuItem; $miSound.Header = 'Hinweiston beim Lüften'; $miSound.IsCheckable = $true; $miSound.IsChecked = [bool]$state.sound
 $miTray = New-Object System.Windows.Controls.MenuItem; $miTray.IsCheckable = $true; $miTray.IsChecked = [bool]$state.tray
 $miHa = New-Object System.Windows.Controls.MenuItem
+$miSens = New-Object System.Windows.Controls.MenuItem
 $miHelp = New-Object System.Windows.Controls.MenuItem
 $miUpd = New-Object System.Windows.Controls.MenuItem
 $miCfg = New-Object System.Windows.Controls.MenuItem
@@ -1668,10 +1753,11 @@ $miReset.Add_Click({ $w0 = [System.Windows.SystemParameters]::WorkArea; $win.Lef
 $miSound.Add_Click({ $state.sound = $miSound.IsChecked; Save-State })
 $miExit.Add_Click({ Exit-App })
 $miHa.Add_Click({ Show-HaDialog })
+$miSens.Add_Click({ Show-SensorDialog })
 $miHelp.Add_Click({ $script:helpOpen = $true; Apply-View })
 $miCfg.Add_Click({ try { if (-not (Test-Path $cfgFile)) { Copy-Item (Join-Path $dir 'config.example.json') $cfgFile }; Start-Process notepad.exe -ArgumentList ('"' + $cfgFile + '"') } catch { Write-Log ('Konfig: ' + $_.Exception.Message) } })
 $miUpd.Add_Click({ Invoke-UpdateFlow $true })
-[void]$menu.Items.Add($miRefresh); [void]$menu.Items.Add($miTop); [void]$menu.Items.Add($miPop); [void]$menu.Items.Add($miTray); [void]$menu.Items.Add($miSound); [void]$menu.Items.Add($miReset); [void]$menu.Items.Add($miLog); [void]$menu.Items.Add($miHa); [void]$menu.Items.Add($miHelp); [void]$menu.Items.Add($miCfg); [void]$menu.Items.Add($miUpd); [void]$menu.Items.Add((New-Object System.Windows.Controls.Separator)); [void]$menu.Items.Add($miExit)
+[void]$menu.Items.Add($miRefresh); [void]$menu.Items.Add($miTop); [void]$menu.Items.Add($miPop); [void]$menu.Items.Add($miTray); [void]$menu.Items.Add($miSound); [void]$menu.Items.Add($miReset); [void]$menu.Items.Add($miLog); [void]$menu.Items.Add($miHa); [void]$menu.Items.Add($miSens); [void]$menu.Items.Add($miHelp); [void]$menu.Items.Add($miCfg); [void]$menu.Items.Add($miUpd); [void]$menu.Items.Add((New-Object System.Windows.Controls.Separator)); [void]$menu.Items.Add($miExit)
 $win.ContextMenu = $menu
 
 
@@ -1696,7 +1782,7 @@ function Apply-Lang {
     $ui.BtnHelp.ToolTip = (T 'help_tip'); $ui.BtnLang.ToolTip = (T 'lang_tip')
     foreach ($k in 'De', 'En') { $ui.('Lang' + $k).Foreground = Brush '#FFA9B4C4'; $ui.('Lang' + $k).FontWeight = 'Normal' }
     if ($state.lang -eq 'en') { $ui.LangEn.Foreground = Brush '#FFFFFFFF'; $ui.LangEn.FontWeight = 'Bold' } else { $ui.LangDe.Foreground = Brush '#FFFFFFFF'; $ui.LangDe.FontWeight = 'Bold' }
-    $miRefresh.Header = (T 'm_refresh'); $miTop.Header = (T 'm_top'); $miPop.Header = (T 'm_pop'); $miTray.Header = (T 'm_tray'); if ($script:trayMiOpen) { $script:trayMiOpen.Text = (T 'tray_open'); $script:trayMiExit.Text = (T 'm_exit') }; $miSound.Header = (T 'm_sound'); $miReset.Header = (T 'm_reset'); $miLog.Header = (T 'm_log'); $miHelp.Header = (T 'm_help'); $miHa.Header = (T 'm_ha'); $miCfg.Header = (T 'm_cfg'); $miUpd.Header = (T 'm_upd'); $miExit.Header = (T 'm_exit')
+    $miRefresh.Header = (T 'm_refresh'); $miTop.Header = (T 'm_top'); $miPop.Header = (T 'm_pop'); $miTray.Header = (T 'm_tray'); if ($script:trayMiOpen) { $script:trayMiOpen.Text = (T 'tray_open'); $script:trayMiExit.Text = (T 'm_exit') }; $miSound.Header = (T 'm_sound'); $miReset.Header = (T 'm_reset'); $miLog.Header = (T 'm_log'); $miHelp.Header = (T 'm_help'); $miHa.Header = (T 'm_ha'); $miSens.Header = (T 'm_sens'); $miCfg.Header = (T 'm_cfg'); $miUpd.Header = (T 'm_upd'); $miExit.Header = (T 'm_exit')
     $ui.RoomName.Text = 'Luftwächter'; $ui.TitleTag.Text = (T 'tagline'); $ui.TitleBox.ToolTip = (T 'copy_tip')
     $ui.Footer.Text = (Get-FooterText)
     $ui.Copy.Text = $copyright + ' · GitHub'; $ui.Copy.ToolTip = (T 'copy_tip'); $ui.Ver.ToolTip = (T 'ver_tip')
