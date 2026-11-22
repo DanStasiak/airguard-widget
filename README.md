@@ -2,7 +2,9 @@
 
 [![Latest release](https://img.shields.io/github/v/release/DanStasiak/airguard-widget)](https://github.com/DanStasiak/airguard-widget/releases/latest) [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE) ![Windows 10/11](https://img.shields.io/badge/Windows-10%2F11-blue) ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-direct-41BDF5)
 
-![Luftwächter: simple view, update notice and details view (illustration with sample data)](docs/screenshot.png)
+<p align="center"><img src="docs/screenshot-simple.png" width="32%" alt="Simple view with welcome card"> <img src="docs/screenshot-update.png" width="32%" alt="Update available on the button"> <img src="docs/screenshot-details.png" width="32%" alt="Details view"></p>
+
+<sub>Illustrations with sample data: simple view, automatic update notice, details view.</sub>
 
 A small always-on-top **Windows desktop widget** that shows how good the air is in your rooms and tells you in plain words whether to ventilate. Free and open source (MIT).
 
