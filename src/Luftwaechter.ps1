@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall)
 
 $appName = 'Luftwaechter'
-$appVersion = '5.9.1'
+$appVersion = '5.10.0'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -2299,6 +2299,7 @@ function Invoke-UpdateFlow([bool]$manual) {
     }
 }
 $ui.BtnUpd.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; Invoke-UpdateFlow $true })
+$ui.TitleBox.Add_MouseLeftButtonDown({ param($s, $e) if ($e.ClickCount -ge 2) { $e.Handled = $true; Toggle-Mode } })
 $ui.Copy.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; try { Start-Process $repoUrl } catch {} })
 $ui.Ver.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; try { Start-Process ($repoUrl + '/releases') } catch {} })
 

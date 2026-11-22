@@ -2,6 +2,10 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [5.10.0] - 2026-11-22
+- New: double-click the title to switch between the simple view and the details view (the Details button still works).
+- Docs: screenshots on the GitHub page now show the solid day and night design.
+
 ## [5.9.1] - 2026-11-22
 - Changed: the title area at the top no longer opens GitHub, so you can grab it and move the window without surprises. The GitHub link stays in the footer.
 

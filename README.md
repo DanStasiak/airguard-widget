@@ -24,6 +24,7 @@ A small always-on-top **Windows desktop widget** that shows how good the air is 
 - **Demo mode:** right-click → *Try the demo* shows simulated rooms, so you can try the widget without Home Assistant
 - **Day and night design:** solid, crisp colours; the background gets deeper at night, switchable by right-click → *Theme* (automatic, day, night)
 - **Quiet time:** right-click → *Quiet for 1 hour* mutes pop-up, tray notice and chime for a call or a nap
+- Double-click the title to switch between the simple and the details view
 - **Daily air score** in the simple view: "Today: good air 92 % of the time", counted from today's readings
 
 Made by **Dan Stasiak** · MIT License · [github.com/DanStasiak/airguard-widget](https://github.com/DanStasiak/airguard-widget)
