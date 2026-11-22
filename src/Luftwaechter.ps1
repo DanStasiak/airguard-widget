@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall)
 
 $appName = 'Luftwaechter'
-$appVersion = '3.14.2'
+$appVersion = '3.15.0'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -86,7 +86,7 @@ function Write-Log([string]$m) {
         Add-Content -Path $logFile -Value ((Get-Date).ToString('yyyy-MM-dd HH:mm:ss') + '  ' + $m) -Encoding UTF8
     } catch {}
 }
-$state = @{ left = $null; top = $null; topmost = $false; topmostSet = $false; popup = $true; tray = $true; room = [string]$cfg.defaultRoom; size = 'M'; weatherOpen = $false; drawerOpen = $false; sound = $true; sparkHours = 3; lang = 'de'; hist = @{} }
+$state = @{ left = $null; top = $null; topmost = $false; topmostSet = $false; popup = $true; tray = $true; room = [string]$cfg.defaultRoom; size = 'M'; weatherOpen = $false; drawerOpen = $false; sound = $true; sparkHours = 3; metric = 0; lang = 'de'; hist = @{} }
 try { if ((Get-Culture).TwoLetterISOLanguageName -ne 'de') { $state.lang = 'en' } } catch {}
 if (Test-Path $stateFile) {
     try {
@@ -102,6 +102,7 @@ if (Test-Path $stateFile) {
         if ($null -ne $s.drawerOpen) { $state.drawerOpen = [bool]$s.drawerOpen }
         if ($null -ne $s.sound) { $state.sound = [bool]$s.sound }
         if ($s.sparkHours -eq 24) { $state.sparkHours = 24 }
+        if ($null -ne $s.metric -and [int]$s.metric -ge 0 -and [int]$s.metric -le 3) { $state.metric = [int]$s.metric }
         if ($s.lang -eq 'en' -or $s.lang -eq 'de') { $state.lang = [string]$s.lang }
         if ($s.hist) { foreach ($p in $s.hist.PSObject.Properties) { $state.hist[$p.Name] = @($p.Value) } }
     } catch {}
@@ -112,7 +113,7 @@ $chipXaml = ''
 for ($i = 1; $i -le 4; $i++) {
     $r = [Math]::Floor(($i - 1) / 2); $c = ($i - 1) % 2
     $chipXaml += @"
-<Border Grid.Row="$r" Grid.Column="$c" CornerRadius="12" Background="#26FFFFFF" Margin="3" Padding="9,5">
+<Border x:Name="C$i" Cursor="Hand" Grid.Row="$r" Grid.Column="$c" CornerRadius="12" Background="#26FFFFFF" Margin="3" Padding="9,5">
   <DockPanel>
     <Ellipse x:Name="D$i" Width="9" Height="9" Fill="#FF7A8594" DockPanel.Dock="Left" Margin="0,0,8,0"/>
     <StackPanel><TextBlock x:Name="V$i" Foreground="White" FontSize="19" FontWeight="Bold"/><TextBlock x:Name="K$i" Foreground="#FFB3BECD" FontSize="11"/></StackPanel>
@@ -138,6 +139,13 @@ $script:Strings = @{
     outside = @('DRAUSSEN', 'OUTSIDE')
     now = @('jetzt', 'now')
     spark = @('{0} Std · Linie = 1000 ppm', '{0} h · line = 1000 ppm')
+    spark_dust = @('Feinstaub · {0} Std · Linie = 15 µg', 'Fine dust · {0} h · line = 15 µg')
+    spark_temp = @('Temperatur · {0} Std', 'Temperature · {0} h')
+    spark_hum = @('Luftfeuchte · {0} Std · Linien = 40 / 60 %', 'Humidity · {0} h · lines = 40 / 60 %')
+    spark_co2 = @('CO₂ · {0} Std · Linie = 1000 ppm', 'CO₂ · {0} h · line = 1000 ppm')
+    spark_wait = @('Der Verlauf wird ab jetzt gesammelt …', 'History is being collected from now on …')
+    mm = @('Heute: Min {0} · Max {1} {2}', 'Today: min {0} · max {1} {2}')
+    chip_tip = @('Tippen: Verlauf dieses Werts anzeigen', 'Tap: show the history of this value')
     spark_tip = @('Tippen: 3 Std / 24 Std', 'Tap: 3 h / 24 h')
     pill_tip = @('Doppelklick: wieder groß', 'Double-click: expand')
     help_tip = @('Hilfe', 'Help')
@@ -229,7 +237,7 @@ $script:Strings = @{
     h3 = @('Der Rat: lüften oder nicht', 'The advice: ventilate or not')
     b3 = @('Das große Feld sagt, was zu tun ist: Fenster öffnen, offen lassen, schließen oder noch warten (z. B. bei Unwetter). Ist das Fenster offen, zeigt ein Balken, wie lange noch gelüftet werden soll. In Räumen ohne Fensterkontakt tippst du auf das Feld: Dann startet ein Lüftungs-Timer, und am Ende kommt ein Ton. Nach dem Lüften steht kurz da, wie sich der CO₂-Wert verbessert hat. Nachts (22–7 Uhr) ist das Fenster abgedunkelt, und es gibt keinen Hinweiston.', 'The large panel tells you what to do: open the window, keep it open, close it, or wait a bit (for example during a storm). When the window is open, a bar shows how much longer to ventilate. In rooms without a window contact, tap the panel: a ventilation timer starts and a sound plays at the end. After ventilating, the panel briefly shows how the CO₂ value improved. At night (22:00–07:00) the window is dimmed and there is no alert sound.')
     h4 = @('Kurve, Trend und Tagesbilanz', 'Curve, trend and daily summary')
-    b4 = @('Die Kurve zeigt den CO₂-Verlauf der letzten 3 Stunden; die Linie markiert 1000 ppm. Ein Tipp auf die Kurve wechselt zu 24 Stunden. Links daneben steht der Trend (steigt, sinkt, stabil) und, wenn möglich, eine Prognose, z. B. wann die Luft wieder gut ist. Die Tagesbilanz nennt Höchstwert, Durchschnitt und den Anteil der Zeit unter 1000 ppm. Die Werte werden auf deinem PC gesammelt und bleiben beim Neustart erhalten.', 'The curve shows the CO₂ history of the last 3 hours; the line marks 1000 ppm. Tap the curve to switch to 24 hours. The trend (rising, falling, steady) and, when possible, a forecast such as when the air will be good again, appear under the ring. The daily summary gives the peak, the average and the share of time below 1000 ppm. The data is collected on your PC and kept across restarts.')
+    b4 = @('Die Kurve zeigt den CO₂-Verlauf der letzten 3 Stunden; die Linie markiert 1000 ppm. Ein Tipp auf die Kurve wechselt zu 24 Stunden. Links daneben steht der Trend (steigt, sinkt, stabil) und, wenn möglich, eine Prognose, z. B. wann die Luft wieder gut ist. Die Tagesbilanz nennt Höchstwert, Durchschnitt und den Anteil der Zeit unter 1000 ppm. Die Werte werden auf deinem PC gesammelt und bleiben beim Neustart erhalten. Tippe auf einen der vier Werte (CO₂, Feinstaub, Temperatur, Luftfeuchte), dann zeigt die Kurve diesen Wert.', 'The curve shows the CO₂ history of the last 3 hours; the line marks 1000 ppm. Tap the curve to switch to 24 hours. The trend (rising, falling, steady) and, when possible, a forecast such as when the air will be good again, appear under the ring. The daily summary gives the peak, the average and the share of time below 1000 ppm. The data is collected on your PC and kept across restarts. Tap one of the four values (CO₂, fine dust, temperature, humidity) and the curve shows that value instead.')
     h5 = @('Die vier Messwerte', 'The four readings')
     b5 = @('CO₂ (ppm), Staub (Feinstaub PM2.5 in µg), Temperatur (°C) und Feuchte (%). Der Punkt vor jedem Wert zeigt seine Farbe.', 'CO₂ (ppm), dust (fine dust PM2.5 in µg), temperature (°C) and humidity (%). The dot in front of each value shows its color.')
     h6 = @('Räume wechseln', 'Switching rooms')
@@ -245,11 +253,12 @@ $script:Strings = @{
     h11 = @('Wenn etwas nicht klappt', 'If something does not work')
     b11 = @('Steht dort "Offline" oder "Keine Verbindung", erreicht dein PC den Server gerade nicht (Internet, VPN?). Es wird weiter versucht. Fehler werden im Protokoll gesammelt: Rechtsklick, dann "Protokoll öffnen". Die Version steht unten rechts. Die Sprache stellst du oben mit "DE | EN" um.', 'If it says "Offline" or "No connection", your PC cannot reach the server right now (internet, VPN?). It keeps trying. Errors are collected in the log: right-click, then "Open log". The version is shown at the bottom right. Change the language at the top with "DE | EN".')
 }
-function T([string]$k, $a = $null, $b = $null) {
+function T([string]$k, $a = $null, $b = $null, $c = $null) {
     $idx = 0; if ($state.lang -eq 'en') { $idx = 1 }
     $s = $k; if ($script:Strings.ContainsKey($k)) { $s = [string]$script:Strings[$k][$idx] }
     if ($null -ne $a) { $s = $s.Replace('{0}', [string]$a) }
     if ($null -ne $b) { $s = $s.Replace('{1}', [string]$b) }
+    if ($null -ne $c) { $s = $s.Replace('{2}', [string]$c) }
     return $s
 }
 
@@ -397,7 +406,7 @@ $win = [Windows.Markup.XamlReader]::Load((New-Object System.Xml.XmlNodeReader ([
 $conv = New-Object Windows.Media.BrushConverter
 function Brush([string]$hex) { return $conv.ConvertFromString($hex) }
 $names = @('Scaler', 'Card', 'Ver', 'RoomStrip', 'SparkBox', 'SparkLabel', 'Glow', 'TitleBox', 'RoomName', 'Time', 'SzS', 'SzM', 'SzL', 'SzC', 'SzP', 'BtnHelp', 'BtnLang', 'LangDe', 'LangEn', 'WMoreT', 'WLessT', 'WTitleT', 'Help', 'HelpClose', 'HelpTitle', 'HelpScroll', 'HelpBody', 'HelpVer', 'BtnUpd', 'BtnUpdT', 'Copy', 'Pill', 'PillDot', 'PillText', 'Arc', 'Face', 'Level', 'Trend', 'Panel', 'IcClosed', 'IcOpen', 'Headline', 'Detail', 'BarTrack', 'BarFill', 'Details', 'Spark', 'SparkR', 'Peak', 'WLine', 'WMore', 'WLineText', 'WFull', 'WLess', 'WIcon', 'WTemp', 'WCond', 'WTip', 'Footer', 'Tab', 'Drawer', 'DrawerClose', 'DrawerTitle', 'DevPanel')
-for ($i = 1; $i -le 4; $i++) { $names += @("D$i", "V$i", "K$i", "WK$i", "WV$i") }
+for ($i = 1; $i -le 4; $i++) { $names += @("C$i", "D$i", "V$i", "K$i", "WK$i", "WV$i") }
 $ui = @{}
 foreach ($n in $names) { $ui[$n] = $win.FindName($n) }
 
@@ -504,7 +513,7 @@ $script:helpOpen = $false
 
 function Save-State {
     try {
-        $o = @{ left = $win.Left; top = $win.Top; topmost = $state.topmost; topmostSet = $state.topmostSet; popup = $state.popup; tray = $state.tray; room = $state.room; size = $state.size; weatherOpen = $state.weatherOpen; drawerOpen = $state.drawerOpen; sound = $state.sound; sparkHours = $state.sparkHours; lang = $state.lang; hist = $state.hist }
+        $o = @{ left = $win.Left; top = $win.Top; topmost = $state.topmost; topmostSet = $state.topmostSet; popup = $state.popup; tray = $state.tray; room = $state.room; size = $state.size; weatherOpen = $state.weatherOpen; drawerOpen = $state.drawerOpen; sound = $state.sound; sparkHours = $state.sparkHours; metric = $state.metric; lang = $state.lang; hist = $state.hist }
         ($o | ConvertTo-Json -Depth 4) | Set-Content -Path $stateFile -Encoding UTF8
     } catch { Write-Log ('Speichern: ' + $_.Exception.Message) }
 }
@@ -567,7 +576,7 @@ function Set-Ring([double]$pct, $brush) {
 }
 
 # ---------- CO2-Verlauf (3 Stunden, pro Raum gespeichert) ----------
-function Add-Hist([string]$room, $co2) {
+function Add-Hist([string]$room, $co2, $extra) {
     if ($null -eq $co2) { return }
     $now = [int][DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
     $arr = @()
@@ -575,7 +584,7 @@ function Add-Hist([string]$room, $co2) {
     $lastTs = 0
     if ($arr.Count -gt 0) { $lastTs = [int]($arr[$arr.Count - 1].Split(':')[0]) }
     if (($now - $lastTs) -ge 60) {
-        $arr += ('{0}:{1}' -f $now, [int]$co2)
+        $arr += ('{0}:{1}:{2}:{3}:{4}' -f $now, [int]$co2, [string]$extra[0], [string]$extra[1], [string]$extra[2])
         $cut = $now - 24 * 3600
         $arr = @($arr | Where-Object { [int]($_.Split(':')[0]) -ge $cut })
         $state.hist[$room] = $arr
@@ -584,37 +593,73 @@ function Add-Hist([string]$room, $co2) {
 
 function Show-Spark([string]$room, [string]$col) {
     $ui.Spark.Children.Clear()
-    $ui.SparkLabel.Text = (T 'spark' $state.sparkHours)
+    $m = [int]$state.metric
+    for ($k = 0; $k -lt 4; $k++) { $ui.('C' + ($k + 1)).Background = Brush $(if ($k -eq $m) { '#55FFFFFF' } else { '#26FFFFFF' }) }
+    $lblKey = @('spark_co2', 'spark_dust', 'spark_temp', 'spark_hum')[$m]
+    $unit = @('ppm', 'µg', '°C', '%')[$m]
+    $ui.SparkLabel.Text = (T $lblKey $state.sparkHours)
+    $lineCol = @($col, '#C792EA', '#FF8A65', '#4FC3F7')[$m]
     $arr = @()
     if ($state.hist.ContainsKey($room)) { $arr = @($state.hist[$room]) }
     $w = 205.0; $h = 62.0
     $now = [double]([DateTimeOffset]::UtcNow.ToUnixTimeSeconds())
-    $pts = @(); $maxv = 1600.0; $minv = 400.0
-    foreach ($e in $arr) { $p = $e.Split(':'); $pts += , @([double]$p[0], [double]$p[1]); if ([double]$p[1] -gt $maxv) { $maxv = [double]$p[1] } }
+    $pts = @()
+    $field = $m + 1
+    foreach ($e in $arr) {
+        $p = $e.Split(':')
+        if ($p.Count -le $field -or [string]$p[$field] -eq '') { continue }
+        $v = 0.0
+        if ([double]::TryParse([string]$p[$field], [Globalization.NumberStyles]::Float, $inv, [ref]$v)) { $pts += , @([double]$p[0], $v) }
+    }
+    $dmin = 0.0; $dmax = 0.0
+    if ($pts.Count -gt 0) { $dmin = ($pts | ForEach-Object { $_[1] } | Measure-Object -Minimum).Minimum; $dmax = ($pts | ForEach-Object { $_[1] } | Measure-Object -Maximum).Maximum }
+    switch ($m) {
+        0 { $minv = 400.0; $maxv = [Math]::Max(1600.0, $dmax); $refs = @(1000.0) }
+        1 { $minv = 0.0; $maxv = [Math]::Max(25.0, $dmax * 1.1); $refs = @(15.0) }
+        2 { $minv = [Math]::Floor($dmin) - 1; $maxv = [Math]::Ceiling($dmax) + 1; $refs = @(); if ($pts.Count -eq 0) { $minv = 18.0; $maxv = 26.0 } }
+        3 { $minv = [Math]::Min(20.0, $dmin - 2); $maxv = [Math]::Max(80.0, $dmax + 2); $refs = @(40.0, 60.0) }
+    }
+    if ($maxv - $minv -lt 6) { $c0 = ($maxv + $minv) / 2; $minv = $c0 - 3; $maxv = $c0 + 3 }
     $yOf = { param($v) $h - 4 - (($v - $minv) / ($maxv - $minv)) * ($h - 8) }
-    $ln = New-Object Windows.Shapes.Line
-    $y1 = & $yOf 1000
-    $ln.X1 = 0; $ln.X2 = $w; $ln.Y1 = $y1; $ln.Y2 = $y1
-    $ln.Stroke = Brush '#55FFFFFF'; $ln.StrokeThickness = 1; $dc = New-Object Windows.Media.DoubleCollection; $dc.Add(3.0); $dc.Add(4.0); $ln.StrokeDashArray = $dc
-    [void]$ui.Spark.Children.Add($ln)
+    foreach ($rv in $refs) {
+        $ln = New-Object Windows.Shapes.Line
+        $y1 = & $yOf $rv
+        $ln.X1 = 0; $ln.X2 = $w; $ln.Y1 = $y1; $ln.Y2 = $y1
+        $ln.Stroke = Brush '#55FFFFFF'; $ln.StrokeThickness = 1; $dc = New-Object Windows.Media.DoubleCollection; $dc.Add(3.0); $dc.Add(4.0); $ln.StrokeDashArray = $dc
+        [void]$ui.Spark.Children.Add($ln)
+    }
     if ($pts.Count -ge 2) {
         $poly = New-Object Windows.Shapes.Polygon
         $pc = New-Object Windows.Media.PointCollection
-        $x0 = 0
         foreach ($p in $pts) {
             $x = $w - (($now - $p[0]) / ([double]$state.sparkHours * 3600.0)) * $w
             if ($x -lt 0) { continue }
             $pc.Add((New-Object Windows.Point($x, (& $yOf $p[1]))))
         }
-        $lastX = $pc[$pc.Count - 1].X; $firstX = $pc[0].X
-        $line = New-Object Windows.Shapes.Polyline
-        $line.Points = $pc; $line.Stroke = Brush $col; $line.StrokeThickness = 2.2; $line.StrokeLineJoin = 'Round'
-        $fillPc = New-Object Windows.Media.PointCollection
-        $fillPc.Add((New-Object Windows.Point($firstX, $h)))
-        foreach ($q in $pc) { $fillPc.Add($q) }
-        $fillPc.Add((New-Object Windows.Point($lastX, $h)))
-        $poly.Points = $fillPc; $poly.Fill = Brush ('#40' + $col.Substring($col.Length - 6))
-        [void]$ui.Spark.Children.Add($poly); [void]$ui.Spark.Children.Add($line)
+        if ($pc.Count -ge 2) {
+            $lastX = $pc[$pc.Count - 1].X; $firstX = $pc[0].X
+            $line = New-Object Windows.Shapes.Polyline
+            $line.Points = $pc; $line.Stroke = Brush $lineCol; $line.StrokeThickness = 2.2; $line.StrokeLineJoin = 'Round'
+            $fillPc = New-Object Windows.Media.PointCollection
+            $fillPc.Add((New-Object Windows.Point($firstX, $h)))
+            foreach ($q in $pc) { $fillPc.Add($q) }
+            $fillPc.Add((New-Object Windows.Point($lastX, $h)))
+            $poly.Points = $fillPc; $poly.Fill = Brush ('#40' + $lineCol.Substring($lineCol.Length - 6))
+            [void]$ui.Spark.Children.Add($poly); [void]$ui.Spark.Children.Add($line)
+        }
+    } elseif ($m -gt 0) {
+        $tb = New-Text (T 'spark_wait') 11 '#FFA9B4C4' $false
+        [Windows.Controls.Canvas]::SetLeft($tb, 4); [Windows.Controls.Canvas]::SetTop($tb, 20)
+        [void]$ui.Spark.Children.Add($tb)
+    }
+    if ($m -gt 0) {
+        $today = (Get-Date).Date; $tv = @()
+        foreach ($q in $pts) { if ([DateTimeOffset]::FromUnixTimeSeconds([long]$q[0]).LocalDateTime -ge $today) { $tv += $q[1] } }
+        if ($tv.Count -ge 2) {
+            $mn = ($tv | Measure-Object -Minimum).Minimum; $mx = ($tv | Measure-Object -Maximum).Maximum
+            $mnT = $mn.ToString('0.#', $inv); $mxT = $mx.ToString('0.#', $inv)
+            $ui.Peak.Text = (T 'mm' $mnT $mxT $unit)
+        } else { $ui.Peak.Text = '' }
     }
 }
 
@@ -869,7 +914,12 @@ function Show-Data($d) {
     $tmp = 0.0
     if ([double]::TryParse((([string]$d.values[0].value) -replace ',', '.'), [Globalization.NumberStyles]::Float, $inv, [ref]$tmp)) { $co2 = $tmp }
     if ($null -ne $co2) { Set-Ring ((2000.0 - $co2) / 1600.0) $b } else { Set-Ring 0.06 (Brush $grey) }
-    Add-Hist ([string]$d.room.key) $co2
+    $ex = @('', '', '')
+    $vals = @($d.values)
+    for ($j = 1; $j -le 3; $j++) {
+        if ($vals.Count -gt $j) { $t2 = 0.0; if ([double]::TryParse((([string]$vals[$j].value) -replace ',', '.'), [Globalization.NumberStyles]::Float, $inv, [ref]$t2)) { $ex[$j - 1] = $t2.ToString('0.##', $inv) } }
+    }
+    Add-Hist ([string]$d.room.key) $co2 $ex
     $trTxt = Get-Trend ([string]$d.room.key)
     $fc = Get-Forecast ([string]$d.room.key) $co2
     if ($fc) { $trTxt = ($trTxt + "`n" + $fc).Trim() }
@@ -1046,6 +1096,10 @@ $ui.Panel.Add_MouseLeftButtonDown({
     }
     if ($script:last) { Show-Data $script:last }
 })
+for ($k = 0; $k -lt 4; $k++) {
+    $cb = $ui.('C' + ($k + 1)); $cb.Tag = $k
+    $cb.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; $state.metric = [int]$s.Tag; if ($script:last) { Show-Data $script:last }; Save-State })
+}
 $ui.SparkBox.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; if ($state.sparkHours -eq 3) { $state.sparkHours = 24 } else { $state.sparkHours = 3 }; if ($script:last) { Show-Data $script:last }; Save-State })
 $ui.Tab.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; $state.drawerOpen = $true; Apply-View; Save-State })
 $ui.DrawerClose.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; $state.drawerOpen = $false; Apply-View; Save-State })
@@ -1117,7 +1171,7 @@ function Build-Help {
 function Apply-Lang {
     $ui.SzC.Text = (T 'sz_c'); $ui.SzP.Text = (T 'sz_p')
     $ui.WMoreT.Text = (T 'more'); $ui.WLessT.Text = (T 'less'); $ui.WTitleT.Text = (T 'outside') + $(if ($place) { ' · ' + $place.ToUpper() } else { '' })
-    $ui.SparkR.Text = (T 'now'); $ui.SparkBox.ToolTip = (T 'spark_tip'); $ui.Pill.ToolTip = (T 'pill_tip')
+    $ui.SparkR.Text = (T 'now'); $ui.SparkBox.ToolTip = (T 'spark_tip'); for ($k = 1; $k -le 4; $k++) { $ui.('C' + $k).ToolTip = (T 'chip_tip') }; $ui.Pill.ToolTip = (T 'pill_tip')
     $ui.BtnHelp.ToolTip = (T 'help_tip'); $ui.BtnLang.ToolTip = (T 'lang_tip')
     foreach ($k in 'De', 'En') { $ui.('Lang' + $k).Foreground = Brush '#FFA9B4C4'; $ui.('Lang' + $k).FontWeight = 'Normal' }
     if ($state.lang -eq 'en') { $ui.LangEn.Foreground = Brush '#FFFFFFFF'; $ui.LangEn.FontWeight = 'Bold' } else { $ui.LangDe.Foreground = Brush '#FFFFFFFF'; $ui.LangDe.FontWeight = 'Bold' }

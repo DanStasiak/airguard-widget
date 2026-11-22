@@ -2,6 +2,10 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [3.15.0] - 2026-11-22
+- New: the four value tiles (CO2, fine dust, temperature, humidity) are now buttons. Tap one and the history curve shows that value (own color and reference lines, plus today's min/max). Your choice is remembered.
+- The history now stores all four values per room (older entries keep working; the new curves fill up from now on).
+
 ## [3.14.2] - 2026-11-22
 - New: a Start menu entry "Luftwächter" is created by the installer (and re-created at program start if missing). Use it, or type Luftwächter in the Start menu, to start the program again at any time.
 - Start (Start menu, autostart) now always ends a stuck or hidden old copy first, so starting never silently fails.
