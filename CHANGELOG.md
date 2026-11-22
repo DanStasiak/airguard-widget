@@ -2,6 +2,9 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [5.3.0] - 2026-11-22
+- New: the simple view shows a friendly daily air score under the advice, for example "Today: good air 92 % of the time ⭐". It counts the share of today's readings with CO₂ under 1000 ppm (needs about 20 minutes of data) and resets at midnight.
+
 ## [5.2.0] - 2026-11-22
 - New: the widget now checks for updates by itself every 60 minutes (set `updateCheckMinutes` in config.json, 15 to 1440). When a new version exists, the Update button turns green, pulses gently and shows the version number, and a tray notice appears once. Hover the button to see when it was last checked.
 - Docs: new screenshots and descriptions on the GitHub page.

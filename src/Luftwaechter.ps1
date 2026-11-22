@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall)
 
 $appName = 'Luftwaechter'
-$appVersion = '5.2.0'
+$appVersion = '5.3.0'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -507,6 +507,9 @@ $script:Strings = @{
     b16 = @('Das Widget spricht direkt mit deinem Home Assistant. Jeder Bereich (Area) mit einem CO₂- oder Feinstaub-Sensor wird ein Raum. Messwerte, Fensterkontakte (Geräteklasse "window"), Lichter, Steckdosen, Heizungen und Rollos des Bereichs werden automatisch gefunden. Das Wetter kommt aus der ersten Wetter-Entität. Stört ein Gerät: Rechtsklick auf die Zeile, Ausblenden (unten bringt "ausgeblendet · alle anzeigen" sie zurück). Typische Einstellungs-Schalter (Kindersicherung, Internetzugang, Kalibrierung) blendet das Widget selbst aus. Nur bestimmte Geräte anzeigen: In Home Assistant das Label "airguard" an diese Entitäten hängen. Verbindung ändern: Rechtsklick, "Mit Home Assistant verbinden…".', 'The widget talks directly to your Home Assistant. Every area with a CO₂ or fine-dust sensor becomes a room. Readings, window contacts (device class "window"), lights, plugs, heaters and blinds of the area are found automatically. Weather comes from the first weather entity. If a device is in the way: right-click its row and choose Hide ("{0} hidden · show all" at the bottom brings them back). Typical setting switches (child lock, internet access, calibration) are hidden automatically. To show only certain devices: give those entities the label "airguard" in Home Assistant. Change the connection: right-click, "Connect to Home Assistant…".')
     m_cfg = @('Konfiguration öffnen', 'Open configuration')
     m_upd = @('Nach Updates suchen', 'Check for updates')
+    day_good = @('Heute: {0} % der Zeit gute Luft ⭐', 'Today: good air {0} % of the time ⭐')
+    day_ok = @('Heute: {0} % der Zeit gute Luft 👍', 'Today: good air {0} % of the time 👍')
+    day_low = @('Heute: nur {0} % gute Luft – lüfte öfter 🌬', 'Today: only {0} % good air – ventilate more often 🌬')
     upd_tip = @('Zuletzt geprüft: {0} · nächste Prüfung in ca. {1} Min.', 'Last checked: {0} · next check in about {1} min')
     upd_tip_new = @('Neue Version {0} wartet · Klicken zum Ansehen', 'New version {0} is waiting · click to view')
     upd_tip_never = @('Noch nicht geprüft · Klicken zum Prüfen', 'Not checked yet · click to check')
@@ -644,6 +647,7 @@ $xaml = @"
             <StackPanel VerticalAlignment="Center">
               <TextBlock x:Name="Headline" Foreground="White" FontSize="22" FontWeight="Bold" TextWrapping="Wrap"/>
               <TextBlock x:Name="Detail" Foreground="#FFDFE5EE" FontSize="13" TextWrapping="Wrap" Margin="0,3,0,0"/>
+              <TextBlock x:Name="DayScore" Foreground="#FFFFFFFF" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,6,0,0" Visibility="Collapsed"/>
               <Border x:Name="BarTrack" Height="7" CornerRadius="4" Background="#33FFFFFF" Margin="0,8,0,0" Visibility="Collapsed"><Border x:Name="BarFill" HorizontalAlignment="Left" CornerRadius="4" Background="#FF2E9E5B" Width="0"/></Border>
             </StackPanel>
           </DockPanel>
@@ -724,7 +728,7 @@ $xaml = @"
 $win = [Windows.Markup.XamlReader]::Load((New-Object System.Xml.XmlNodeReader ([xml]$xaml)))
 $conv = New-Object Windows.Media.BrushConverter
 function Brush([string]$hex) { return $conv.ConvertFromString($hex) }
-$names = @('Tour', 'TourH', 'TourT', 'TourOk', 'TourOkT', 'GrpTiles', 'GrpFoot', 'GrpUpd', 'SzBox', 'BtnMode', 'BtnModeT', 'TabArr', 'TabLbl', 'Scaler', 'Card', 'Ver', 'RoomStrip', 'SparkBox', 'SparkLabel', 'Glow', 'WOut', 'WOutB', 'TitleBox', 'RoomName', 'RoomSub', 'TitleTag', 'Time', 'SzS', 'SzM', 'SzL', 'SzC', 'SzP', 'BtnHelp', 'BtnLang', 'LangDe', 'LangEn', 'WMoreT', 'WLessT', 'WTitleT', 'Help', 'HelpClose', 'HelpTitle', 'HelpScroll', 'HelpBody', 'HelpVer', 'BtnUpd', 'BtnUpdT', 'Copy', 'Pill', 'PillDot', 'PillText', 'Arc', 'Face', 'Level', 'Trend', 'Panel', 'IcClosed', 'IcOpen', 'Headline', 'Detail', 'BarTrack', 'BarFill', 'Details', 'Spark', 'SparkR', 'Peak', 'WLine', 'WMore', 'WLineText', 'WFull', 'WLess', 'WIcon', 'WTemp', 'WCond', 'WTip', 'Footer', 'Tab', 'Drawer', 'DrawerClose', 'DrawerTitle', 'DevPanel')
+$names = @('DayScore', 'Tour', 'TourH', 'TourT', 'TourOk', 'TourOkT', 'GrpTiles', 'GrpFoot', 'GrpUpd', 'SzBox', 'BtnMode', 'BtnModeT', 'TabArr', 'TabLbl', 'Scaler', 'Card', 'Ver', 'RoomStrip', 'SparkBox', 'SparkLabel', 'Glow', 'WOut', 'WOutB', 'TitleBox', 'RoomName', 'RoomSub', 'TitleTag', 'Time', 'SzS', 'SzM', 'SzL', 'SzC', 'SzP', 'BtnHelp', 'BtnLang', 'LangDe', 'LangEn', 'WMoreT', 'WLessT', 'WTitleT', 'Help', 'HelpClose', 'HelpTitle', 'HelpScroll', 'HelpBody', 'HelpVer', 'BtnUpd', 'BtnUpdT', 'Copy', 'Pill', 'PillDot', 'PillText', 'Arc', 'Face', 'Level', 'Trend', 'Panel', 'IcClosed', 'IcOpen', 'Headline', 'Detail', 'BarTrack', 'BarFill', 'Details', 'Spark', 'SparkR', 'Peak', 'WLine', 'WMore', 'WLineText', 'WFull', 'WLess', 'WIcon', 'WTemp', 'WCond', 'WTip', 'Footer', 'Tab', 'Drawer', 'DrawerClose', 'DrawerTitle', 'DevPanel')
 for ($i = 1; $i -le 4; $i++) { $names += @("C$i", "D$i", "V$i", "K$i", "WK$i", "WV$i") }
 $ui = @{}
 foreach ($n in $names) { $ui[$n] = $win.FindName($n) }
@@ -1268,6 +1272,18 @@ function Apply-View {
     if ($win.Top + $win.ActualHeight -gt $vb) { $win.Top = [Math]::Max($vt, $vb - $win.ActualHeight - 6) }
 }
 
+function Get-DayScore([string]$room) {
+    if (-not $state.hist.ContainsKey($room)) { return $null }
+    $mid = [int][DateTimeOffset]::new((Get-Date).Date).ToUnixTimeSeconds()
+    $n = 0; $good = 0
+    foreach ($e in @($state.hist[$room])) {
+        $f = ([string]$e).Split(':')
+        if ($f.Count -lt 2 -or [int]$f[0] -lt $mid) { continue }
+        $n++; if ([int]$f[1] -lt 1000) { $good++ }
+    }
+    if ($n -lt 20) { return $null }
+    return [int][Math]::Round(100.0 * $good / $n)
+}
 function Show-Data($d) {
     $script:rooms = @($d.rooms)
     Build-Strip
@@ -1334,6 +1350,12 @@ function Show-Data($d) {
     }
     $ui.Headline.Text = [string]$d.headline
     $ui.Detail.Text = $detail
+    $ds = $null
+    if ($state.simple -and -not $script:compact) { $ds = Get-DayScore ([string]$d.room.key) }
+    if ($null -ne $ds) {
+        $k = $(if ($ds -ge 90) { 'day_good' } elseif ($ds -ge 70) { 'day_ok' } else { 'day_low' })
+        $ui.DayScore.Text = (T $k $ds); $ui.DayScore.Visibility = 'Visible'
+    } else { $ui.DayScore.Visibility = 'Collapsed' }
     # Lüftungs-Timer (per Tippen auf die Rat-Fläche), vor allem für Räume ohne Fensterkontakt
     $actNow = [string]$d.action
     if ($script:ventEnd -and -not $isOpen) {
