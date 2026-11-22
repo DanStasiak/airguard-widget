@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall)
 
 $appName = 'Luftwaechter'
-$appVersion = '5.11.0'
+$appVersion = '5.12.0'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -339,7 +339,7 @@ function Write-Log([string]$m) {
         Add-Content -Path $logFile -Value ((Get-Date).ToString('yyyy-MM-dd HH:mm:ss') + '  ' + $m) -Encoding UTF8
     } catch {}
 }
-$state = @{ left = $null; top = $null; topmost = $false; topmostSet = $false; popup = $true; tray = $true; room = [string]$cfg.defaultRoom; size = 'M'; weatherOpen = $false; drawerOpen = $false; sound = $true; sparkHours = 3; metric = 0; hidden = @(); lang = 'de'; hist = @{}; hist7 = @{}; sensors = @{}; simple = $true; tourDone = $false; demo = $false; theme = 'auto' }
+$state = @{ left = $null; top = $null; topmost = $false; topmostSet = $false; popup = $true; tray = $true; room = [string]$cfg.defaultRoom; size = 'M'; weatherOpen = $false; drawerOpen = $false; sound = $true; sparkHours = 3; metric = 0; hidden = @(); lang = 'de'; hist = @{}; hist7 = @{}; sensors = @{}; simple = $true; tourDone = $false; demo = $false; theme = 'auto'; seenVer = '' }
 try { if ((Get-Culture).TwoLetterISOLanguageName -ne 'de') { $state.lang = 'en' } } catch {}
 if (Test-Path $stateFile) {
     try {
@@ -355,6 +355,7 @@ if (Test-Path $stateFile) {
         if ($null -ne $s.drawerOpen) { $state.drawerOpen = [bool]$s.drawerOpen }
         if ($null -ne $s.sound) { $state.sound = [bool]$s.sound }
         if ($s.sparkHours -eq 24 -or $s.sparkHours -eq 168) { $state.sparkHours = [int]$s.sparkHours }
+        if ($s.seenVer) { $state.seenVer = [string]$s.seenVer }
         if ($s.theme) { $state.theme = [string]$s.theme }
         if ($null -ne $s.demo) { $state.demo = [bool]$s.demo }
         if ($null -ne $s.tourDone) { $state.tourDone = [bool]$s.tourDone }
@@ -524,6 +525,7 @@ $script:Strings = @{
     m_snooze = @('Ruhe für 1 Stunde', 'Quiet for 1 hour')
     m_snooze_off = @('Ruhe beenden (bis {0})', 'End quiet time (until {0})')
     m_export = @('Verlauf als CSV speichern (7 Tage)', 'Save history as CSV (7 days)')
+    news_h = @('Neu in Version {0}', 'New in version {0}')
     m_bigger = @('Größer anzeigen', 'Make bigger')
     m_smaller = @('Kleiner anzeigen', 'Make smaller')
     upd_tip = @('Zuletzt geprüft: {0} · nächste Prüfung in ca. {1} Min.', 'Last checked: {0} · next check in about {1} min')
@@ -852,7 +854,7 @@ $script:helpOpen = $false
 
 function Save-State {
     try {
-        $o = @{ left = $win.Left; top = $win.Top; topmost = $state.topmost; topmostSet = $state.topmostSet; popup = $state.popup; tray = $state.tray; room = $state.room; size = $state.size; weatherOpen = $state.weatherOpen; drawerOpen = $state.drawerOpen; sound = $state.sound; sparkHours = $state.sparkHours; metric = $state.metric; hidden = @($state.hidden); lang = $state.lang; hist = $state.hist; hist7 = $state.hist7; sensors = $state.sensors; simple = $state.simple; tourDone = $state.tourDone; demo = $state.demo; theme = $state.theme }
+        $o = @{ left = $win.Left; top = $win.Top; topmost = $state.topmost; topmostSet = $state.topmostSet; popup = $state.popup; tray = $state.tray; room = $state.room; size = $state.size; weatherOpen = $state.weatherOpen; drawerOpen = $state.drawerOpen; sound = $state.sound; sparkHours = $state.sparkHours; metric = $state.metric; hidden = @($state.hidden); lang = $state.lang; hist = $state.hist; hist7 = $state.hist7; sensors = $state.sensors; simple = $state.simple; tourDone = $state.tourDone; demo = $state.demo; theme = $state.theme; seenVer = $state.seenVer }
         ($o | ConvertTo-Json -Depth 4) | Set-Content -Path $stateFile -Encoding UTF8
     } catch { Write-Log ('Speichern: ' + $_.Exception.Message) }
 }
@@ -1243,8 +1245,23 @@ function Apply-Simple {
     $ui.BtnModeT.Text = $(if ($sm) { T 'mode_more' } else { T 'mode_simple' })
     $ui.BtnMode.ToolTip = (T 'mode_tip')
     $ui.TabLbl.Text = (T 'tab_lbl')
-    $ui.TourH.Text = (T 'tour_h'); $ui.TourT.Text = (T 'tour_t'); $ui.TourOkT.Text = (T 'tour_ok')
-    if ($sm -and -not $state.tourDone -and -not $script:compact) { $ui.Tour.Visibility = 'Visible' } else { $ui.Tour.Visibility = 'Collapsed' }
+    $ui.TourOkT.Text = (T 'tour_ok')
+    $script:tourMode = ''
+    if ($sm -and -not $state.tourDone -and -not $script:compact) {
+        $script:tourMode = 'tour'; $ui.TourH.Text = (T 'tour_h'); $ui.TourT.Text = (T 'tour_t')
+    } elseif ($state.tourDone -and [string]$state.seenVer -ne $appVersion -and -not $script:compact) {
+        if ($null -eq $script:newsText) {
+            $script:newsText = ''
+            try {
+                $ent = @(Read-Changelog) | Where-Object { $_.ver -eq $appVersion } | Select-Object -First 1
+                if ($ent) { $script:newsText = (@($ent.lines) -join "`n") }
+            } catch {}
+            if ($script:newsText.Length -gt 320) { $script:newsText = $script:newsText.Substring(0, 317) + '…' }
+        }
+        if ($script:newsText) { $script:tourMode = 'news'; $ui.TourH.Text = (T 'news_h' $appVersion); $ui.TourT.Text = $script:newsText }
+        else { $state.seenVer = $appVersion }
+    }
+    if ($script:tourMode) { $ui.Tour.Visibility = 'Visible' } else { $ui.Tour.Visibility = 'Collapsed' }
     if ($script:compact) { return }
     $hide = $(if ($sm) { 'Collapsed' } else { 'Visible' })
     foreach ($n in 'GrpTiles', 'Peak', 'GrpFoot', 'SzBox', 'Time') { $ui.$n.Visibility = $hide }
@@ -2050,7 +2067,7 @@ for ($k = 0; $k -lt 4; $k++) {
     $cb.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; $state.metric = [int]$s.Tag; if ($script:last) { Show-Data $script:last }; Save-State })
 }
 $ui.SparkBox.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; if ($state.sparkHours -eq 3) { $state.sparkHours = 24 } elseif ($state.sparkHours -eq 24) { $state.sparkHours = 168 } else { $state.sparkHours = 3 }; if ($script:last) { Show-Data $script:last }; Save-State })
-$ui.TourOk.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; $state.tourDone = $true; $ui.Tour.Visibility = 'Collapsed'; Save-State; Apply-View })
+$ui.TourOk.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; $state.tourDone = $true; $state.seenVer = $appVersion; $ui.Tour.Visibility = 'Collapsed'; Save-State; Apply-View })
 $ui.BtnMode.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; Toggle-Mode })
 $ui.Tab.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; $state.drawerOpen = $true; Apply-View; Save-State })
 $ui.DrawerClose.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; $state.drawerOpen = $false; Apply-View; Save-State })

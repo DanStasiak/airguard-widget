@@ -2,6 +2,9 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [5.12.0] - 2026-11-22
+- New: after an update, a small card at the top shows what is new in this version, so you never have to look it up. It shows once and goes away with "Got it".
+
 ## [5.11.0] - 2026-11-22
 - New: export. Right-click, "Save history as CSV" writes the last 7 days (CO₂, fine dust, temperature, humidity, every 10 minutes, all rooms) to a CSV file in your Documents folder and shows it in Explorer. It opens directly in Excel.
 

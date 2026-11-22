@@ -20,7 +20,7 @@ A small always-on-top **Windows desktop widget** that shows how good the air is 
 - Pick the sensor per reading, or let the widget average all suitable sensors in a room; it warns when a sensor stops reporting
 - Hourly weather outlook, rain-aware advice, tray icon with notifications
 - **Update button:** checks this repository by itself (every 60 minutes by default) and turns green with the new version number when one is waiting; one click shows what changed and updates after you confirm
-- **Welcome card** on first start explains the simple view in three sentences
+- **Welcome card** on first start explains the simple view in three sentences; after each update a "What's new" card shows the changes once
 - **Demo mode:** right-click → *Try the demo* shows simulated rooms, so you can try the widget without Home Assistant
 - **Day and night design:** solid, crisp colours; the background gets deeper at night, switchable by right-click → *Theme* (automatic, day, night)
 - **Quiet time:** right-click → *Quiet for 1 hour* mutes pop-up, tray notice and chime for a call or a nap
