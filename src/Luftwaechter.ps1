@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall)
 
 $appName = 'Luftwaechter'
-$appVersion = '4.2.0'
+$appVersion = '4.3.0'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -408,6 +408,7 @@ $script:Strings = @{
     upd_dlfail = @('Das Update konnte nicht geladen oder geprüft werden. Es wurde nichts geändert.', 'The update could not be downloaded or verified. Nothing was changed.')
     upd_notinst = @('Updates funktionieren nur in der installierten Version. Bitte zuerst Installieren.bat ausführen.', 'Updates only work in the installed copy. Please run Installieren.bat first.')
     ver_tip = @('Version · Klick: alle Versionen auf GitHub', 'Version · click: all versions on GitHub')
+    tagline = @('frei & quelloffen · von Dan Stasiak', 'free & open source · by Dan Stasiak')
     copy_tip = @('Freie Software (MIT) · Quellcode auf GitHub', 'Free software (MIT) · source code on GitHub')
     h12 = @('Über Luftwächter · freie Software', 'About Luftwächter · free software')
     b12 = @('Luftwächter ist freie Software unter der MIT-Lizenz: Du darfst es kostenlos nutzen, ändern und weitergeben. Der Hinweis auf den Urheber (Dan Stasiak) muss dabei erhalten bleiben. Quellcode, Änderungsliste (Changelog), Fehlermeldungen und Verbesserungsvorschläge: {0}', 'Luftwächter is free software under the MIT License: you may use, modify and share it free of charge. The notice crediting the author (Dan Stasiak) must be kept. Source code, changelog, bug reports and ideas: {0}')
@@ -465,8 +466,11 @@ $xaml = @"
     <Border.Effect><DropShadowEffect x:Name="Glow" BlurRadius="24" ShadowDepth="0" Color="#FF7A8594" Opacity="0.5"/></Border.Effect>
     <StackPanel Margin="18,14,18,12">
       <StackPanel>
-        <Border x:Name="TitleBox" HorizontalAlignment="Left" CornerRadius="14" Background="#33FFFFFF" Padding="14,4" Cursor="Hand">
-          <StackPanel Orientation="Horizontal"><TextBlock x:Name="RoomName" Foreground="White" FontSize="30" FontWeight="Bold"/><TextBlock Text="  ▾" Foreground="#FFDFE5EE" FontSize="18" VerticalAlignment="Center"/></StackPanel>
+        <Border x:Name="TitleBox" HorizontalAlignment="Left" Background="Transparent" Padding="2,0,0,0" Cursor="Hand">
+          <StackPanel>
+            <TextBlock x:Name="RoomName" Foreground="White" FontSize="30" FontWeight="Bold"/>
+            <StackPanel Orientation="Horizontal" Margin="1,0,0,0"><TextBlock x:Name="RoomSub" Foreground="#FFFFFFFF" FontSize="15" FontWeight="SemiBold"/><TextBlock x:Name="TitleTag" Foreground="#FF9AA7B8" FontSize="12" VerticalAlignment="Bottom" Margin="8,0,0,1"/></StackPanel>
+          </StackPanel>
         </Border>
         <DockPanel Margin="2,8,0,0">
           <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
@@ -591,7 +595,7 @@ $xaml = @"
 $win = [Windows.Markup.XamlReader]::Load((New-Object System.Xml.XmlNodeReader ([xml]$xaml)))
 $conv = New-Object Windows.Media.BrushConverter
 function Brush([string]$hex) { return $conv.ConvertFromString($hex) }
-$names = @('Scaler', 'Card', 'Ver', 'RoomStrip', 'SparkBox', 'SparkLabel', 'Glow', 'TitleBox', 'RoomName', 'Time', 'SzS', 'SzM', 'SzL', 'SzC', 'SzP', 'BtnHelp', 'BtnLang', 'LangDe', 'LangEn', 'WMoreT', 'WLessT', 'WTitleT', 'Help', 'HelpClose', 'HelpTitle', 'HelpScroll', 'HelpBody', 'HelpVer', 'BtnUpd', 'BtnUpdT', 'Copy', 'Pill', 'PillDot', 'PillText', 'Arc', 'Face', 'Level', 'Trend', 'Panel', 'IcClosed', 'IcOpen', 'Headline', 'Detail', 'BarTrack', 'BarFill', 'Details', 'Spark', 'SparkR', 'Peak', 'WLine', 'WMore', 'WLineText', 'WFull', 'WLess', 'WIcon', 'WTemp', 'WCond', 'WTip', 'Footer', 'Tab', 'Drawer', 'DrawerClose', 'DrawerTitle', 'DevPanel')
+$names = @('Scaler', 'Card', 'Ver', 'RoomStrip', 'SparkBox', 'SparkLabel', 'Glow', 'TitleBox', 'RoomName', 'RoomSub', 'TitleTag', 'Time', 'SzS', 'SzM', 'SzL', 'SzC', 'SzP', 'BtnHelp', 'BtnLang', 'LangDe', 'LangEn', 'WMoreT', 'WLessT', 'WTitleT', 'Help', 'HelpClose', 'HelpTitle', 'HelpScroll', 'HelpBody', 'HelpVer', 'BtnUpd', 'BtnUpdT', 'Copy', 'Pill', 'PillDot', 'PillText', 'Arc', 'Face', 'Level', 'Trend', 'Panel', 'IcClosed', 'IcOpen', 'Headline', 'Detail', 'BarTrack', 'BarFill', 'Details', 'Spark', 'SparkR', 'Peak', 'WLine', 'WMore', 'WLineText', 'WFull', 'WLess', 'WIcon', 'WTemp', 'WCond', 'WTip', 'Footer', 'Tab', 'Drawer', 'DrawerClose', 'DrawerTitle', 'DevPanel')
 for ($i = 1; $i -le 4; $i++) { $names += @("C$i", "D$i", "V$i", "K$i", "WK$i", "WV$i") }
 $ui = @{}
 foreach ($n in $names) { $ui[$n] = $win.FindName($n) }
@@ -1110,7 +1114,7 @@ function Show-Data($d) {
     $ui.Drawer.Background = Brush '#FF1B222D'
     $ui.Panel.Background = Brush ('#33' + $col.Substring($col.Length - 6))
     $ui.Level.Foreground = $b
-    $ui.RoomName.Text = [string]$d.room.name
+    $ui.RoomSub.Text = [string]$d.room.name
     $ui.DrawerTitle.Text = (T 'dev_title') + [string]$d.room.name
     $lvl = (T 'no_vals'); $face = [char]::ConvertFromUtf32(0x1F914)
     switch ([string]$d.level) {
@@ -1240,7 +1244,7 @@ function Show-Setup {
     $ui.Card.BorderBrush = $g; $ui.Level.Text = '–'; $ui.Level.Foreground = $g; $ui.Face.Text = [char]::ConvertFromUtf32(0x1F527)
     $ui.PillText.Text = (T 'setup'); $ui.PillDot.Foreground = $g; Set-Ring 0.06 $g
     $ui.Panel.Background = Brush '#33FFFFFF'; if ($script:haMode) { $ui.Headline.Text = (T 'ha_norooms'); $ui.Detail.Text = (T 'ha_norooms_d') } else { $ui.Headline.Text = (T 'setup'); $ui.Detail.Text = (T 'setup_d') }
-    $ui.RoomName.Text = 'Luftwächter'; $ui.Time.Text = ''; $script:pulse = $false
+    $ui.RoomSub.Text = ''; $ui.Time.Text = ''; $script:pulse = $false
 }
 
 # ---------- Home Assistant direkt: Räume, Messwerte und Geräte automatisch finden ----------
@@ -1254,7 +1258,7 @@ $script:HaTpl = @'
 {%- if states[e] is not none -%}
 {%- set dc = state_attr(e, 'device_class') -%}
 {%- if (dom == 'sensor' and dc in ['carbon_dioxide', 'pm25', 'temperature', 'humidity']) or (dom == 'binary_sensor' and dc == 'window') or dom in ['light', 'switch', 'climate', 'cover', 'button'] -%}
-{%- set es.l = es.l + [{'i': e, 'd': dom, 'c': dc, 's': states(e), 'n': (state_attr(e, 'friendly_name') or e), 't': state_attr(e, 'temperature'), 'cu': state_attr(e, 'current_temperature'), 'ha': state_attr(e, 'hvac_action'), 'p': state_attr(e, 'current_position')}] -%}
+{%- set es.l = es.l + [{'i': e, 'd': dom, 'c': dc, 's': states(e), 'n': (state_attr(e, 'friendly_name') or e), 't': state_attr(e, 'temperature'), 'cu': state_attr(e, 'current_temperature'), 'ha': state_attr(e, 'hvac_action'), 'p': state_attr(e, 'current_position'), 'lr': as_timestamp(states[e].last_reported or states[e].last_updated, 0)}] -%}
 {%- endif -%}
 {%- endif -%}
 {%- endfor -%}
@@ -1281,19 +1285,22 @@ function Fmt($v, [int]$dg) {
 }
 function LvAbove($v, $g, $f) { if ($null -eq $v) { return $null }; if ($v -lt $g) { return 0 }; if ($v -lt $f) { return 1 }; return 2 }
 function LvRange($v, $g1, $g2, $f1, $f2) { if ($null -eq $v) { return $null }; if (($v -ge $g1) -and ($v -le $g2)) { return 0 }; if (($v -ge $f1) -and ($v -le $f2)) { return 1 }; return 2 }
-function Pick-Ent($ents, [string]$dom, [string]$dc) {
+function Pick-Ent($ents, [string]$dom, [string]$dc, $lab) {
     $c = @($ents | Where-Object { $_.d -eq $dom -and $_.c -eq $dc })
     if ($c.Count -eq 0) { return $null }
     $ok = @($c | Where-Object { $null -ne (Num $_.s) })
-    if ($ok.Count -gt 0) { return $ok[0] }
-    return $c[0]
+    if ($ok.Count -eq 0) { return $c[0] }
+    # mehrere Sensoren gleicher Art im Raum: mit Label "airguard" zuerst, sonst der, der zuletzt etwas gemeldet hat
+    $lb = @($ok | Where-Object { @($lab) -contains [string]$_.i })
+    if ($lb.Count -gt 0) { $ok = $lb }
+    return @($ok | Sort-Object { [double]$_.lr } -Descending)[0]
 }
-function Eval-HaRoom($r) {
+function Eval-HaRoom($r, $lab) {
     $ents = @($r.e)
-    $eCo2 = Pick-Ent $ents 'sensor' 'carbon_dioxide'
-    $ePm = Pick-Ent $ents 'sensor' 'pm25'
-    $eT = Pick-Ent $ents 'sensor' 'temperature'
-    $eH = Pick-Ent $ents 'sensor' 'humidity'
+    $eCo2 = Pick-Ent $ents 'sensor' 'carbon_dioxide' $lab
+    $ePm = Pick-Ent $ents 'sensor' 'pm25' $lab
+    $eT = Pick-Ent $ents 'sensor' 'temperature' $lab
+    $eH = Pick-Ent $ents 'sensor' 'humidity' $lab
     $co2 = $null; if ($eCo2) { $co2 = Num $eCo2.s }
     $pm = $null; if ($ePm) { $pm = Num $ePm.s }
     $tt = $null; if ($eT) { $tt = Num $eT.s }
@@ -1335,7 +1342,7 @@ function Build-HaData($data, [string]$wantRoom) {
     $lnames = @('gut', 'mittel', 'schlecht')
     $list = @()
     foreach ($r in @($data.r)) {
-        $ev = Eval-HaRoom $r
+        $ev = Eval-HaRoom $r @($data.L)
         if ($ev.air) { $list += [pscustomobject]@{ key = [string]$r.a; name = [string]$r.n; raw = $r; ev = $ev } }
     }
     if ($list.Count -eq 0) { return $null }
@@ -1637,28 +1644,7 @@ $ui.SparkBox.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; if ($st
 $ui.Tab.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; $state.drawerOpen = $true; Apply-View; Save-State })
 $ui.DrawerClose.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; $state.drawerOpen = $false; Apply-View; Save-State })
 
-$ui.TitleBox.Add_MouseLeftButtonDown({
-    param($s, $e)
-    $e.Handled = $true
-    $m = New-Object Windows.Controls.ContextMenu
-    foreach ($r in $script:rooms) {
-        $mi = New-Object Windows.Controls.MenuItem
-        $dot = New-Object Windows.Shapes.Ellipse; $dot.Width = 11; $dot.Height = 11
-        $c = '#FF7A8594'; if ($r.color) { $c = [string]$r.color }
-        $dot.Fill = Brush $c
-        $mi.Icon = $dot
-        $txt = [string]$r.name
-        if ($r.co2) { $txt += '    CO₂ ' + [string]$r.co2 }
-        $mi.Header = $txt
-        $mi.FontSize = 15
-        if ([string]$r.key -eq [string]$state.room) { $mi.FontWeight = 'Bold' }
-        $mi.Tag = [string]$r.key
-        $mi.Add_Click({ param($s2, $e2) $state.room = [string]$s2.Tag; $script:ventEnd = $null; $script:prevOpen = $null; $script:sumText = ''; $script:lastAction = $null; $script:devSig = ''; $script:openSince = $null; Save-State; Update-Widget })
-        [void]$m.Items.Add($mi)
-    }
-    if ($m.Items.Count -eq 0) { $mi = New-Object Windows.Controls.MenuItem; $mi.Header = (T 'rooms_loading'); $mi.IsEnabled = $false; [void]$m.Items.Add($mi) }
-    $m.PlacementTarget = $ui.TitleBox; $m.Placement = 'Bottom'; $m.IsOpen = $true
-})
+$ui.TitleBox.Add_MouseLeftButtonUp({ param($s, $e) try { Start-Process $script:repoUrl } catch {} })
 
 $menu = New-Object System.Windows.Controls.ContextMenu
 $miRefresh = New-Object System.Windows.Controls.MenuItem; $miRefresh.Header = 'Jetzt aktualisieren'
@@ -1711,6 +1697,7 @@ function Apply-Lang {
     foreach ($k in 'De', 'En') { $ui.('Lang' + $k).Foreground = Brush '#FFA9B4C4'; $ui.('Lang' + $k).FontWeight = 'Normal' }
     if ($state.lang -eq 'en') { $ui.LangEn.Foreground = Brush '#FFFFFFFF'; $ui.LangEn.FontWeight = 'Bold' } else { $ui.LangDe.Foreground = Brush '#FFFFFFFF'; $ui.LangDe.FontWeight = 'Bold' }
     $miRefresh.Header = (T 'm_refresh'); $miTop.Header = (T 'm_top'); $miPop.Header = (T 'm_pop'); $miTray.Header = (T 'm_tray'); if ($script:trayMiOpen) { $script:trayMiOpen.Text = (T 'tray_open'); $script:trayMiExit.Text = (T 'm_exit') }; $miSound.Header = (T 'm_sound'); $miReset.Header = (T 'm_reset'); $miLog.Header = (T 'm_log'); $miHelp.Header = (T 'm_help'); $miHa.Header = (T 'm_ha'); $miCfg.Header = (T 'm_cfg'); $miUpd.Header = (T 'm_upd'); $miExit.Header = (T 'm_exit')
+    $ui.RoomName.Text = 'Luftwächter'; $ui.TitleTag.Text = (T 'tagline'); $ui.TitleBox.ToolTip = (T 'copy_tip')
     $ui.Footer.Text = (Get-FooterText)
     $ui.Copy.Text = $copyright + ' · GitHub'; $ui.Copy.ToolTip = (T 'copy_tip'); $ui.Ver.ToolTip = (T 'ver_tip')
     Set-UpdateButton

@@ -2,6 +2,10 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [4.3.0] - 2026-11-22
+- Fix: when a room has several sensors of the same kind (e.g. an old and a new CO2 sensor), the widget now uses the one with the label "airguard", otherwise the one that reported most recently. Before, it could show a stale sensor (1051 ppm instead of 1258 ppm).
+- New: the room drop-down in the header is gone (rooms are switched with the chips). The header now shows the app name "Luftwächter", the current room and "free & open source - by Dan Stasiak"; click it to open the project page.
+
 ## [4.2.0] - 2026-11-22
 - New: rain-aware ventilation advice. The widget reads the hourly forecast from Home Assistant; when rain, snow or a thunderstorm is due within 6 hours it says so ("Ventilate soon: rain from 15:00") in the advice and in the weather tip.
 - Improved: the history curve zooms to the data you have, so a new curve is readable right away instead of squeezed to the right edge.
