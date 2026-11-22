@@ -2,6 +2,10 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [3.13.1] - 2026-11-22
+- Fix: the window is no longer always in front. It now behaves like a normal window: other programs can cover it, and it has a taskbar button. "Always on top" is an option in the right-click menu (off by default; the old forced setting is reset once).
+- New: when ventilation is needed (open / close the window) the widget briefly comes to the front for a few seconds without stealing focus. Can be switched off in the menu ("Bring to front briefly ...").
+
 ## [3.13.0] - 2026-11-22
 First public release.
 - Open source under the MIT License (c) 2026 Dan Stasiak.

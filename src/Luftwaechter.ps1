@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall)
 
 $appName = 'Luftwaechter'
-$appVersion = '3.13.0'
+$appVersion = '3.13.1'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -71,14 +71,15 @@ function Write-Log([string]$m) {
         Add-Content -Path $logFile -Value ((Get-Date).ToString('yyyy-MM-dd HH:mm:ss') + '  ' + $m) -Encoding UTF8
     } catch {}
 }
-$state = @{ left = $null; top = $null; topmost = $true; room = [string]$cfg.defaultRoom; size = 'M'; weatherOpen = $false; drawerOpen = $false; sound = $true; sparkHours = 3; lang = 'de'; hist = @{} }
+$state = @{ left = $null; top = $null; topmost = $false; topmostSet = $false; popup = $true; room = [string]$cfg.defaultRoom; size = 'M'; weatherOpen = $false; drawerOpen = $false; sound = $true; sparkHours = 3; lang = 'de'; hist = @{} }
 try { if ((Get-Culture).TwoLetterISOLanguageName -ne 'de') { $state.lang = 'en' } } catch {}
 if (Test-Path $stateFile) {
     try {
         $s = Get-Content $stateFile -Raw | ConvertFrom-Json
         if ($null -ne $s.left) { $state.left = [double]$s.left }
         if ($null -ne $s.top) { $state.top = [double]$s.top }
-        if ($null -ne $s.topmost) { $state.topmost = [bool]$s.topmost }
+        if ($s.topmostSet -and $null -ne $s.topmost) { $state.topmost = [bool]$s.topmost; $state.topmostSet = $true }
+        if ($null -ne $s.popup) { $state.popup = [bool]$s.popup }
         if ($s.room) { $state.room = [string]$s.room }
         if ($s.size) { $state.size = [string]$s.size }
         if ($null -ne $s.weatherOpen) { $state.weatherOpen = [bool]$s.weatherOpen }
@@ -167,6 +168,7 @@ $script:Strings = @{
     asof = @('Stand ', 'As of ')
     rooms_loading = @('Räume werden geladen …', 'Loading rooms …')
     m_refresh = @('Jetzt aktualisieren', 'Refresh now')
+    m_pop = @('Beim Lüften kurz nach vorn holen', 'Bring to front briefly when ventilation is needed')
     m_top = @('Immer im Vordergrund', 'Always on top')
     m_sound = @('Hinweiston beim Lüften', 'Sound when ventilating')
     m_reset = @('Fenster zurücksetzen (oben rechts)', 'Reset window (top right)')
@@ -218,7 +220,7 @@ $script:Strings = @{
     h9 = @('Größen und Pille', 'Sizes and pill')
     b9 = @('S, M und L ändern die Größe, "kompakt" blendet die Details aus, und "Pille" schrumpft alles zu einem kleinen Farbpunkt mit Raum und CO₂-Wert. Doppelklick auf die Pille macht das Fenster wieder groß.', 'S, M and L change the size, "compact" hides the details, and "Pill" shrinks everything to a small color dot with room and CO₂ value. Double-click the pill to expand the window again.')
     h10 = @('Fenster und Rechtsklick', 'Window and right-click')
-    b10 = @('Zum Verschieben das Fenster irgendwo anfassen und ziehen. Doppelklick aktualisiert sofort (sonst automatisch alle paar Sekunden). Rechtsklick öffnet das Menü: aktualisieren, immer im Vordergrund, Hinweiston, Fenster zurücksetzen, Protokoll, Hilfe und Beenden. Luftwächter startet mit Windows und stellt Position, Größe, Raum und Sprache wieder her.', 'Grab the window anywhere and drag to move it. Double-click refreshes immediately (otherwise it refreshes automatically every few seconds). Right-click opens the menu: refresh, always on top, sound, reset window, log, help and quit. Luftwächter starts with Windows and restores position, size, room and language.')
+    b10 = @('Zum Verschieben das Fenster irgendwo anfassen und ziehen. Doppelklick aktualisiert sofort (sonst automatisch alle paar Sekunden). Rechtsklick öffnet das Menü: aktualisieren, immer im Vordergrund, Hinweiston, Fenster zurücksetzen, Protokoll, Hilfe und Beenden. Luftwächter startet mit Windows und stellt Position, Größe, Raum und Sprache wieder her. Das Fenster verhält sich wie jedes andere Fenster: Es kann hinter anderen Programmen verschwinden und ist in der Taskleiste. Wer es immer sichtbar haben will, schaltet im Menü "Immer im Vordergrund" ein. Wenn gelüftet werden soll, holt es sich kurz nach vorn (abschaltbar).', 'Grab the window anywhere and drag to move it. Double-click refreshes immediately (otherwise it refreshes automatically every few seconds). Right-click opens the menu: refresh, always on top, sound, reset window, log, help and quit. Luftwächter starts with Windows and restores position, size, room and language. The window behaves like any other window: it can go behind other programs and has a taskbar button. If you want it always visible, switch on "Always on top" in the menu. When ventilation is needed it briefly comes to the front (can be switched off).')
     h11 = @('Wenn etwas nicht klappt', 'If something does not work')
     b11 = @('Steht dort "Offline" oder "Keine Verbindung", erreicht dein PC den Server gerade nicht (Internet, VPN?). Es wird weiter versucht. Fehler werden im Protokoll gesammelt: Rechtsklick, dann "Protokoll öffnen". Die Version steht unten rechts. Die Sprache stellst du oben mit "DE | EN" um.', 'If it says "Offline" or "No connection", your PC cannot reach the server right now (internet, VPN?). It keeps trying. Errors are collected in the log: right-click, then "Open log". The version is shown at the bottom right. Change the language at the top with "DE | EN".')
 }
@@ -235,7 +237,7 @@ $xaml = @"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Luftwächter" SizeToContent="WidthAndHeight"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
-        ResizeMode="NoResize" ShowInTaskbar="False" Topmost="True" FontFamily="Segoe UI Variable Text, Segoe UI"
+        ResizeMode="NoResize" ShowInTaskbar="True" Topmost="False" FontFamily="Segoe UI Variable Text, Segoe UI"
         UseLayoutRounding="True" SnapsToDevicePixels="True" RenderOptions.ClearTypeHint="Enabled"
         TextOptions.TextFormattingMode="Display" TextOptions.TextRenderingMode="ClearType" TextOptions.TextHintingMode="Fixed">
 <Grid x:Name="Scaler" Margin="16">
@@ -397,12 +399,16 @@ $script:ventDone = $false
 $script:ventDoneAt = $null
 $script:lastAction = $null
 $script:lastChime = (Get-Date).AddHours(-2)
+$script:lastPop = (Get-Date).AddHours(-2)
+$popTimer = New-Object System.Windows.Threading.DispatcherTimer
+$popTimer.Interval = [TimeSpan]::FromSeconds(12)
+$popTimer.Add_Tick({ $popTimer.Stop(); $win.Topmost = [bool]$state.topmost })
 $script:compact = ($state.size -eq 'C')
 $script:helpOpen = $false
 
 function Save-State {
     try {
-        $o = @{ left = $win.Left; top = $win.Top; topmost = $win.Topmost; room = $state.room; size = $state.size; weatherOpen = $state.weatherOpen; drawerOpen = $state.drawerOpen; sound = $state.sound; sparkHours = $state.sparkHours; lang = $state.lang; hist = $state.hist }
+        $o = @{ left = $win.Left; top = $win.Top; topmost = $state.topmost; topmostSet = $state.topmostSet; popup = $state.popup; room = $state.room; size = $state.size; weatherOpen = $state.weatherOpen; drawerOpen = $state.drawerOpen; sound = $state.sound; sparkHours = $state.sparkHours; lang = $state.lang; hist = $state.hist }
         ($o | ConvertTo-Json -Depth 4) | Set-Content -Path $stateFile -Encoding UTF8
     } catch { Write-Log ('Speichern: ' + $_.Exception.Message) }
 }
@@ -861,6 +867,11 @@ function Show-Data($d) {
         try { [System.Media.SystemSounds]::Asterisk.Play() } catch {}
         $script:lastChime = Get-Date
     }
+    if ($state.popup -and -not $state.topmost -and $null -ne $script:lastAction -and $act -ne $script:lastAction -and ($act -eq 'oeffnen' -or $act -eq 'schliessen') -and $h -ge 7 -and $h -lt 22 -and (((Get-Date) - $script:lastPop).TotalMinutes -gt 30)) {
+        $script:lastPop = Get-Date
+        $win.Topmost = $true
+        $popTimer.Stop(); $popTimer.Start()
+    }
     $script:lastAction = $act
     Apply-View
 }
@@ -967,7 +978,8 @@ $ui.TitleBox.Add_MouseLeftButtonDown({
 
 $menu = New-Object System.Windows.Controls.ContextMenu
 $miRefresh = New-Object System.Windows.Controls.MenuItem; $miRefresh.Header = 'Jetzt aktualisieren'
-$miTop = New-Object System.Windows.Controls.MenuItem; $miTop.Header = 'Immer im Vordergrund'; $miTop.IsCheckable = $true; $miTop.IsChecked = $win.Topmost
+$miPop = New-Object System.Windows.Controls.MenuItem; $miPop.IsCheckable = $true; $miPop.IsChecked = [bool]$state.popup
+$miTop = New-Object System.Windows.Controls.MenuItem; $miTop.Header = 'Immer im Vordergrund'; $miTop.IsCheckable = $true; $miTop.IsChecked = [bool]$state.topmost
 $miLog = New-Object System.Windows.Controls.MenuItem; $miLog.Header = 'Protokoll öffnen (bei Problemen)'
 $miReset = New-Object System.Windows.Controls.MenuItem; $miReset.Header = 'Fenster zurücksetzen (oben rechts)'
 $miSound = New-Object System.Windows.Controls.MenuItem; $miSound.Header = 'Hinweiston beim Lüften'; $miSound.IsCheckable = $true; $miSound.IsChecked = [bool]$state.sound
@@ -976,7 +988,8 @@ $miUpd = New-Object System.Windows.Controls.MenuItem
 $miCfg = New-Object System.Windows.Controls.MenuItem
 $miExit = New-Object System.Windows.Controls.MenuItem
 $miRefresh.Add_Click({ Update-Widget })
-$miTop.Add_Click({ $win.Topmost = $miTop.IsChecked; Save-State })
+$miTop.Add_Click({ $state.topmost = [bool]$miTop.IsChecked; $state.topmostSet = $true; $win.Topmost = $state.topmost; Save-State })
+$miPop.Add_Click({ $state.popup = [bool]$miPop.IsChecked; Save-State })
 $miLog.Add_Click({ try { if (-not (Test-Path $logFile)) { Set-Content -Path $logFile -Value (T 'no_errors') -Encoding UTF8 }; Start-Process notepad.exe -ArgumentList ('"' + $logFile + '"') } catch {} })
 $miReset.Add_Click({ $w0 = [System.Windows.SystemParameters]::WorkArea; $win.Left = [Math]::Max($w0.Left, $w0.Right - $win.ActualWidth - 20); $win.Top = $w0.Top + 20; Save-State })
 $miSound.Add_Click({ $state.sound = $miSound.IsChecked; Save-State })
@@ -984,7 +997,7 @@ $miExit.Add_Click({ $win.Close() })
 $miHelp.Add_Click({ $script:helpOpen = $true; Apply-View })
 $miCfg.Add_Click({ try { if (-not (Test-Path $cfgFile)) { Copy-Item (Join-Path $dir 'config.example.json') $cfgFile }; Start-Process notepad.exe -ArgumentList ('"' + $cfgFile + '"') } catch { Write-Log ('Konfig: ' + $_.Exception.Message) } })
 $miUpd.Add_Click({ Invoke-UpdateFlow $true })
-[void]$menu.Items.Add($miRefresh); [void]$menu.Items.Add($miTop); [void]$menu.Items.Add($miSound); [void]$menu.Items.Add($miReset); [void]$menu.Items.Add($miLog); [void]$menu.Items.Add($miHelp); [void]$menu.Items.Add($miCfg); [void]$menu.Items.Add($miUpd); [void]$menu.Items.Add((New-Object System.Windows.Controls.Separator)); [void]$menu.Items.Add($miExit)
+[void]$menu.Items.Add($miRefresh); [void]$menu.Items.Add($miTop); [void]$menu.Items.Add($miPop); [void]$menu.Items.Add($miSound); [void]$menu.Items.Add($miReset); [void]$menu.Items.Add($miLog); [void]$menu.Items.Add($miHelp); [void]$menu.Items.Add($miCfg); [void]$menu.Items.Add($miUpd); [void]$menu.Items.Add((New-Object System.Windows.Controls.Separator)); [void]$menu.Items.Add($miExit)
 $win.ContextMenu = $menu
 
 
@@ -1009,7 +1022,7 @@ function Apply-Lang {
     $ui.BtnHelp.ToolTip = (T 'help_tip'); $ui.BtnLang.ToolTip = (T 'lang_tip')
     foreach ($k in 'De', 'En') { $ui.('Lang' + $k).Foreground = Brush '#FFA9B4C4'; $ui.('Lang' + $k).FontWeight = 'Normal' }
     if ($state.lang -eq 'en') { $ui.LangEn.Foreground = Brush '#FFFFFFFF'; $ui.LangEn.FontWeight = 'Bold' } else { $ui.LangDe.Foreground = Brush '#FFFFFFFF'; $ui.LangDe.FontWeight = 'Bold' }
-    $miRefresh.Header = (T 'm_refresh'); $miTop.Header = (T 'm_top'); $miSound.Header = (T 'm_sound'); $miReset.Header = (T 'm_reset'); $miLog.Header = (T 'm_log'); $miHelp.Header = (T 'm_help'); $miCfg.Header = (T 'm_cfg'); $miUpd.Header = (T 'm_upd'); $miExit.Header = (T 'm_exit')
+    $miRefresh.Header = (T 'm_refresh'); $miTop.Header = (T 'm_top'); $miPop.Header = (T 'm_pop'); $miSound.Header = (T 'm_sound'); $miReset.Header = (T 'm_reset'); $miLog.Header = (T 'm_log'); $miHelp.Header = (T 'm_help'); $miCfg.Header = (T 'm_cfg'); $miUpd.Header = (T 'm_upd'); $miExit.Header = (T 'm_exit')
     $ui.Footer.Text = (Get-FooterText)
     $ui.Copy.Text = $copyright + ' · GitHub'; $ui.Copy.ToolTip = (T 'copy_tip'); $ui.Ver.ToolTip = (T 'ver_tip')
     Set-UpdateButton
