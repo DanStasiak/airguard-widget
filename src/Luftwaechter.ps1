@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall)
 
 $appName = 'Luftwaechter'
-$appVersion = '5.0.0'
+$appVersion = '5.0.1'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -167,88 +167,88 @@ function Install-AskHa([string]$cfgPath) {
     Write-Host 'Nicht eingerichtet - das geht spaeter im Widget per Rechtsklick. / Not set up - you can do it later in the widget via right-click.'
 }
 
-function Show-InstallWizard([string]$cfgPath) {
-    Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase
-    $script:wzDe = ((Get-Culture).TwoLetterISOLanguageName -eq 'de')
-    $x = @"
-<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Luftwächter" Width="540" SizeToContent="Height" WindowStartupLocation="CenterScreen" Topmost="True" ResizeMode="NoResize" Background="#FF1B222D" FontFamily="Segoe UI">
-  <StackPanel Margin="26">
-    <DockPanel><Button x:Name="WLang" DockPanel.Dock="Right" Padding="10,2" VerticalAlignment="Top"/><TextBlock Text="Luftwächter" Foreground="White" FontSize="30" FontWeight="Bold"/></DockPanel>
-    <TextBlock x:Name="WIntro" Foreground="#FFB3BECD" FontSize="13" TextWrapping="Wrap" Margin="0,4,0,18"/>
-    <TextBlock x:Name="WStep1" Foreground="White" FontSize="14" FontWeight="SemiBold"/>
-    <DockPanel Margin="0,6,0,0"><Button x:Name="WFind" DockPanel.Dock="Right" Padding="12,4" Margin="8,0,0,0"/><TextBox x:Name="WUrl" Padding="6,5" FontSize="13"/></DockPanel>
-    <ComboBox x:Name="WFound" Margin="0,6,0,0" Padding="6,4" FontSize="13" Visibility="Collapsed"/>
-    <TextBlock x:Name="WStep2" Foreground="White" FontSize="14" FontWeight="SemiBold" Margin="0,16,0,0"/>
-    <PasswordBox x:Name="WTok" Padding="6,5" FontSize="13" Margin="0,6,0,4"/>
-    <TextBlock x:Name="WOpen" Foreground="#FF7CB7FF" FontSize="12" Cursor="Hand"/>
-    <TextBlock x:Name="WStep3" Foreground="White" FontSize="14" FontWeight="SemiBold" Margin="0,16,0,0"/>
-    <CheckBox x:Name="WAuto" Foreground="#FFDFE5EE" FontSize="13" Margin="0,6,0,0" IsChecked="True"/>
-    <CheckBox x:Name="WMenu" Foreground="#FFDFE5EE" FontSize="13" Margin="0,4,0,0" IsChecked="True"/>
-    <TextBlock x:Name="WMsg" Foreground="#FFFFD27A" FontSize="13" TextWrapping="Wrap" Margin="0,16,0,0" MinHeight="20"/>
-    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0"><Button x:Name="WSkip" Padding="16,7" Margin="0,0,8,0"/><Button x:Name="WGo" Padding="22,7" IsDefault="True" FontWeight="SemiBold"/></StackPanel>
-  </StackPanel>
-</Window>
-"@
-    $d = [Windows.Markup.XamlReader]::Load((New-Object System.Xml.XmlNodeReader ([xml]$x)))
-    $script:wzWin = $d
-    $script:wzCfg = $cfgPath
-    $script:wzRes = $null
-    foreach ($nm in 'WLang', 'WIntro', 'WStep1', 'WFind', 'WUrl', 'WFound', 'WStep2', 'WTok', 'WOpen', 'WStep3', 'WAuto', 'WMenu', 'WMsg', 'WSkip', 'WGo') { Set-Variable -Scope Script -Name ('wz' + $nm) -Value ($d.FindName($nm)) }
-    $script:wzApply = {
-        $de = $script:wzDe
-        $script:wzWLang.Content = $(if ($de) { 'DE | EN' } else { 'EN | DE' })
-        $script:wzWIntro.Text = $(if ($de) { 'Willkommen! Hier verbindest du das Widget mit deinem Home Assistant. Räume, Sensoren und Geräte werden danach automatisch gefunden.' } else { 'Welcome! Connect the widget to your Home Assistant here. Rooms, sensors and devices are found automatically afterwards.' })
-        $script:wzWStep1.Text = $(if ($de) { '1  Adresse von Home Assistant' } else { '1  Home Assistant address' })
-        $script:wzWFind.Content = $(if ($de) { 'Im Netzwerk suchen' } else { 'Search network' })
-        $script:wzWStep2.Text = $(if ($de) { '2  Langlebiger Zugangstoken' } else { '2  Long-lived access token' })
-        $script:wzWOpen.Text = $(if ($de) { 'Token-Seite in Home Assistant öffnen (Profil → Sicherheit → Token erstellen)' } else { 'Open the token page in Home Assistant (Profile → Security → Create token)' })
-        $script:wzWStep3.Text = $(if ($de) { '3  Optionen' } else { '3  Options' })
-        $script:wzWAuto.Content = $(if ($de) { 'Mit Windows starten' } else { 'Start with Windows' })
-        $script:wzWMenu.Content = $(if ($de) { 'Eintrag im Startmenü anlegen' } else { 'Add a Start menu entry' })
-        $script:wzWSkip.Content = $(if ($de) { 'Später einrichten' } else { 'Set up later' })
-        $script:wzWGo.Content = $(if ($de) { 'Verbinden und installieren' } else { 'Connect and install' })
-    }
-    & $script:wzApply
-    $script:wzWUrl.Text = 'http://homeassistant.local:8123'
-    $script:wzWLang.Add_Click({ $script:wzDe = -not $script:wzDe; & $script:wzApply })
-    $script:wzWOpen.Add_MouseLeftButtonDown({ try { $u0 = Normalize-HaUrl $script:wzWUrl.Text; if ($u0) { Start-Process ($u0 + '/profile/security') } } catch {} })
-    $script:wzWFound.Add_SelectionChanged({ if ($script:wzWFound.SelectedItem) { $script:wzWUrl.Text = [string]$script:wzWFound.SelectedItem } })
-    $script:wzWFind.Add_Click({
-        $script:wzWMsg.Text = $(if ($script:wzDe) { 'Suche Home Assistant im Netzwerk …' } else { 'Searching the network for Home Assistant …' })
-        $script:wzWin.Dispatcher.Invoke([Action]{}, [Windows.Threading.DispatcherPriority]::Render)
-        $f = @(Find-Ha)
-        $script:wzWFound.Items.Clear(); $script:wzWFound.Visibility = 'Collapsed'
-        if ($f.Count -eq 0) { $script:wzWMsg.Text = $(if ($script:wzDe) { 'Nichts gefunden. Bitte die Adresse selbst eintragen.' } else { 'Nothing found. Please type the address yourself.' }); return }
-        $script:wzWUrl.Text = $f[0]
-        if ($f.Count -gt 1) { foreach ($u in $f) { [void]$script:wzWFound.Items.Add($u) }; $script:wzWFound.Visibility = 'Visible' }
-        $script:wzWMsg.Text = $(if ($script:wzDe) { 'Gefunden: ' + $f[0] } else { 'Found: ' + $f[0] })
-    })
-    $script:wzWSkip.Add_Click({ $script:wzRes = [pscustomobject]@{ ok = $false; auto = [bool]$script:wzWAuto.IsChecked; menu = [bool]$script:wzWMenu.IsChecked }; $script:wzWin.DialogResult = $false })
-    $script:wzWGo.Add_Click({
-        $de = $script:wzDe
-        $u1 = Normalize-HaUrl $script:wzWUrl.Text; $t1 = ([string]$script:wzWTok.Password).Trim()
-        if (-not $u1 -or -not $t1) { $script:wzWMsg.Text = $(if ($de) { 'Bitte Adresse und Token eintragen, oder „Später einrichten“ wählen.' } else { 'Please enter the address and the token, or choose "Set up later".' }); return }
-        $script:wzWMsg.Text = $(if ($de) { 'Teste die Verbindung …' } else { 'Testing the connection …' })
-        $script:wzWin.Dispatcher.Invoke([Action]{}, [Windows.Threading.DispatcherPriority]::Render)
-        $r1 = Test-Ha $u1 $t1
-        if ($r1 -eq 'auth') { $script:wzWMsg.Text = $(if ($de) { 'Der Token wurde abgelehnt. Bitte einen neuen erstellen.' } else { 'The token was rejected. Please create a new one.' }); return }
-        if ($r1 -ne 'ok') { $script:wzWMsg.Text = $(if ($de) { 'Keine Verbindung. Stimmen Adresse und Netzwerk?' } else { 'No connection. Are the address and network correct?' }); return }
-        Save-HaUrl $script:wzCfg $u1; Save-HaToken $t1
-        $n = ''
-        try {
-            $tpl = '{% set ns = namespace(n=0) %}{% for a in areas() %}{% set ok = namespace(v=false) %}{% for e in area_entities(a) %}{% if state_attr(e, "device_class") in ["carbon_dioxide", "pm25"] and states[e] is not none %}{% set ok.v = true %}{% endif %}{% endfor %}{% if ok.v %}{% set ns.n = ns.n + 1 %}{% endif %}{% endfor %}{{ ns.n }}'
-            $n = (Invoke-Ha $u1 $t1 'POST' '/api/template' (@{ template = $tpl } | ConvertTo-Json -Compress)).Trim()
-        } catch {}
-        $script:wzRes = [pscustomobject]@{ ok = $true; auto = [bool]$script:wzWAuto.IsChecked; menu = [bool]$script:wzWMenu.IsChecked; rooms = $n }
-        if ($n -match '^\d+$') { $script:wzWMsg.Text = $(if ($de) { 'Verbunden. ' + $n + ' Räume mit Luftsensor gefunden.' } else { 'Connected. Found ' + $n + ' rooms with an air sensor.' }) } else { $script:wzWMsg.Text = $(if ($de) { 'Verbunden.' } else { 'Connected.' }) }
-        $script:wzWin.Dispatcher.Invoke([Action]{}, [Windows.Threading.DispatcherPriority]::Render)
-        Start-Sleep -Milliseconds 1400
-        $script:wzWin.DialogResult = $true
-    })
-    [void]$d.ShowDialog()
-    return $script:wzRes
-}
+function Show-InstallWizard([string]$cfgPath) {
+    Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase
+    $script:wzDe = ((Get-Culture).TwoLetterISOLanguageName -eq 'de')
+    $x = @"
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Luftwächter" Width="540" SizeToContent="Height" WindowStartupLocation="CenterScreen" Topmost="True" ResizeMode="NoResize" Background="#FF1B222D" FontFamily="Segoe UI">
+  <StackPanel Margin="26">
+    <DockPanel><Button x:Name="WLang" DockPanel.Dock="Right" Padding="10,2" VerticalAlignment="Top"/><TextBlock Text="Luftwächter" Foreground="White" FontSize="30" FontWeight="Bold"/></DockPanel>
+    <TextBlock x:Name="WIntro" Foreground="#FFB3BECD" FontSize="13" TextWrapping="Wrap" Margin="0,4,0,18"/>
+    <TextBlock x:Name="WStep1" Foreground="White" FontSize="14" FontWeight="SemiBold"/>
+    <DockPanel Margin="0,6,0,0"><Button x:Name="WFind" DockPanel.Dock="Right" Padding="12,4" Margin="8,0,0,0"/><TextBox x:Name="WUrl" Padding="6,5" FontSize="13"/></DockPanel>
+    <ComboBox x:Name="WFound" Margin="0,6,0,0" Padding="6,4" FontSize="13" Visibility="Collapsed"/>
+    <TextBlock x:Name="WStep2" Foreground="White" FontSize="14" FontWeight="SemiBold" Margin="0,16,0,0"/>
+    <PasswordBox x:Name="WTok" Padding="6,5" FontSize="13" Margin="0,6,0,4"/>
+    <TextBlock x:Name="WOpen" Foreground="#FF7CB7FF" FontSize="12" Cursor="Hand"/>
+    <TextBlock x:Name="WStep3" Foreground="White" FontSize="14" FontWeight="SemiBold" Margin="0,16,0,0"/>
+    <CheckBox x:Name="WAuto" Foreground="#FFDFE5EE" FontSize="13" Margin="0,6,0,0" IsChecked="True"/>
+    <CheckBox x:Name="WMenu" Foreground="#FFDFE5EE" FontSize="13" Margin="0,4,0,0" IsChecked="True"/>
+    <TextBlock x:Name="WMsg" Foreground="#FFFFD27A" FontSize="13" TextWrapping="Wrap" Margin="0,16,0,0" MinHeight="20"/>
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0"><Button x:Name="WSkip" Padding="16,7" Margin="0,0,8,0"/><Button x:Name="WGo" Padding="22,7" IsDefault="True" FontWeight="SemiBold"/></StackPanel>
+  </StackPanel>
+</Window>
+"@
+    $d = [Windows.Markup.XamlReader]::Load((New-Object System.Xml.XmlNodeReader ([xml]$x)))
+    $script:wzWin = $d
+    $script:wzCfg = $cfgPath
+    $script:wzRes = $null
+    foreach ($nm in 'WLang', 'WIntro', 'WStep1', 'WFind', 'WUrl', 'WFound', 'WStep2', 'WTok', 'WOpen', 'WStep3', 'WAuto', 'WMenu', 'WMsg', 'WSkip', 'WGo') { Set-Variable -Scope Script -Name ('wz' + $nm) -Value ($d.FindName($nm)) }
+    $script:wzApply = {
+        $de = $script:wzDe
+        $script:wzWLang.Content = $(if ($de) { 'DE | EN' } else { 'EN | DE' })
+        $script:wzWIntro.Text = $(if ($de) { 'Willkommen! Hier verbindest du das Widget mit deinem Home Assistant. Räume, Sensoren und Geräte werden danach automatisch gefunden.' } else { 'Welcome! Connect the widget to your Home Assistant here. Rooms, sensors and devices are found automatically afterwards.' })
+        $script:wzWStep1.Text = $(if ($de) { '1  Adresse von Home Assistant' } else { '1  Home Assistant address' })
+        $script:wzWFind.Content = $(if ($de) { 'Im Netzwerk suchen' } else { 'Search network' })
+        $script:wzWStep2.Text = $(if ($de) { '2  Langlebiger Zugangstoken' } else { '2  Long-lived access token' })
+        $script:wzWOpen.Text = $(if ($de) { 'Token-Seite in Home Assistant öffnen (Profil → Sicherheit → Token erstellen)' } else { 'Open the token page in Home Assistant (Profile → Security → Create token)' })
+        $script:wzWStep3.Text = $(if ($de) { '3  Optionen' } else { '3  Options' })
+        $script:wzWAuto.Content = $(if ($de) { 'Mit Windows starten' } else { 'Start with Windows' })
+        $script:wzWMenu.Content = $(if ($de) { 'Eintrag im Startmenü anlegen' } else { 'Add a Start menu entry' })
+        $script:wzWSkip.Content = $(if ($de) { 'Später einrichten' } else { 'Set up later' })
+        $script:wzWGo.Content = $(if ($de) { 'Verbinden und installieren' } else { 'Connect and install' })
+    }
+    & $script:wzApply
+    $script:wzWUrl.Text = 'http://homeassistant.local:8123'
+    $script:wzWLang.Add_Click({ $script:wzDe = -not $script:wzDe; & $script:wzApply })
+    $script:wzWOpen.Add_MouseLeftButtonDown({ try { $u0 = Normalize-HaUrl $script:wzWUrl.Text; if ($u0) { Start-Process ($u0 + '/profile/security') } } catch {} })
+    $script:wzWFound.Add_SelectionChanged({ if ($script:wzWFound.SelectedItem) { $script:wzWUrl.Text = [string]$script:wzWFound.SelectedItem } })
+    $script:wzWFind.Add_Click({
+        $script:wzWMsg.Text = $(if ($script:wzDe) { 'Suche Home Assistant im Netzwerk …' } else { 'Searching the network for Home Assistant …' })
+        $script:wzWin.Dispatcher.Invoke([Action]{}, [Windows.Threading.DispatcherPriority]::Render)
+        $f = @(Find-Ha)
+        $script:wzWFound.Items.Clear(); $script:wzWFound.Visibility = 'Collapsed'
+        if ($f.Count -eq 0) { $script:wzWMsg.Text = $(if ($script:wzDe) { 'Nichts gefunden. Bitte die Adresse selbst eintragen.' } else { 'Nothing found. Please type the address yourself.' }); return }
+        $script:wzWUrl.Text = $f[0]
+        if ($f.Count -gt 1) { foreach ($u in $f) { [void]$script:wzWFound.Items.Add($u) }; $script:wzWFound.Visibility = 'Visible' }
+        $script:wzWMsg.Text = $(if ($script:wzDe) { 'Gefunden: ' + $f[0] } else { 'Found: ' + $f[0] })
+    })
+    $script:wzWSkip.Add_Click({ $script:wzRes = [pscustomobject]@{ ok = $false; auto = [bool]$script:wzWAuto.IsChecked; menu = [bool]$script:wzWMenu.IsChecked }; $script:wzWin.DialogResult = $false })
+    $script:wzWGo.Add_Click({
+        $de = $script:wzDe
+        $u1 = Normalize-HaUrl $script:wzWUrl.Text; $t1 = ([string]$script:wzWTok.Password).Trim()
+        if (-not $u1 -or -not $t1) { $script:wzWMsg.Text = $(if ($de) { 'Bitte Adresse und Token eintragen, oder „Später einrichten“ wählen.' } else { 'Please enter the address and the token, or choose "Set up later".' }); return }
+        $script:wzWMsg.Text = $(if ($de) { 'Teste die Verbindung …' } else { 'Testing the connection …' })
+        $script:wzWin.Dispatcher.Invoke([Action]{}, [Windows.Threading.DispatcherPriority]::Render)
+        $r1 = Test-Ha $u1 $t1
+        if ($r1 -eq 'auth') { $script:wzWMsg.Text = $(if ($de) { 'Der Token wurde abgelehnt. Bitte einen neuen erstellen.' } else { 'The token was rejected. Please create a new one.' }); return }
+        if ($r1 -ne 'ok') { $script:wzWMsg.Text = $(if ($de) { 'Keine Verbindung. Stimmen Adresse und Netzwerk?' } else { 'No connection. Are the address and network correct?' }); return }
+        Save-HaUrl $script:wzCfg $u1; Save-HaToken $t1
+        $n = ''
+        try {
+            $tpl = '{% set ns = namespace(n=0) %}{% for a in areas() %}{% set ok = namespace(v=false) %}{% for e in area_entities(a) %}{% if state_attr(e, "device_class") in ["carbon_dioxide", "pm25"] and states[e] is not none %}{% set ok.v = true %}{% endif %}{% endfor %}{% if ok.v %}{% set ns.n = ns.n + 1 %}{% endif %}{% endfor %}{{ ns.n }}'
+            $n = (Invoke-Ha $u1 $t1 'POST' '/api/template' (@{ template = $tpl } | ConvertTo-Json -Compress)).Trim()
+        } catch {}
+        $script:wzRes = [pscustomobject]@{ ok = $true; auto = [bool]$script:wzWAuto.IsChecked; menu = [bool]$script:wzWMenu.IsChecked; rooms = $n }
+        if ($n -match '^\d+$') { $script:wzWMsg.Text = $(if ($de) { 'Verbunden. ' + $n + ' Räume mit Luftsensor gefunden.' } else { 'Connected. Found ' + $n + ' rooms with an air sensor.' }) } else { $script:wzWMsg.Text = $(if ($de) { 'Verbunden.' } else { 'Connected.' }) }
+        $script:wzWin.Dispatcher.Invoke([Action]{}, [Windows.Threading.DispatcherPriority]::Render)
+        Start-Sleep -Milliseconds 1400
+        $script:wzWin.DialogResult = $true
+    })
+    [void]$d.ShowDialog()
+    return $script:wzRes
+}
 $startMenuLnk = Join-Path ([Environment]::GetFolderPath('Programs')) 'Luftwächter.lnk'
 function New-StartMenuShortcut {
     try {
@@ -475,6 +475,8 @@ $script:Strings = @{
     sens_h = @('Luftfeuchte', 'Humidity')
     sens_none = @('keine Sensoren', 'no sensors')
     sens_save = @('Speichern', 'Save')
+    m_mode_full = @('Alle Details anzeigen', 'Show all details')
+    m_mode_simple = @('Einfache Ansicht', 'Simple view')
     mode_more = @('Details', 'Details')
     mode_simple = @('Einfach', 'Simple')
     mode_tip = @('Zwischen einfacher Ansicht und allen Details wechseln', 'Switch between the simple view and all details')
@@ -1198,27 +1200,28 @@ function Build-Strip {
 }
 
 # ---------- Ansicht ----------
-function Apply-Simple {
-    $sm = [bool]$state.simple
-    $ui.BtnModeT.Text = $(if ($sm) { T 'mode_more' } else { T 'mode_simple' })
-    $ui.BtnMode.ToolTip = (T 'mode_tip')
-    $ui.TabLbl.Text = (T 'tab_lbl')
-    if ($script:compact) { return }
-    $hide = $(if ($sm) { 'Collapsed' } else { 'Visible' })
-    foreach ($n in 'GrpTiles', 'Peak', 'GrpFoot', 'SzBox', 'Time') { $ui.$n.Visibility = $hide }
-    if ($sm) { $ui.WLine.Visibility = 'Collapsed'; $ui.WFull.Visibility = 'Collapsed' }
-    elseif ($state.weatherOpen) { $ui.WLine.Visibility = 'Collapsed'; $ui.WFull.Visibility = 'Visible' } else { $ui.WLine.Visibility = 'Visible'; $ui.WFull.Visibility = 'Collapsed' }
-    if ($sm) {
-        $ui.Copy.Visibility = 'Collapsed'
-        if ($script:newVer) { $ui.GrpUpd.Visibility = 'Visible' } else { $ui.GrpUpd.Visibility = 'Collapsed' }
-        $ui.Headline.FontSize = 26; $ui.Detail.FontSize = 16; $ui.Level.FontSize = 28; $ui.Trend.FontSize = 14
-        $ui.TabArr.Visibility = 'Collapsed'; $ui.TabLbl.Visibility = 'Visible'; $ui.Tab.Height = 170; $ui.Tab.Width = 34
-    } else {
-        $ui.Copy.Visibility = 'Visible'; $ui.GrpUpd.Visibility = 'Visible'
-        $ui.Headline.FontSize = 22; $ui.Detail.FontSize = 13; $ui.Level.FontSize = 24; $ui.Trend.FontSize = 12
-        $ui.TabArr.Visibility = 'Visible'; $ui.TabLbl.Visibility = 'Collapsed'; $ui.Tab.Height = 120; $ui.Tab.Width = 28
-    }
-}
+function Toggle-Mode { $state.simple = -not [bool]$state.simple; Apply-View; Save-State; Apply-Lang }
+function Apply-Simple {
+    $sm = [bool]$state.simple
+    $ui.BtnModeT.Text = $(if ($sm) { T 'mode_more' } else { T 'mode_simple' })
+    $ui.BtnMode.ToolTip = (T 'mode_tip')
+    $ui.TabLbl.Text = (T 'tab_lbl')
+    if ($script:compact) { return }
+    $hide = $(if ($sm) { 'Collapsed' } else { 'Visible' })
+    foreach ($n in 'GrpTiles', 'Peak', 'GrpFoot', 'SzBox', 'Time') { $ui.$n.Visibility = $hide }
+    if ($sm) { $ui.WLine.Visibility = 'Collapsed'; $ui.WFull.Visibility = 'Collapsed' }
+    elseif ($state.weatherOpen) { $ui.WLine.Visibility = 'Collapsed'; $ui.WFull.Visibility = 'Visible' } else { $ui.WLine.Visibility = 'Visible'; $ui.WFull.Visibility = 'Collapsed' }
+    if ($sm) {
+        $ui.Copy.Visibility = 'Collapsed'
+        $ui.GrpUpd.Visibility = 'Visible'
+        $ui.Headline.FontSize = 26; $ui.Detail.FontSize = 16; $ui.Level.FontSize = 28; $ui.Trend.FontSize = 14
+        $ui.TabArr.Visibility = 'Collapsed'; $ui.TabLbl.Visibility = 'Visible'; $ui.Tab.Height = 170; $ui.Tab.Width = 34
+    } else {
+        $ui.Copy.Visibility = 'Visible'; $ui.GrpUpd.Visibility = 'Visible'
+        $ui.Headline.FontSize = 22; $ui.Detail.FontSize = 13; $ui.Level.FontSize = 24; $ui.Trend.FontSize = 12
+        $ui.TabArr.Visibility = 'Visible'; $ui.TabLbl.Visibility = 'Collapsed'; $ui.Tab.Height = 120; $ui.Tab.Width = 28
+    }
+}
 function Apply-View {
     $scale = 1.0
     switch ($state.size) { 'S' { $scale = 0.82 } 'L' { $scale = 1.2 } default { $scale = 1.0 } }
@@ -1723,64 +1726,64 @@ function Send-HaCommand($body) {
     [void](Invoke-Ha $script:haUrl $script:haTok 'POST' ('/api/services/' + $svc) ($payload | ConvertTo-Json -Compress))
 }
 
-function Show-SensorDialog {
-    if (-not $script:haData) { return }
-    $room = @($script:haData.r | Where-Object { [string]$_.a -eq [string]$state.room })[0]
-    if (-not $room) { return }
-    $x = @"
-<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Luftwächter" Width="520" SizeToContent="Height" WindowStartupLocation="CenterScreen" Topmost="True" ResizeMode="NoResize" Background="#FF1B222D" FontFamily="Segoe UI">
-  <StackPanel Margin="22">
-    <TextBlock x:Name="STitle" Foreground="White" FontSize="21" FontWeight="Bold" TextWrapping="Wrap"/>
-    <TextBlock x:Name="SIntro" Foreground="#FFB3BECD" FontSize="13" TextWrapping="Wrap" Margin="0,6,0,14"/>
-    <TextBlock x:Name="SL0" Foreground="White" FontSize="13" FontWeight="SemiBold"/><ComboBox x:Name="SC0" Margin="0,4,0,10" Padding="6,4" FontSize="13"/>
-    <TextBlock x:Name="SL1" Foreground="White" FontSize="13" FontWeight="SemiBold"/><ComboBox x:Name="SC1" Margin="0,4,0,10" Padding="6,4" FontSize="13"/>
-    <TextBlock x:Name="SL2" Foreground="White" FontSize="13" FontWeight="SemiBold"/><ComboBox x:Name="SC2" Margin="0,4,0,10" Padding="6,4" FontSize="13"/>
-    <TextBlock x:Name="SL3" Foreground="White" FontSize="13" FontWeight="SemiBold"/><ComboBox x:Name="SC3" Margin="0,4,0,14" Padding="6,4" FontSize="13"/>
-    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"><Button x:Name="SNo" Padding="16,6" Margin="0,0,8,0"/><Button x:Name="SYes" Padding="16,6" IsDefault="True"/></StackPanel>
-  </StackPanel>
-</Window>
-"@
-    $d = [Windows.Markup.XamlReader]::Load((New-Object System.Xml.XmlNodeReader ([xml]$x)))
-    $script:sdDlg = $d
-    $d.FindName('STitle').Text = (T 'sens_title' ([string]$room.n)); $d.FindName('SIntro').Text = (T 'sens_intro')
-    $d.FindName('SNo').Content = (T 'ha_cancel'); $d.FindName('SYes').Content = (T 'sens_save')
-    $defs = @(@('co2', 'carbon_dioxide', 'sens_co2', 0), @('pm', 'pm25', 'sens_pm', 0), @('t', 'temperature', 'sens_t', 1), @('h', 'humidity', 'sens_h', 0))
-    $cur = $state.sensors[[string]$state.room]
-    $nowE = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
-    $script:sdBoxes = @()
-    for ($k = 0; $k -lt 4; $k++) {
-        $df = $defs[$k]
-        $d.FindName('SL' + $k).Text = (T $df[2])
-        $cb = $d.FindName('SC' + $k)
-        $cands = @(Get-Cands @($room.e) $df[1])
-        $a = New-Object System.Windows.Controls.ComboBoxItem
-        $a.Tag = ''
-        if ($cands.Count -eq 0) { $a.Content = (T 'sens_none') } elseif ($cands.Count -eq 1) { $a.Content = (Lx 'Automatisch' 'Automatic') } else { $a.Content = (Lx ('Automatisch (Mittelwert aus ' + $cands.Count + ')') ('Automatic (average of ' + $cands.Count + ')')) }
-        [void]$cb.Items.Add($a)
-        $cb.SelectedItem = $a
-        foreach ($c in $cands) {
-            $age = ''
-            if ([double]$c.lr -gt 0) { $m = [int][Math]::Max(0, ($nowE - [double]$c.lr) / 60); if ($m -ge 5) { $age = ' · ' + (Lx ('vor ' + $m + ' min') ($m.ToString() + ' min ago')) } }
-            $it = New-Object System.Windows.Controls.ComboBoxItem
-            $it.Content = ([string]$c.n + ' · ' + (Fmt (Num $c.s) $df[3]) + $age); $it.Tag = [string]$c.i
-            [void]$cb.Items.Add($it)
-            if ($cur -and [string]$cur[$df[0]] -eq [string]$c.i) { $cb.SelectedItem = $it }
-        }
-        $cb.Tag = $df[0]
-        $script:sdBoxes += $cb
-    }
-    $d.FindName('SNo').Add_Click({ $script:sdDlg.DialogResult = $false })
-    $d.FindName('SYes').Add_Click({
-        $h = @{}
-        foreach ($b in $script:sdBoxes) { $sel = $b.SelectedItem; if ($sel -and [string]$sel.Tag) { $h[[string]$b.Tag] = [string]$sel.Tag } }
-        if ($h.Count -gt 0) { $state.sensors[[string]$state.room] = $h } else { $state.sensors.Remove([string]$state.room) }
-        Save-State
-        $script:sdDlg.DialogResult = $true
-    })
-    $res = $d.ShowDialog()
-    if ($res) { $script:devSig = ''; Update-Widget }
-}
+function Show-SensorDialog {
+    if (-not $script:haData) { return }
+    $room = @($script:haData.r | Where-Object { [string]$_.a -eq [string]$state.room })[0]
+    if (-not $room) { return }
+    $x = @"
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Luftwächter" Width="520" SizeToContent="Height" WindowStartupLocation="CenterScreen" Topmost="True" ResizeMode="NoResize" Background="#FF1B222D" FontFamily="Segoe UI">
+  <StackPanel Margin="22">
+    <TextBlock x:Name="STitle" Foreground="White" FontSize="21" FontWeight="Bold" TextWrapping="Wrap"/>
+    <TextBlock x:Name="SIntro" Foreground="#FFB3BECD" FontSize="13" TextWrapping="Wrap" Margin="0,6,0,14"/>
+    <TextBlock x:Name="SL0" Foreground="White" FontSize="13" FontWeight="SemiBold"/><ComboBox x:Name="SC0" Margin="0,4,0,10" Padding="6,4" FontSize="13"/>
+    <TextBlock x:Name="SL1" Foreground="White" FontSize="13" FontWeight="SemiBold"/><ComboBox x:Name="SC1" Margin="0,4,0,10" Padding="6,4" FontSize="13"/>
+    <TextBlock x:Name="SL2" Foreground="White" FontSize="13" FontWeight="SemiBold"/><ComboBox x:Name="SC2" Margin="0,4,0,10" Padding="6,4" FontSize="13"/>
+    <TextBlock x:Name="SL3" Foreground="White" FontSize="13" FontWeight="SemiBold"/><ComboBox x:Name="SC3" Margin="0,4,0,14" Padding="6,4" FontSize="13"/>
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"><Button x:Name="SNo" Padding="16,6" Margin="0,0,8,0"/><Button x:Name="SYes" Padding="16,6" IsDefault="True"/></StackPanel>
+  </StackPanel>
+</Window>
+"@
+    $d = [Windows.Markup.XamlReader]::Load((New-Object System.Xml.XmlNodeReader ([xml]$x)))
+    $script:sdDlg = $d
+    $d.FindName('STitle').Text = (T 'sens_title' ([string]$room.n)); $d.FindName('SIntro').Text = (T 'sens_intro')
+    $d.FindName('SNo').Content = (T 'ha_cancel'); $d.FindName('SYes').Content = (T 'sens_save')
+    $defs = @(@('co2', 'carbon_dioxide', 'sens_co2', 0), @('pm', 'pm25', 'sens_pm', 0), @('t', 'temperature', 'sens_t', 1), @('h', 'humidity', 'sens_h', 0))
+    $cur = $state.sensors[[string]$state.room]
+    $nowE = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+    $script:sdBoxes = @()
+    for ($k = 0; $k -lt 4; $k++) {
+        $df = $defs[$k]
+        $d.FindName('SL' + $k).Text = (T $df[2])
+        $cb = $d.FindName('SC' + $k)
+        $cands = @(Get-Cands @($room.e) $df[1])
+        $a = New-Object System.Windows.Controls.ComboBoxItem
+        $a.Tag = ''
+        if ($cands.Count -eq 0) { $a.Content = (T 'sens_none') } elseif ($cands.Count -eq 1) { $a.Content = (Lx 'Automatisch' 'Automatic') } else { $a.Content = (Lx ('Automatisch (Mittelwert aus ' + $cands.Count + ')') ('Automatic (average of ' + $cands.Count + ')')) }
+        [void]$cb.Items.Add($a)
+        $cb.SelectedItem = $a
+        foreach ($c in $cands) {
+            $age = ''
+            if ([double]$c.lr -gt 0) { $m = [int][Math]::Max(0, ($nowE - [double]$c.lr) / 60); if ($m -ge 5) { $age = ' · ' + (Lx ('vor ' + $m + ' min') ($m.ToString() + ' min ago')) } }
+            $it = New-Object System.Windows.Controls.ComboBoxItem
+            $it.Content = ([string]$c.n + ' · ' + (Fmt (Num $c.s) $df[3]) + $age); $it.Tag = [string]$c.i
+            [void]$cb.Items.Add($it)
+            if ($cur -and [string]$cur[$df[0]] -eq [string]$c.i) { $cb.SelectedItem = $it }
+        }
+        $cb.Tag = $df[0]
+        $script:sdBoxes += $cb
+    }
+    $d.FindName('SNo').Add_Click({ $script:sdDlg.DialogResult = $false })
+    $d.FindName('SYes').Add_Click({
+        $h = @{}
+        foreach ($b in $script:sdBoxes) { $sel = $b.SelectedItem; if ($sel -and [string]$sel.Tag) { $h[[string]$b.Tag] = [string]$sel.Tag } }
+        if ($h.Count -gt 0) { $state.sensors[[string]$state.room] = $h } else { $state.sensors.Remove([string]$state.room) }
+        Save-State
+        $script:sdDlg.DialogResult = $true
+    })
+    $res = $d.ShowDialog()
+    if ($res) { $script:devSig = ''; Update-Widget }
+}
 function Show-HaDialog {
     $x = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -1904,12 +1907,12 @@ for ($k = 0; $k -lt 4; $k++) {
     $cb.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; $state.metric = [int]$s.Tag; if ($script:last) { Show-Data $script:last }; Save-State })
 }
 $ui.SparkBox.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; if ($state.sparkHours -eq 3) { $state.sparkHours = 24 } elseif ($state.sparkHours -eq 24) { $state.sparkHours = 168 } else { $state.sparkHours = 3 }; if ($script:last) { Show-Data $script:last }; Save-State })
-$ui.BtnMode.Add_MouseLeftButtonUp({ $state.simple = -not [bool]$state.simple; Apply-View; Save-State })
+$ui.BtnMode.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; Toggle-Mode })
 $ui.Tab.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; $state.drawerOpen = $true; Apply-View; Save-State })
 $ui.DrawerClose.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; $state.drawerOpen = $false; Apply-View; Save-State })
 
-$ui.Footer.Add_MouseLeftButtonUp({ if ($script:last -and $script:last.warn) { Show-SensorDialog } })
-$ui.TitleBox.Add_MouseLeftButtonUp({ param($s, $e) try { Start-Process $script:repoUrl } catch {} })
+$ui.Footer.Add_MouseLeftButtonDown({ param($s, $e) if ($script:last -and $script:last.warn) { $e.Handled = $true; Show-SensorDialog } })
+$ui.TitleBox.Add_MouseLeftButtonDown({ param($s, $e) if ($e.ClickCount -eq 1) { $e.Handled = $true; try { Start-Process $script:repoUrl } catch {} } })
 
 $menu = New-Object System.Windows.Controls.ContextMenu
 $miRefresh = New-Object System.Windows.Controls.MenuItem; $miRefresh.Header = 'Jetzt aktualisieren'
@@ -1920,6 +1923,7 @@ $miReset = New-Object System.Windows.Controls.MenuItem; $miReset.Header = 'Fenst
 $miSound = New-Object System.Windows.Controls.MenuItem; $miSound.Header = 'Hinweiston beim Lüften'; $miSound.IsCheckable = $true; $miSound.IsChecked = [bool]$state.sound
 $miTray = New-Object System.Windows.Controls.MenuItem; $miTray.IsCheckable = $true; $miTray.IsChecked = [bool]$state.tray
 $miHa = New-Object System.Windows.Controls.MenuItem
+$miMode = New-Object System.Windows.Controls.MenuItem
 $miSens = New-Object System.Windows.Controls.MenuItem
 $miHelp = New-Object System.Windows.Controls.MenuItem
 $miUpd = New-Object System.Windows.Controls.MenuItem
@@ -1934,11 +1938,12 @@ $miReset.Add_Click({ $w0 = [System.Windows.SystemParameters]::WorkArea; $win.Lef
 $miSound.Add_Click({ $state.sound = $miSound.IsChecked; Save-State })
 $miExit.Add_Click({ Exit-App })
 $miHa.Add_Click({ Show-HaDialog })
+$miMode.Add_Click({ Toggle-Mode })
 $miSens.Add_Click({ Show-SensorDialog })
 $miHelp.Add_Click({ $script:helpOpen = $true; Apply-View })
 $miCfg.Add_Click({ try { if (-not (Test-Path $cfgFile)) { Copy-Item (Join-Path $dir 'config.example.json') $cfgFile }; Start-Process notepad.exe -ArgumentList ('"' + $cfgFile + '"') } catch { Write-Log ('Konfig: ' + $_.Exception.Message) } })
 $miUpd.Add_Click({ Invoke-UpdateFlow $true })
-[void]$menu.Items.Add($miRefresh); [void]$menu.Items.Add($miTop); [void]$menu.Items.Add($miPop); [void]$menu.Items.Add($miTray); [void]$menu.Items.Add($miSound); [void]$menu.Items.Add($miReset); [void]$menu.Items.Add($miLog); [void]$menu.Items.Add($miHa); [void]$menu.Items.Add($miSens); [void]$menu.Items.Add($miHelp); [void]$menu.Items.Add($miCfg); [void]$menu.Items.Add($miUpd); [void]$menu.Items.Add((New-Object System.Windows.Controls.Separator)); [void]$menu.Items.Add($miExit)
+[void]$menu.Items.Add($miMode); [void]$menu.Items.Add($miRefresh); [void]$menu.Items.Add($miTop); [void]$menu.Items.Add($miPop); [void]$menu.Items.Add($miTray); [void]$menu.Items.Add($miSound); [void]$menu.Items.Add($miReset); [void]$menu.Items.Add($miLog); [void]$menu.Items.Add($miHa); [void]$menu.Items.Add($miSens); [void]$menu.Items.Add($miHelp); [void]$menu.Items.Add($miCfg); [void]$menu.Items.Add($miUpd); [void]$menu.Items.Add((New-Object System.Windows.Controls.Separator)); [void]$menu.Items.Add($miExit)
 $win.ContextMenu = $menu
 
 
@@ -1963,7 +1968,7 @@ function Apply-Lang {
     $ui.BtnHelp.ToolTip = (T 'help_tip'); $ui.BtnLang.ToolTip = (T 'lang_tip')
     foreach ($k in 'De', 'En') { $ui.('Lang' + $k).Foreground = Brush '#FFA9B4C4'; $ui.('Lang' + $k).FontWeight = 'Normal' }
     if ($state.lang -eq 'en') { $ui.LangEn.Foreground = Brush '#FFFFFFFF'; $ui.LangEn.FontWeight = 'Bold' } else { $ui.LangDe.Foreground = Brush '#FFFFFFFF'; $ui.LangDe.FontWeight = 'Bold' }
-    $miRefresh.Header = (T 'm_refresh'); $miTop.Header = (T 'm_top'); $miPop.Header = (T 'm_pop'); $miTray.Header = (T 'm_tray'); if ($script:trayMiOpen) { $script:trayMiOpen.Text = (T 'tray_open'); $script:trayMiExit.Text = (T 'm_exit') }; $miSound.Header = (T 'm_sound'); $miReset.Header = (T 'm_reset'); $miLog.Header = (T 'm_log'); $miHelp.Header = (T 'm_help'); $miHa.Header = (T 'm_ha'); $miSens.Header = (T 'm_sens'); $miCfg.Header = (T 'm_cfg'); $miUpd.Header = (T 'm_upd'); $miExit.Header = (T 'm_exit')
+    $miRefresh.Header = (T 'm_refresh'); $miTop.Header = (T 'm_top'); $miPop.Header = (T 'm_pop'); $miTray.Header = (T 'm_tray'); if ($script:trayMiOpen) { $script:trayMiOpen.Text = (T 'tray_open'); $script:trayMiExit.Text = (T 'm_exit') }; $miSound.Header = (T 'm_sound'); $miReset.Header = (T 'm_reset'); $miLog.Header = (T 'm_log'); $miHelp.Header = (T 'm_help'); $miHa.Header = (T 'm_ha'); $miMode.Header = $(if ($state.simple) { T 'm_mode_full' } else { T 'm_mode_simple' }); $miSens.Header = (T 'm_sens'); $miCfg.Header = (T 'm_cfg'); $miUpd.Header = (T 'm_upd'); $miExit.Header = (T 'm_exit')
     $ui.RoomName.Text = 'Luftwächter'; $ui.TitleTag.Text = (T 'tagline'); $ui.TitleBox.ToolTip = (T 'copy_tip')
     $ui.Footer.Text = (Get-FooterText)
     $ui.Copy.Text = $copyright + ' · GitHub'; $ui.Copy.ToolTip = (T 'copy_tip'); $ui.Ver.ToolTip = (T 'ver_tip')

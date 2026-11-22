@@ -2,6 +2,11 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [5.0.1] - 2026-11-22
+- Fix: the "Details" button (and the clickable title and sensor warning) did not react, because the window grabbed the mouse for dragging. They work now.
+- Fix: the Update button stays visible in the simple view.
+- New: right-click menu entry "Show all details" / "Simple view" as a second way to switch.
+
 ## [5.0.0] - 2026-11-22
 - New: simple view, now the default. The widget shows only what matters: the face, one clear sentence ("Please open the window") in larger text, the trend, and the rooms. Curve, numbers, weather, sizes and technical notes are one click away behind the "Details" button (top left); "Simple" goes back. Your choice is remembered.
 - New: the device tab on the right edge now says "Lamps & plugs" instead of an arrow.
