@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall)
 
 $appName = 'Luftwaechter'
-$appVersion = '5.10.0'
+$appVersion = '5.11.0'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -523,6 +523,7 @@ $script:Strings = @{
     m_theme_night = @('Design: Nacht', 'Theme: Night')
     m_snooze = @('Ruhe für 1 Stunde', 'Quiet for 1 hour')
     m_snooze_off = @('Ruhe beenden (bis {0})', 'End quiet time (until {0})')
+    m_export = @('Verlauf als CSV speichern (7 Tage)', 'Save history as CSV (7 days)')
     m_bigger = @('Größer anzeigen', 'Make bigger')
     m_smaller = @('Kleiner anzeigen', 'Make smaller')
     upd_tip = @('Zuletzt geprüft: {0} · nächste Prüfung in ca. {1} Min.', 'Last checked: {0} · next check in about {1} min')
@@ -1299,6 +1300,31 @@ function Get-DayScore([string]$room) {
     if ($n -lt 20) { return $null }
     return [int][Math]::Round(100.0 * $good / $n)
 }
+function Export-History {
+    try {
+        $rn = @{}
+        foreach ($r in @($script:rooms)) { $rn[[string]$r.key] = [string]$r.name }
+        $de = ($state.lang -ne 'en')
+        $hdr = $(if ($de) { 'Zeit;Raum;CO2 ppm;Feinstaub ug/m3;Temperatur C;Luftfeuchte %' } else { 'Time;Room;CO2 ppm;Fine dust ug/m3;Temperature C;Humidity %' })
+        $lines = New-Object System.Collections.Generic.List[string]
+        $lines.Add($hdr)
+        foreach ($k in @($state.hist7.Keys)) {
+            $nm = $(if ($rn.ContainsKey($k)) { $rn[$k] } else { $k })
+            foreach ($e in @($state.hist7[$k])) {
+                $f = ([string]$e).Split(':')
+                if ($f.Count -lt 2) { continue }
+                $t = [DateTimeOffset]::FromUnixTimeSeconds([int64]$f[0]).LocalDateTime.ToString('yyyy-MM-dd HH:mm')
+                $row = @($t, $nm, $f[1], $(if ($f.Count -gt 2) { $f[2] } else { '' }), $(if ($f.Count -gt 3) { $f[3] } else { '' }), $(if ($f.Count -gt 4) { $f[4] } else { '' }))
+                if ($de) { for ($i = 2; $i -lt 6; $i++) { $row[$i] = ([string]$row[$i]).Replace('.', ',') } }
+                $lines.Add(($row -join ';'))
+            }
+        }
+        $docs = [Environment]::GetFolderPath('MyDocuments')
+        $file = Join-Path $docs ('Luftwaechter-Verlauf-' + (Get-Date).ToString('yyyyMMdd-HHmm') + '.csv')
+        [System.IO.File]::WriteAllLines($file, $lines, (New-Object System.Text.UTF8Encoding($true)))
+        Start-Process 'explorer.exe' -ArgumentList ('/select,"' + $file + '"')
+    } catch { Write-Log ('Export: ' + $_.Exception.Message) }
+}
 $script:snoozeUntil = $null
 function Test-Snooze { return ($null -ne $script:snoozeUntil -and (Get-Date) -lt $script:snoozeUntil) }
 function Show-Data($d) {
@@ -2043,6 +2069,7 @@ $miHa = New-Object System.Windows.Controls.MenuItem
 $miMode = New-Object System.Windows.Controls.MenuItem
 $miBig = New-Object System.Windows.Controls.MenuItem
 $miSmall = New-Object System.Windows.Controls.MenuItem
+$miExport = New-Object System.Windows.Controls.MenuItem
 $miSnooze = New-Object System.Windows.Controls.MenuItem
 $miTheme = New-Object System.Windows.Controls.MenuItem
 $miDemo = New-Object System.Windows.Controls.MenuItem
@@ -2062,6 +2089,7 @@ $miSound.Add_Click({ $state.sound = $miSound.IsChecked; Save-State })
 $miExit.Add_Click({ Exit-App })
 $miHa.Add_Click({ Show-HaDialog })
 $miMode.Add_Click({ Toggle-Mode })
+$miExport.Add_Click({ Export-History })
 $miSnooze.Add_Click({ if (Test-Snooze) { $script:snoozeUntil = $null } else { $script:snoozeUntil = (Get-Date).AddHours(1) }; Apply-Lang })
 $miTheme.Add_Click({ $state.theme = $(switch ([string]$state.theme) { 'auto' { 'day' } 'day' { 'night' } default { 'auto' } }); Apply-Theme; Save-State; Apply-Lang })
 $miDemo.Add_Click({ $state.demo = -not [bool]$state.demo; $state.room = ''; Save-State; Apply-Lang; Update-Widget })
@@ -2080,7 +2108,7 @@ $miSens.Add_Click({ Show-SensorDialog })
 $miHelp.Add_Click({ $script:helpOpen = $true; Apply-View })
 $miCfg.Add_Click({ try { if (-not (Test-Path $cfgFile)) { Copy-Item (Join-Path $dir 'config.example.json') $cfgFile }; Start-Process notepad.exe -ArgumentList ('"' + $cfgFile + '"') } catch { Write-Log ('Konfig: ' + $_.Exception.Message) } })
 $miUpd.Add_Click({ Invoke-UpdateFlow $true })
-[void]$menu.Items.Add($miMode); [void]$menu.Items.Add($miSnooze); [void]$menu.Items.Add($miBig); [void]$menu.Items.Add($miTheme); [void]$menu.Items.Add($miDemo); [void]$menu.Items.Add($miHaSup); [void]$menu.Items.Add($miSmall); [void]$menu.Items.Add($miRefresh); [void]$menu.Items.Add($miTop); [void]$menu.Items.Add($miPop); [void]$menu.Items.Add($miTray); [void]$menu.Items.Add($miSound); [void]$menu.Items.Add($miReset); [void]$menu.Items.Add($miLog); [void]$menu.Items.Add($miHa); [void]$menu.Items.Add($miSens); [void]$menu.Items.Add($miHelp); [void]$menu.Items.Add($miCfg); [void]$menu.Items.Add($miUpd); [void]$menu.Items.Add((New-Object System.Windows.Controls.Separator)); [void]$menu.Items.Add($miExit)
+[void]$menu.Items.Add($miMode); [void]$menu.Items.Add($miSnooze); [void]$menu.Items.Add($miBig); [void]$menu.Items.Add($miExport); [void]$menu.Items.Add($miTheme); [void]$menu.Items.Add($miDemo); [void]$menu.Items.Add($miHaSup); [void]$menu.Items.Add($miSmall); [void]$menu.Items.Add($miRefresh); [void]$menu.Items.Add($miTop); [void]$menu.Items.Add($miPop); [void]$menu.Items.Add($miTray); [void]$menu.Items.Add($miSound); [void]$menu.Items.Add($miReset); [void]$menu.Items.Add($miLog); [void]$menu.Items.Add($miHa); [void]$menu.Items.Add($miSens); [void]$menu.Items.Add($miHelp); [void]$menu.Items.Add($miCfg); [void]$menu.Items.Add($miUpd); [void]$menu.Items.Add((New-Object System.Windows.Controls.Separator)); [void]$menu.Items.Add($miExit)
 $win.ContextMenu = $menu
 
 
@@ -2105,7 +2133,7 @@ function Apply-Lang {
     $ui.BtnHelp.ToolTip = (T 'help_tip'); $ui.BtnLang.ToolTip = (T 'lang_tip')
     foreach ($k in 'De', 'En') { $ui.('Lang' + $k).Foreground = Brush '#FFA9B4C4'; $ui.('Lang' + $k).FontWeight = 'Normal' }
     if ($state.lang -eq 'en') { $ui.LangEn.Foreground = Brush '#FFFFFFFF'; $ui.LangEn.FontWeight = 'Bold' } else { $ui.LangDe.Foreground = Brush '#FFFFFFFF'; $ui.LangDe.FontWeight = 'Bold' }
-    $miSnooze.Header = $(if (Test-Snooze) { T 'm_snooze_off' ($script:snoozeUntil.ToString('HH:mm')) } else { T 'm_snooze' }); $miTheme.Header = $(switch ([string]$state.theme) { 'day' { T 'm_theme_day' } 'night' { T 'm_theme_night' } default { T 'm_theme_auto' } }); $miDemo.Header = $(if ($state.demo) { T 'm_demo_off' } else { T 'm_demo' }); $miHaSup.Header = (T 'm_ha_support'); $miBig.Header = (T 'm_bigger'); $miSmall.Header = (T 'm_smaller'); $miRefresh.Header = (T 'm_refresh'); $miTop.Header = (T 'm_top'); $miPop.Header = (T 'm_pop'); $miTray.Header = (T 'm_tray'); if ($script:trayMiOpen) { $script:trayMiOpen.Text = (T 'tray_open'); $script:trayMiExit.Text = (T 'm_exit') }; $miSound.Header = (T 'm_sound'); $miReset.Header = (T 'm_reset'); $miLog.Header = (T 'm_log'); $miHelp.Header = (T 'm_help'); $miHa.Header = (T 'm_ha'); $miMode.Header = $(if ($state.simple) { T 'm_mode_full' } else { T 'm_mode_simple' }); $miSens.Header = (T 'm_sens'); $miCfg.Header = (T 'm_cfg'); $miUpd.Header = (T 'm_upd'); $miExit.Header = (T 'm_exit')
+    $miExport.Header = (T 'm_export'); $miSnooze.Header = $(if (Test-Snooze) { T 'm_snooze_off' ($script:snoozeUntil.ToString('HH:mm')) } else { T 'm_snooze' }); $miTheme.Header = $(switch ([string]$state.theme) { 'day' { T 'm_theme_day' } 'night' { T 'm_theme_night' } default { T 'm_theme_auto' } }); $miDemo.Header = $(if ($state.demo) { T 'm_demo_off' } else { T 'm_demo' }); $miHaSup.Header = (T 'm_ha_support'); $miBig.Header = (T 'm_bigger'); $miSmall.Header = (T 'm_smaller'); $miRefresh.Header = (T 'm_refresh'); $miTop.Header = (T 'm_top'); $miPop.Header = (T 'm_pop'); $miTray.Header = (T 'm_tray'); if ($script:trayMiOpen) { $script:trayMiOpen.Text = (T 'tray_open'); $script:trayMiExit.Text = (T 'm_exit') }; $miSound.Header = (T 'm_sound'); $miReset.Header = (T 'm_reset'); $miLog.Header = (T 'm_log'); $miHelp.Header = (T 'm_help'); $miHa.Header = (T 'm_ha'); $miMode.Header = $(if ($state.simple) { T 'm_mode_full' } else { T 'm_mode_simple' }); $miSens.Header = (T 'm_sens'); $miCfg.Header = (T 'm_cfg'); $miUpd.Header = (T 'm_upd'); $miExit.Header = (T 'm_exit')
     $ui.RoomName.Text = 'Luftwächter'; $ui.TitleTag.Text = (T 'tagline')
     $ui.Footer.Text = (Get-FooterText)
     $ui.Copy.Text = $copyright + ' · GitHub'; $ui.Copy.ToolTip = (T 'copy_tip'); $ui.Ver.ToolTip = (T 'ver_tip')

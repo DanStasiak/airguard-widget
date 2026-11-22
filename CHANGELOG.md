@@ -2,6 +2,9 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [5.11.0] - 2026-11-22
+- New: export. Right-click, "Save history as CSV" writes the last 7 days (CO₂, fine dust, temperature, humidity, every 10 minutes, all rooms) to a CSV file in your Documents folder and shows it in Explorer. It opens directly in Excel.
+
 ## [5.10.0] - 2026-11-22
 - New: double-click the title to switch between the simple view and the details view (the Details button still works).
 - Docs: screenshots on the GitHub page now show the solid day and night design.
