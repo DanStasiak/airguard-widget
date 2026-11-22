@@ -2,6 +2,9 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [4.7.0] - 2026-11-22
+- New: version history. The Update button now always opens a window with what is new (if an update is waiting) and the full history: every release of the current major version with its changes, and one summary paragraph for each earlier major version.
+
 ## [4.6.0] - 2026-11-22
 - New: sensor watchdog. If a sensor stops reporting (20 minutes or more) or is ignored because its data is stale, the footer shows an amber warning with its name, so you never trust an old value without knowing.
 - Improved: with Home Assistant the footer now says how many sensors feed the readings instead of a fixed text.

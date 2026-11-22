@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall)
 
 $appName = 'Luftwaechter'
-$appVersion = '4.6.0'
+$appVersion = '4.7.0'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -409,6 +409,10 @@ $script:Strings = @{
     upd_new = @('⬆ {0} verfügbar', '⬆ {0} available')
     upd_title = @('Neue Version verfügbar', 'New version available')
     upd_sub = @('Installiert: {0}   ·   Neu: {1}', 'Installed: {0}   ·   New: {1}')
+    upd_hist = @('Versionsverlauf', 'Version history')
+    upd_cur = @('Version {0}.x · alle Änderungen', 'Version {0}.x · all changes')
+    upd_prev = @('Frühere Hauptversionen', 'Earlier major versions')
+    upd_close = @('Schließen', 'Close')
     upd_what = @('Das ist neu:', 'What is new:')
     upd_nonotes = @('(Keine Änderungsnotizen angegeben.)', '(No release notes provided.)')
     upd_yes = @('Jetzt aktualisieren', 'Update now')
@@ -1851,26 +1855,75 @@ function Get-LatestRelease {
 function Test-Newer([string]$remote, [string]$local) {
     try { return ([version]$remote.TrimStart('v')) -gt ([version]$local) } catch { return $false }
 }
-function Show-UpdateDialog($rel, [string]$remote) {
+function Read-Changelog {
+    $list = @()
+    try {
+        $f = Join-Path $dir 'CHANGELOG.md'
+        if (-not (Test-Path $f)) { return @() }
+        $cur = $null
+        foreach ($ln in (Get-Content -Path $f -Encoding UTF8)) {
+            if ($ln -match '^##\s+\[(.+?)\]\s*-?\s*(.*)$') {
+                $v = $Matches[1]; $mj = ($v -split '[\. ]')[0]
+                $cur = [pscustomobject]@{ ver = $v; date = [string]$Matches[2]; major = $mj; lines = @() }
+                $list += $cur
+            } elseif ($cur -and $ln.Trim() -ne '') { $cur.lines += ($ln.Trim() -replace '^-\s+', '') }
+        }
+    } catch { Write-Log ('Changelog: ' + $_.Exception.Message) }
+    return $list
+}
+function Show-UpdateDialog($rel, [string]$remote, [bool]$isNew) {
     $x = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Luftwächter" Width="470" SizeToContent="Height" MaxHeight="640" WindowStartupLocation="CenterScreen" Topmost="True" ResizeMode="NoResize" Background="#FF1B222D" FontFamily="Segoe UI">
+        Title="Luftwächter" Width="560" SizeToContent="Height" MaxHeight="720" WindowStartupLocation="CenterScreen" Topmost="True" ResizeMode="NoResize" Background="#FF1B222D" FontFamily="Segoe UI">
   <StackPanel Margin="22">
     <TextBlock x:Name="UTitle" Foreground="White" FontSize="21" FontWeight="Bold" TextWrapping="Wrap"/>
-    <TextBlock x:Name="USub" Foreground="#FFB3BECD" FontSize="13" Margin="0,4,0,12"/>
-    <TextBlock x:Name="UWhat" Foreground="White" FontSize="13" FontWeight="SemiBold"/>
-    <Border Background="#33000000" CornerRadius="8" Margin="0,4,0,16" Padding="10"><ScrollViewer MaxHeight="280" VerticalScrollBarVisibility="Auto"><TextBlock x:Name="UBody" Foreground="#FFDFE5EE" FontSize="12.5" TextWrapping="Wrap"/></ScrollViewer></Border>
+    <TextBlock x:Name="USub" Foreground="#FFB3BECD" FontSize="13" Margin="0,4,0,10"/>
+    <Border Background="#33000000" CornerRadius="8" Margin="0,0,0,16" Padding="12"><ScrollViewer MaxHeight="470" VerticalScrollBarVisibility="Auto"><StackPanel x:Name="UBody"/></ScrollViewer></Border>
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"><Button x:Name="UNo" Padding="16,6" Margin="0,0,8,0"/><Button x:Name="UYes" Padding="16,6" IsDefault="True"/></StackPanel>
   </StackPanel>
 </Window>
 "@
     $d = [Windows.Markup.XamlReader]::Load((New-Object System.Xml.XmlNodeReader ([xml]$x)))
-    $d.FindName('UTitle').Text = (T 'upd_title')
-    $d.FindName('USub').Text = (T 'upd_sub' ('v' + $appVersion) ('v' + $remote))
-    $d.FindName('UWhat').Text = (T 'upd_what')
-    $body = ([string]$rel.body).Trim(); if (-not $body) { $body = (T 'upd_nonotes') }
-    $d.FindName('UBody').Text = $body
-    $d.FindName('UNo').Content = (T 'upd_no'); $d.FindName('UYes').Content = (T 'upd_yes')
+    if ($isNew) {
+        $d.FindName('UTitle').Text = (T 'upd_title')
+        $d.FindName('USub').Text = (T 'upd_sub' ('v' + $appVersion) ('v' + $remote))
+    } else {
+        $d.FindName('UTitle').Text = (T 'upd_hist')
+        $d.FindName('USub').Text = (T 'upd_none' ('v' + $appVersion))
+    }
+    $body = $d.FindName('UBody')
+    $add = { param($txt, $sz, $fg, $bold, $top) $tb = New-Text $txt $sz $fg $bold; $tb.TextWrapping = 'Wrap'; $tb.Margin = New-Object Windows.Thickness(0, $top, 0, 0); [void]$body.Children.Add($tb) }
+    if ($isNew) {
+        & $add (T 'upd_what') 14 '#FF7CE0A0' $true 0
+        $nb = ([string]$rel.body).Trim(); if (-not $nb) { $nb = (T 'upd_nonotes') }
+        & $add $nb 12.5 '#FFFFFFFF' $false 3
+    }
+    $log = @(Read-Changelog)
+    if ($log.Count -gt 0) {
+        $curMajor = ($appVersion -split '\.')[0]
+        $top = 0; if ($isNew) { $top = 16 }
+        & $add (T 'upd_cur' $curMajor) 14 '#FF9CC4FF' $true $top
+        foreach ($e in @($log | Where-Object { $_.major -eq $curMajor })) {
+            & $add ('v' + $e.ver + '  ·  ' + $e.date) 12.5 '#FFFFFFFF' $true 9
+            foreach ($l in @($e.lines)) { & $add ('•  ' + $l) 12 '#FFDFE5EE' $false 2 }
+        }
+        $others = @($log | Where-Object { $_.major -ne $curMajor })
+        if ($others.Count -gt 0) {
+            & $add (T 'upd_prev') 14 '#FF9CC4FF' $true 18
+            $sums = @{ '3' = @('Vom Ein-Raum-Widget zur vollständigen App: mehrere Räume, ausfahrbares Geräte-Fenster (Licht, Steckdosen, Heizung, Jalousien), Wetterzeile, CO₂-Kurve mit Trend und Prognose, Lüftungs-Timer, Raumleiste, Autostart, Nachtmodus, Fehlerprotokoll, Pill-Modus, Tagesbilanz, Hilfe und DE/EN-Umschalter. Mit 3.13 kam die erste öffentliche Version (MIT-Lizenz) mit Update-Button, Konfiguration und n8n-Referenz-Backend; 3.14 brachte Tray-Symbol, Lüftungs-Benachrichtigungen und Startmenü-Eintrag, 3.15 die klickbaren Werte-Kacheln mit eigener Kurve je Messwert.', 'From a single-room widget to a complete app: multiple rooms, slide-out device panel (lights, plugs, heating, blinds), weather row, CO₂ curve with trend and forecast, ventilation timer, room strip, autostart, night dimming, error log, pill mode, daily summary, help and DE/EN toggle. 3.13 was the first public release (MIT License) with the update button, configuration and an n8n reference backend; 3.14 added the tray icon, ventilation notifications and a Start menu entry, 3.15 the clickable value tiles with their own curve per reading.') }
+            foreach ($mj in @($others | ForEach-Object { $_.major } | Select-Object -Unique)) {
+                $grp = @($others | Where-Object { $_.major -eq $mj })
+                $a = ([string]$grp[$grp.Count - 1].ver -split ' ')[0]; $b = ([string]$grp[0].ver -split ' ')[0]
+                $range = $a; if ($a -ne $b) { $range = $a + ' – ' + $b }
+                & $add ((Lx 'Version ' 'Version ') + $mj + '  (' + $range + ')') 12.5 '#FFFFFFFF' $true 9
+                if ($sums.ContainsKey($mj)) { $para = (Lx $sums[$mj][0] $sums[$mj][1]) }
+                else { $para = ((@($grp | ForEach-Object { $_.lines }) | ForEach-Object { $_ -replace '^(New|Fix|Improved):\s*', '' }) -join ' ') }
+                & $add $para 12 '#FFDFE5EE' $false 2
+            }
+        }
+    }
+    $d.FindName('UNo').Content = $(if ($isNew) { T 'upd_no' } else { T 'upd_close' }); $d.FindName('UYes').Content = (T 'upd_yes')
+    if (-not $isNew) { $d.FindName('UYes').Visibility = 'Collapsed'; $d.FindName('UNo').IsDefault = $true }
     $script:dlg = $d
     $d.FindName('UNo').Add_Click({ $script:dlg.DialogResult = $false })
     $d.FindName('UYes').Add_Click({ $script:dlg.DialogResult = $true })
@@ -1944,10 +1997,10 @@ function Invoke-UpdateFlow([bool]$manual) {
         $remote = ([string]$rel.tag_name).TrimStart('v')
         if (Test-Newer $remote $appVersion) {
             $script:newVer = $remote; Set-UpdateButton
-            if ($manual) { if (Show-UpdateDialog $rel $remote) { Start-Update $rel } }
+            if ($manual) { if (Show-UpdateDialog $rel $remote $true) { Start-Update $rel } }
         } else {
             $script:newVer = $null; Set-UpdateButton
-            if ($manual) { [void][System.Windows.MessageBox]::Show((T 'upd_none' ('v' + $appVersion)), 'Luftwächter', 'OK', 'Information') }
+            if ($manual) { [void](Show-UpdateDialog $null '' $false) }
         }
     } catch {
         Write-Log ('Update-Suche: ' + $_.Exception.Message)
