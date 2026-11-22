@@ -2,6 +2,11 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [4.1.0] - 2026-11-22
+- New: hide devices. Right-click a device row and choose Hide; "n hidden - show all" at the bottom of the panel brings them back. Your choice is remembered.
+- New: typical setting switches from Home Assistant (child lock, internet access, calibration, notifications, display ...) are hidden automatically. Set "showAllDevices": true in config.json to see everything.
+- Fix: the curve title no longer runs into "now" on the right.
+
 ## [4.0.0] - 2026-11-22
 - New: direct connection to Home Assistant. Rooms are found automatically (areas with a CO2 or fine-dust sensor), together with readings, window contacts, lights, plugs, heaters, blinds and the weather. No server needed.
 - New: the installer searches your network for Home Assistant and asks for a long-lived access token; the token is stored encrypted for your Windows account. Right-click: Connect to Home Assistant (with a Find button).

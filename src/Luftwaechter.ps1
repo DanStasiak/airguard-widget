@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall)
 
 $appName = 'Luftwaechter'
-$appVersion = '4.0.0'
+$appVersion = '4.1.0'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -249,7 +249,7 @@ function Write-Log([string]$m) {
         Add-Content -Path $logFile -Value ((Get-Date).ToString('yyyy-MM-dd HH:mm:ss') + '  ' + $m) -Encoding UTF8
     } catch {}
 }
-$state = @{ left = $null; top = $null; topmost = $false; topmostSet = $false; popup = $true; tray = $true; room = [string]$cfg.defaultRoom; size = 'M'; weatherOpen = $false; drawerOpen = $false; sound = $true; sparkHours = 3; metric = 0; lang = 'de'; hist = @{} }
+$state = @{ left = $null; top = $null; topmost = $false; topmostSet = $false; popup = $true; tray = $true; room = [string]$cfg.defaultRoom; size = 'M'; weatherOpen = $false; drawerOpen = $false; sound = $true; sparkHours = 3; metric = 0; hidden = @(); lang = 'de'; hist = @{} }
 try { if ((Get-Culture).TwoLetterISOLanguageName -ne 'de') { $state.lang = 'en' } } catch {}
 if (Test-Path $stateFile) {
     try {
@@ -265,6 +265,7 @@ if (Test-Path $stateFile) {
         if ($null -ne $s.drawerOpen) { $state.drawerOpen = [bool]$s.drawerOpen }
         if ($null -ne $s.sound) { $state.sound = [bool]$s.sound }
         if ($s.sparkHours -eq 24) { $state.sparkHours = 24 }
+        if ($s.hidden) { $state.hidden = @($s.hidden | ForEach-Object { [string]$_ }) }
         if ($null -ne $s.metric -and [int]$s.metric -ge 0 -and [int]$s.metric -le 3) { $state.metric = [int]$s.metric }
         if ($s.lang -eq 'en' -or $s.lang -eq 'de') { $state.lang = [string]$s.lang }
         if ($s.hist) { foreach ($p in $s.hist.PSObject.Properties) { $state.hist[$p.Name] = @($p.Value) } }
@@ -302,11 +303,13 @@ $script:Strings = @{
     outside = @('DRAUSSEN', 'OUTSIDE')
     now = @('jetzt', 'now')
     spark = @('{0} Std · Linie = 1000 ppm', '{0} h · line = 1000 ppm')
-    spark_dust = @('Feinstaub · {0} Std · Linie = 15 µg', 'Fine dust · {0} h · line = 15 µg')
+    spark_dust = @('Feinstaub · {0} Std · Linie 15', 'Fine dust · {0} h · line 15')
     spark_temp = @('Temperatur · {0} Std', 'Temperature · {0} h')
-    spark_hum = @('Luftfeuchte · {0} Std · Linien = 40 / 60 %', 'Humidity · {0} h · lines = 40 / 60 %')
-    spark_co2 = @('CO₂ · {0} Std · Linie = 1000 ppm', 'CO₂ · {0} h · line = 1000 ppm')
+    spark_hum = @('Feuchte · {0} Std · 40–60 %', 'Humidity · {0} h · 40–60 %')
+    spark_co2 = @('CO₂ · {0} Std · Linie 1000', 'CO₂ · {0} h · line 1000')
     spark_wait = @('Der Verlauf wird ab jetzt gesammelt …', 'History is being collected from now on …')
+    dev_hide = @('Ausblenden', 'Hide')
+    dev_unhide = @('{0} ausgeblendet · alle anzeigen', '{0} hidden · show all')
     mm = @('Heute: Min {0} · Max {1} {2}', 'Today: min {0} · max {1} {2}')
     chip_tip = @('Tippen: Verlauf dieses Werts anzeigen', 'Tap: show the history of this value')
     spark_tip = @('Tippen: 3 Std / 24 Std', 'Tap: 3 h / 24 h')
@@ -389,7 +392,7 @@ $script:Strings = @{
     ha_auth = @('Der Token wurde abgelehnt. Bitte neu erstellen und einfügen.', 'The token was rejected. Please create a new one and paste it.')
     ha_net = @('Keine Verbindung. Adresse und Netzwerk prüfen.', 'No connection. Check the address and the network.')
     h16 = @('Home Assistant direkt', 'Home Assistant direct')
-    b16 = @('Das Widget spricht direkt mit deinem Home Assistant. Jeder Bereich (Area) mit einem CO₂- oder Feinstaub-Sensor wird ein Raum. Messwerte, Fensterkontakte (Geräteklasse "window"), Lichter, Steckdosen, Heizungen und Rollos des Bereichs werden automatisch gefunden. Das Wetter kommt aus der ersten Wetter-Entität. Nur bestimmte Geräte anzeigen: In Home Assistant das Label "airguard" an diese Entitäten hängen. Verbindung ändern: Rechtsklick, "Mit Home Assistant verbinden…".', 'The widget talks directly to your Home Assistant. Every area with a CO₂ or fine-dust sensor becomes a room. Readings, window contacts (device class "window"), lights, plugs, heaters and blinds of the area are found automatically. Weather comes from the first weather entity. To show only certain devices: give those entities the label "airguard" in Home Assistant. Change the connection: right-click, "Connect to Home Assistant…".')
+    b16 = @('Das Widget spricht direkt mit deinem Home Assistant. Jeder Bereich (Area) mit einem CO₂- oder Feinstaub-Sensor wird ein Raum. Messwerte, Fensterkontakte (Geräteklasse "window"), Lichter, Steckdosen, Heizungen und Rollos des Bereichs werden automatisch gefunden. Das Wetter kommt aus der ersten Wetter-Entität. Stört ein Gerät: Rechtsklick auf die Zeile, Ausblenden (unten bringt "ausgeblendet · alle anzeigen" sie zurück). Typische Einstellungs-Schalter (Kindersicherung, Internetzugang, Kalibrierung) blendet das Widget selbst aus. Nur bestimmte Geräte anzeigen: In Home Assistant das Label "airguard" an diese Entitäten hängen. Verbindung ändern: Rechtsklick, "Mit Home Assistant verbinden…".', 'The widget talks directly to your Home Assistant. Every area with a CO₂ or fine-dust sensor becomes a room. Readings, window contacts (device class "window"), lights, plugs, heaters and blinds of the area are found automatically. Weather comes from the first weather entity. If a device is in the way: right-click its row and choose Hide ("{0} hidden · show all" at the bottom brings them back). Typical setting switches (child lock, internet access, calibration) are hidden automatically. To show only certain devices: give those entities the label "airguard" in Home Assistant. Change the connection: right-click, "Connect to Home Assistant…".')
     m_cfg = @('Konfiguration öffnen', 'Open configuration')
     m_upd = @('Nach Updates suchen', 'Check for updates')
     upd_btn = @('⟳ Update', '⟳ Update')
@@ -696,7 +699,7 @@ $script:helpOpen = $false
 
 function Save-State {
     try {
-        $o = @{ left = $win.Left; top = $win.Top; topmost = $state.topmost; topmostSet = $state.topmostSet; popup = $state.popup; tray = $state.tray; room = $state.room; size = $state.size; weatherOpen = $state.weatherOpen; drawerOpen = $state.drawerOpen; sound = $state.sound; sparkHours = $state.sparkHours; metric = $state.metric; lang = $state.lang; hist = $state.hist }
+        $o = @{ left = $win.Left; top = $win.Top; topmost = $state.topmost; topmostSet = $state.topmostSet; popup = $state.popup; tray = $state.tray; room = $state.room; size = $state.size; weatherOpen = $state.weatherOpen; drawerOpen = $state.drawerOpen; sound = $state.sound; sparkHours = $state.sparkHours; metric = $state.metric; hidden = @($state.hidden); lang = $state.lang; hist = $state.hist }
         ($o | ConvertTo-Json -Depth 4) | Set-Content -Path $stateFile -Encoding UTF8
     } catch { Write-Log ('Speichern: ' + $_.Exception.Message) }
 }
@@ -929,6 +932,9 @@ function New-Btn([string]$t, $tag) {
 
 function Build-Devices($devs) {
     $ui.DevPanel.Children.Clear()
+    $hid = @($state.hidden)
+    $nRx = '(?i)internetzugang|internet access|child lock|kindersicherung|reversal|calibrat|kalibrier|bluetooth proxy|nicht stören|do not disturb|benachrichtigung|notification|schlafmodus|sleep mode|display|backlight|auto.?update|firmware|identify|restart|neustart|pairing|permit join'
+    $devs = @($devs | Where-Object { ($hid -notcontains [string]$_.entity) -and -not ($script:haMode -and -not [bool]$cfg.showAllDevices -and ([string]$_.type -eq 'switch') -and (([string]$_.name) -match $nRx)) })
     $groups = @('Licht', 'Strom', 'Heizung', 'Rollo')
     $gIcon = @{ Licht = ([char]::ConvertFromUtf32(0x1F4A1)); Strom = ([char]::ConvertFromUtf32(0x1F50C)); Heizung = ([char]::ConvertFromUtf32(0x1F321)); Rollo = ([char]::ConvertFromUtf32(0x1FA9F)) }
     $any = $false
@@ -946,6 +952,14 @@ function Build-Devices($devs) {
             $dp = New-Object Windows.Controls.DockPanel
             $row.Child = $dp
             $entity = [string]$dv.entity
+            $row.Tag = $entity
+            $row.Add_MouseRightButtonUp({ param($s, $e)
+                $e.Handled = $true
+                $m = New-Object Windows.Controls.ContextMenu
+                $mi = New-Object Windows.Controls.MenuItem; $mi.Header = (T 'dev_hide'); $mi.Tag = [string]$s.Tag
+                $mi.Add_Click({ param($s2, $e2) $state.hidden = @(@($state.hidden) + [string]$s2.Tag); Save-State; $script:devSig = ''; if ($script:last) { Show-Data $script:last } })
+                [void]$m.Items.Add($mi); $m.PlacementTarget = $s; $m.IsOpen = $true
+            })
             $ctl = $null
             switch ([string]$dv.type) {
                 'switch' {
@@ -992,6 +1006,12 @@ function Build-Devices($devs) {
             [void]$dp.Children.Add($sp2)
             [void]$ui.DevPanel.Children.Add($row)
         }
+    }
+    if ($hid.Count -gt 0) {
+        $uh = New-Text (T 'dev_unhide' $hid.Count) 11 '#FF7CB7FF' $false
+        $uh.Margin = New-Object Windows.Thickness(2, 10, 0, 0); $uh.Cursor = 'Hand'
+        $uh.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; $state.hidden = @(); Save-State; $script:devSig = ''; if ($script:last) { Show-Data $script:last } })
+        [void]$ui.DevPanel.Children.Add($uh)
     }
     if (-not $any) {
         $t = New-Text (T 'no_dev') 13 '#FFB3BECD' $false
