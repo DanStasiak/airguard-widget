@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall)
 
 $appName = 'Luftwaechter'
-$appVersion = '3.15.0'
+$appVersion = '4.0.0'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -14,6 +14,158 @@ $copyright = '© 2026 Dan Stasiak · MIT'
 $installDir = Join-Path $env:LOCALAPPDATA $appName
 $stateDir = Join-Path $env:APPDATA $appName
 $startupLnk = Join-Path ([Environment]::GetFolderPath('Startup')) 'Luftwaechter.lnk'
+
+# ---------- Home Assistant: Verbindung (Adresse in config.json, Token verschlüsselt per Windows-Konto) ----------
+function Normalize-HaUrl([string]$u) {
+    $u = ([string]$u).Trim().TrimEnd('/')
+    if ($u -and $u -notmatch '^https?://') { $u = 'http://' + $u }
+    return $u
+}
+function Get-HaTokenFile { return (Join-Path $stateDir 'ha-token.bin') }
+function Save-HaToken([string]$t) {
+    Add-Type -AssemblyName System.Security
+    New-Item -ItemType Directory -Force -Path $stateDir | Out-Null
+    $b = [System.Security.Cryptography.ProtectedData]::Protect([System.Text.Encoding]::UTF8.GetBytes($t), $null, [System.Security.Cryptography.DataProtectionScope]::CurrentUser)
+    [System.IO.File]::WriteAllBytes((Get-HaTokenFile), $b)
+}
+function Get-HaToken {
+    try {
+        $f = Get-HaTokenFile
+        if (-not (Test-Path $f)) { return '' }
+        Add-Type -AssemblyName System.Security
+        $p = [System.Security.Cryptography.ProtectedData]::Unprotect([System.IO.File]::ReadAllBytes($f), $null, [System.Security.Cryptography.DataProtectionScope]::CurrentUser)
+        return [System.Text.Encoding]::UTF8.GetString($p)
+    } catch { return '' }
+}
+function Invoke-Ha([string]$base, [string]$tok, [string]$method, [string]$path, [string]$body) {
+    $req = [System.Net.HttpWebRequest]::Create($base + $path)
+    $req.Method = $method; $req.Timeout = 15000; $req.ReadWriteTimeout = 15000
+    $req.UserAgent = 'Luftwaechter/4'
+    $req.Headers.Add('Authorization', 'Bearer ' + $tok)
+    if ($body) {
+        $bytes = [System.Text.Encoding]::UTF8.GetBytes($body)
+        $req.ContentType = 'application/json; charset=utf-8'; $req.ContentLength = $bytes.Length
+        $st = $req.GetRequestStream(); $st.Write($bytes, 0, $bytes.Length); $st.Close()
+    }
+    $resp = $req.GetResponse()
+    try {
+        $sr = New-Object System.IO.StreamReader($resp.GetResponseStream(), [System.Text.Encoding]::UTF8)
+        $txt = $sr.ReadToEnd(); $sr.Close()
+    } finally { $resp.Close() }
+    return $txt
+}
+function Test-Ha([string]$base, [string]$tok) {
+    try {
+        $t = Invoke-Ha $base $tok 'GET' '/api/' ''
+        if ($t -match 'API running') { return 'ok' }
+        return 'net'
+    } catch [System.Net.WebException] {
+        try { if ($_.Exception.Response -and [int]$_.Exception.Response.StatusCode -eq 401) { return 'auth' } } catch {}
+        return 'net'
+    } catch { return 'net' }
+}
+function Save-HaUrl([string]$cfgPath, [string]$u) {
+    $c = $null
+    try { if (Test-Path $cfgPath) { $c = Get-Content $cfgPath -Raw -Encoding UTF8 | ConvertFrom-Json } } catch {}
+    if (-not $c) { $c = [pscustomobject]@{ url = ''; switchUrl = ''; defaultRoom = ''; refreshSeconds = 10 } }
+    $c | Add-Member -NotePropertyName haUrl -NotePropertyValue $u -Force
+    ($c | ConvertTo-Json -Depth 6) | Set-Content -Path $cfgPath -Encoding UTF8
+}
+function Test-HaHost([string]$base) {
+    try {
+        $req = [System.Net.HttpWebRequest]::Create($base + '/manifest.json')
+        $req.Timeout = 3000; $req.ReadWriteTimeout = 3000; $req.UserAgent = 'Luftwaechter/4'
+        $resp = $req.GetResponse()
+        try { $sr = New-Object System.IO.StreamReader($resp.GetResponseStream()); $txt = $sr.ReadToEnd(); $sr.Close() } finally { $resp.Close() }
+        return ($txt -match 'Home Assistant')
+    } catch {
+        try { if ($_.Exception.Response -and [int]$_.Exception.Response.StatusCode -eq 401) { return $true } } catch {}
+        return $false
+    }
+}
+function Find-Ha {
+    $found = @()
+    foreach ($h in 'homeassistant.local', 'homeassistant') {
+        try {
+            $c = New-Object System.Net.Sockets.TcpClient
+            $ar = $c.BeginConnect($h, 8123, $null, $null)
+            if ($ar.AsyncWaitHandle.WaitOne(1500) -and $c.Connected) { $u = 'http://' + $h + ':8123'; if ((Test-HaHost $u) -and ($found -notcontains $u)) { $found += $u } }
+            $c.Close()
+        } catch {}
+    }
+    $nets = @()
+    try {
+        foreach ($ni in [System.Net.NetworkInformation.NetworkInterface]::GetAllNetworkInterfaces()) {
+            if ($ni.OperationalStatus -ne 'Up' -or $ni.NetworkInterfaceType -eq 'Loopback') { continue }
+            foreach ($ua in $ni.GetIPProperties().UnicastAddresses) {
+                if ($ua.Address.AddressFamily -eq 'InterNetwork') {
+                    $o = $ua.Address.GetAddressBytes()
+                    if ($o[0] -eq 169) { continue }
+                    $pre = ([string]$o[0] + '.' + [string]$o[1] + '.' + [string]$o[2] + '.')
+                    if ($nets -notcontains $pre) { $nets += $pre }
+                }
+            }
+        }
+    } catch {}
+    foreach ($pre in $nets) {
+        $cl = @(); $ars = @()
+        for ($n = 1; $n -le 254; $n++) {
+            $c = New-Object System.Net.Sockets.TcpClient
+            $cl += $c; $ars += $c.BeginConnect(($pre + [string]$n), 8123, $null, $null)
+        }
+        Start-Sleep -Milliseconds 1500
+        for ($n = 0; $n -lt 254; $n++) {
+            try {
+                if ($ars[$n].IsCompleted -and $cl[$n].Connected) {
+                    $u = 'http://' + $pre + [string]($n + 1) + ':8123'
+                    if ((Test-HaHost $u) -and ($found -notcontains $u)) { $found += $u }
+                }
+            } catch {}
+            try { $cl[$n].Close() } catch {}
+        }
+    }
+    return $found
+}
+function Install-AskHa([string]$cfgPath) {
+    Write-Host ''
+    Write-Host '=== Home Assistant verbinden / Connect to Home Assistant ==='
+    Write-Host 'Adresse z. B. http://homeassistant.local:8123 - leer lassen = spaeter im Widget (Rechtsklick).'
+    Write-Host 'Address e.g. http://homeassistant.local:8123 - leave empty = set up later in the widget (right-click).'
+    Write-Host 'Suche Home Assistant im Netzwerk ... / Searching the network for Home Assistant ...'
+    $cands = @(Find-Ha)
+    $pick = ''
+    if ($cands.Count -eq 1) {
+        Write-Host ('Gefunden / Found: ' + $cands[0])
+        $a = Read-Host 'Diese Adresse verwenden? / Use this address? [J/y = Ja/Yes, n = andere / other]'
+        if ($a -notmatch '^[nN]') { $pick = $cands[0] }
+    } elseif ($cands.Count -gt 1) {
+        for ($k = 0; $k -lt $cands.Count; $k++) { Write-Host ('  ' + [string]($k + 1) + ') ' + $cands[$k]) }
+        $a = Read-Host 'Nummer waehlen oder Enter fuer manuell / Pick a number or Enter for manual'
+        $ix = 0
+        if ([int]::TryParse($a, [ref]$ix) -and $ix -ge 1 -and $ix -le $cands.Count) { $pick = $cands[$ix - 1] }
+    } else {
+        Write-Host 'Nichts gefunden - bitte Adresse eingeben. / Nothing found - please enter the address.'
+    }
+    for ($try = 1; $try -le 3; $try++) {
+        if ($pick) { $u = $pick; $pick = '' } else { $u = Normalize-HaUrl (Read-Host 'Adresse / Address') }
+        if (-not $u) { return }
+        Write-Host 'Token: Home Assistant > Profil > Sicherheit > Langlebige Zugangstoken > Token erstellen.'
+        Write-Host 'Token: Home Assistant > Profile > Security > Long-lived access tokens > Create token.'
+        $sec = Read-Host 'Token' -AsSecureString
+        $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($sec)
+        $tok = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
+        [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+        $tok = $tok.Trim()
+        $r = Test-Ha $u $tok
+        if ($r -eq 'ok') {
+            Save-HaUrl $cfgPath $u; Save-HaToken $tok
+            Write-Host 'Verbindung OK - Token verschluesselt gespeichert. / Connection OK - token stored encrypted.'
+            return
+        }
+        if ($r -eq 'auth') { Write-Host 'Token abgelehnt. / Token rejected.' } else { Write-Host 'Keine Verbindung (Adresse/Netzwerk?). / No connection (address/network?).' }
+    }
+    Write-Host 'Nicht eingerichtet - das geht spaeter im Widget per Rechtsklick. / Not set up - you can do it later in the widget via right-click.'
+}
 
 $startMenuLnk = Join-Path ([Environment]::GetFolderPath('Programs')) 'Luftwächter.lnk'
 function New-StartMenuShortcut {
@@ -37,7 +189,13 @@ if ($Install) {
         if (Test-Path $sf) { Copy-Item -Force $sf $installDir }
     }
     $sc = Join-Path $src 'config.json'; $dc = Join-Path $installDir 'config.json'
+    $haOld = ''
+    try { $haOld = [string]((Get-Content $dc -Raw -Encoding UTF8 | ConvertFrom-Json).haUrl) } catch {}
     if (Test-Path $sc) { Copy-Item -Force $sc $dc } elseif (-not (Test-Path $dc)) { Copy-Item -Force (Join-Path $src 'config.example.json') $dc }
+    if ($haOld) { try { $nc = Get-Content $dc -Raw -Encoding UTF8 | ConvertFrom-Json; if (-not $nc.haUrl) { Save-HaUrl $dc $haOld } } catch {} }
+    $haCur = ''
+    try { $haCur = [string]((Get-Content $dc -Raw -Encoding UTF8 | ConvertFrom-Json).haUrl) } catch {}
+    if (-not ($haCur -and (Test-Path (Get-HaTokenFile)))) { Install-AskHa $dc }
     $sh = New-Object -ComObject WScript.Shell
     $lnk = $sh.CreateShortcut($startupLnk)
     $lnk.TargetPath = 'wscript.exe'
@@ -73,6 +231,11 @@ $place = [string]$cfg.place
 $footerCfg = [string]$cfg.footer
 $url = [string]$cfg.url
 $switchUrl = [string]$cfg.switchUrl
+$script:haUrl = Normalize-HaUrl ([string]$cfg.haUrl)
+$script:haTok = Get-HaToken
+$script:haMode = [bool]($script:haUrl -and $script:haTok)
+$script:canSwitch = [bool]($script:haMode -or $switchUrl)
+$script:haDevs = @{}
 $interval = 10
 if ($cfg.refreshSeconds) { $interval = [Math]::Max(2, [Math]::Min([int]$cfg.refreshSeconds, 10)) }
 
@@ -206,7 +369,27 @@ $script:Strings = @{
     m_exit = @('Beenden', 'Quit')
     no_errors = @('Keine Fehler protokolliert.', 'No errors logged.')
     setup = @('Noch nicht eingerichtet', 'Not set up yet')
-    setup_d = @('Rechtsklick, dann "Konfiguration öffnen", und den Server-Link (url) eintragen. Siehe Hilfe.', 'Right-click, then "Open configuration", and enter your server link (url). See Help.')
+    setup_d = @('Rechtsklick, dann "Mit Home Assistant verbinden…". Siehe Hilfe.', 'Right-click, then "Connect to Home Assistant…". See Help.')
+    ha_norooms = @('Keine Räume gefunden', 'No rooms found')
+    ha_norooms_d = @('In Home Assistant braucht ein Bereich (Area) einen CO₂- oder Feinstaub-Sensor (Geräteklasse carbon_dioxide oder pm25). Siehe Hilfe.', 'In Home Assistant an area needs a CO₂ or fine-dust sensor (device class carbon_dioxide or pm25). See Help.')
+    m_ha = @('Mit Home Assistant verbinden…', 'Connect to Home Assistant…')
+    ha_title = @('Mit Home Assistant verbinden', 'Connect to Home Assistant')
+    ha_intro = @('Trage die Adresse deines Home Assistant und einen langlebigen Zugangstoken ein. Den Token erstellst du in Home Assistant unter Profil → Sicherheit → Langlebige Zugangstoken. Er wird verschlüsselt auf diesem PC gespeichert (nur für dein Windows-Konto).', 'Enter the address of your Home Assistant and a long-lived access token. Create the token in Home Assistant under Profile → Security → Long-lived access tokens. It is stored encrypted on this PC (only for your Windows account).')
+    ha_url = @('Adresse (z. B. http://homeassistant.local:8123)', 'Address (e.g. http://homeassistant.local:8123)')
+    ha_tok = @('Zugangstoken', 'Access token')
+    ha_open = @('Token-Seite in Home Assistant öffnen', 'Open the token page in Home Assistant')
+    ha_find = @('Suchen', 'Find')
+    ha_go = @('Verbinden', 'Connect')
+    ha_cancel = @('Abbrechen', 'Cancel')
+    ha_searching = @('Suche im Netzwerk … (ca. 5 Sekunden)', 'Searching the network … (about 5 seconds)')
+    ha_found = @('Gefunden: {0}', 'Found: {0}')
+    ha_nofind = @('Nichts gefunden. Bitte die Adresse selbst eintragen.', 'Nothing found. Please enter the address yourself.')
+    ha_empty = @('Bitte Adresse und Token eingeben.', 'Please enter the address and the token.')
+    ha_testing = @('Prüfe die Verbindung …', 'Checking the connection …')
+    ha_auth = @('Der Token wurde abgelehnt. Bitte neu erstellen und einfügen.', 'The token was rejected. Please create a new one and paste it.')
+    ha_net = @('Keine Verbindung. Adresse und Netzwerk prüfen.', 'No connection. Check the address and the network.')
+    h16 = @('Home Assistant direkt', 'Home Assistant direct')
+    b16 = @('Das Widget spricht direkt mit deinem Home Assistant. Jeder Bereich (Area) mit einem CO₂- oder Feinstaub-Sensor wird ein Raum. Messwerte, Fensterkontakte (Geräteklasse "window"), Lichter, Steckdosen, Heizungen und Rollos des Bereichs werden automatisch gefunden. Das Wetter kommt aus der ersten Wetter-Entität. Nur bestimmte Geräte anzeigen: In Home Assistant das Label "airguard" an diese Entitäten hängen. Verbindung ändern: Rechtsklick, "Mit Home Assistant verbinden…".', 'The widget talks directly to your Home Assistant. Every area with a CO₂ or fine-dust sensor becomes a room. Readings, window contacts (device class "window"), lights, plugs, heaters and blinds of the area are found automatically. Weather comes from the first weather entity. To show only certain devices: give those entities the label "airguard" in Home Assistant. Change the connection: right-click, "Connect to Home Assistant…".')
     m_cfg = @('Konfiguration öffnen', 'Open configuration')
     m_upd = @('Nach Updates suchen', 'Check for updates')
     upd_btn = @('⟳ Update', '⟳ Update')
@@ -228,7 +411,7 @@ $script:Strings = @{
     h13 = @('Updates', 'Updates')
     b13 = @('Der Knopf "⟳ Update" unten rechts fragt GitHub, ob es eine neuere Version gibt. Du siehst die Änderungen und entscheidest, ob aktualisiert wird. Danach tauscht sich das Programm selbst aus und startet neu. Deine Einstellungen und dein Zustand bleiben erhalten; die alte Version liegt als Sicherung im Programmordner. Alle paar Stunden wird still im Hintergrund geprüft, der Knopf wird dann grün.', 'The "⟳ Update" button at the bottom right asks GitHub whether a newer version exists. You see the changes and decide whether to update. The program then replaces itself and restarts. Your settings and state are kept; the old version is stored as a backup in the program folder. A silent check runs every few hours; the button then turns green.')
     h14 = @('Einrichtung (config.json)', 'Setup (config.json)')
-    b14 = @('Rechtsklick, dann "Konfiguration öffnen". url = Server-Link zum Lesen der Daten, switchUrl = Server-Link zum Schalten (optional), defaultRoom = Startraum, place = Ort für die Wetterzeile, footer = Quellenhinweis, roomShort = Kurznamen der Räume. Nach dem Speichern das Programm per Rechtsklick beenden und neu starten.', 'Right-click, then "Open configuration". url = server link for reading data, switchUrl = server link for switching (optional), defaultRoom = start room, place = location for the weather row, footer = source note, roomShort = short room names. After saving, quit via right-click and start the program again.')
+    b14 = @('Normalerweise reicht der Assistent (Rechtsklick, "Mit Home Assistant verbinden…"). Weitere Einstellungen in config.json (Rechtsklick, "Konfiguration öffnen"): defaultRoom = Startraum, place = Ort für die Wetterzeile, footer = Quellenhinweis, roomShort = Kurznamen der Räume, weatherEntity = bestimmte Wetter-Entität. Alternativ zum Direktanschluss: url und switchUrl für einen eigenen Server. Nach dem Speichern das Programm neu starten.', 'Normally the assistant is enough (right-click, "Connect to Home Assistant…"). More settings in config.json (right-click, "Open configuration"): defaultRoom = start room, place = location for the weather row, footer = source note, roomShort = short room names, weatherEntity = a specific weather entity. As an alternative to the direct connection: url and switchUrl for your own server. Restart the program after saving.')
     help_title = @('Hilfe', 'Help')
     h1 = @('Wofür ist das?', 'What is this?')
     b1 = @('Luftwächter zeigt dir, wie gut die Luft in einem Raum ist, und sagt dir in einfachen Worten, ob du lüften sollst. Dazu kommen das Wetter draußen und die Geräte im Raum. Es zeigt alle Räume, die dein Server liefert.', 'Luftwächter shows how good the air in a room is and tells you in plain words whether you should ventilate. It also shows the weather outside and the devices in the room. It shows all rooms your server provides.')
@@ -540,16 +723,20 @@ function Get-Json([string]$u) {
 }
 
 function Send-Command($body) {
-    if (-not $switchUrl) { return }
+    if (-not $script:canSwitch) { return }
     try {
-        $json = $body | ConvertTo-Json -Compress
-        $bytes = [System.Text.Encoding]::UTF8.GetBytes($json)
-        $req = [System.Net.HttpWebRequest]::Create($switchUrl)
-        $req.Method = 'POST'; $req.ContentType = 'application/json; charset=utf-8'
-        $req.Timeout = 8000; $req.ReadWriteTimeout = 8000
-        $req.ContentLength = $bytes.Length
-        $st = $req.GetRequestStream(); $st.Write($bytes, 0, $bytes.Length); $st.Close()
-        $resp = $req.GetResponse(); $resp.Close()
+        if ($script:haMode) {
+            Send-HaCommand $body
+        } else {
+            $json = $body | ConvertTo-Json -Compress
+            $bytes = [System.Text.Encoding]::UTF8.GetBytes($json)
+            $req = [System.Net.HttpWebRequest]::Create($switchUrl)
+            $req.Method = 'POST'; $req.ContentType = 'application/json; charset=utf-8'
+            $req.Timeout = 8000; $req.ReadWriteTimeout = 8000
+            $req.ContentLength = $bytes.Length
+            $st = $req.GetRequestStream(); $st.Write($bytes, 0, $bytes.Length); $st.Close()
+            $resp = $req.GetResponse(); $resp.Close()
+        }
     } catch { Write-Log ('Schalten: ' + $_.Exception.Message) }
     $script:devSig = ''
     Update-Widget
@@ -798,7 +985,7 @@ function Build-Devices($devs) {
                     $ctl = New-Btn 'Start' @{ e = $entity; a = 'press' }
                 }
             }
-            if ($ctl) { [Windows.Controls.DockPanel]::SetDock($ctl, 'Right'); $ctl.VerticalAlignment = 'Center'; if ((-not $switchUrl) -and ([string]$dv.type -ne 'meter')) { $ctl.Opacity = 0.35; $ctl.IsEnabled = $false } ; [void]$dp.Children.Add($ctl) }
+            if ($ctl) { [Windows.Controls.DockPanel]::SetDock($ctl, 'Right'); $ctl.VerticalAlignment = 'Center'; if ((-not $script:canSwitch) -and ([string]$dv.type -ne 'meter')) { $ctl.Opacity = 0.35; $ctl.IsEnabled = $false } ; [void]$dp.Children.Add($ctl) }
             $sp2 = New-Object Windows.Controls.StackPanel; $sp2.VerticalAlignment = 'Center'
             [void]$sp2.Children.Add((New-Text ([string]$dv.name) 14 '#FFFFFFFF' $false))
             if ($dv.detail) { [void]$sp2.Children.Add((New-Text ([string]$dv.detail) 11 '#FFB3BECD' $false)) }
@@ -811,7 +998,7 @@ function Build-Devices($devs) {
         $t.TextWrapping = 'Wrap'; $t.Margin = New-Object Windows.Thickness(0, 12, 0, 0)
         [void]$ui.DevPanel.Children.Add($t)
     }
-    if (-not $switchUrl) {
+    if (-not $script:canSwitch) {
         $t = New-Text (T 'no_switch') 11 '#FFB3BECD' $false
         $t.Margin = New-Object Windows.Thickness(2, 10, 0, 0)
         [void]$ui.DevPanel.Children.Add($t)
@@ -1027,17 +1214,304 @@ function Show-Setup {
     $g = Brush $grey
     $ui.Card.BorderBrush = $g; $ui.Level.Text = '–'; $ui.Level.Foreground = $g; $ui.Face.Text = [char]::ConvertFromUtf32(0x1F527)
     $ui.PillText.Text = (T 'setup'); $ui.PillDot.Foreground = $g; Set-Ring 0.06 $g
-    $ui.Panel.Background = Brush '#33FFFFFF'; $ui.Headline.Text = (T 'setup'); $ui.Detail.Text = (T 'setup_d')
+    $ui.Panel.Background = Brush '#33FFFFFF'; if ($script:haMode) { $ui.Headline.Text = (T 'ha_norooms'); $ui.Detail.Text = (T 'ha_norooms_d') } else { $ui.Headline.Text = (T 'setup'); $ui.Detail.Text = (T 'setup_d') }
     $ui.RoomName.Text = 'Luftwächter'; $ui.Time.Text = ''; $script:pulse = $false
 }
 
+# ---------- Home Assistant direkt: Räume, Messwerte und Geräte automatisch finden ----------
+$script:HaTpl = @'
+{%- set rooms = namespace(l=[]) -%}
+{%- set lab = label_entities('airguard') -%}
+{%- for a in areas() -%}
+{%- set es = namespace(l=[]) -%}
+{%- for e in area_entities(a) -%}
+{%- set dom = e.split('.')[0] -%}
+{%- if states[e] is not none -%}
+{%- set dc = state_attr(e, 'device_class') -%}
+{%- if (dom == 'sensor' and dc in ['carbon_dioxide', 'pm25', 'temperature', 'humidity']) or (dom == 'binary_sensor' and dc == 'window') or dom in ['light', 'switch', 'climate', 'cover', 'button'] -%}
+{%- set es.l = es.l + [{'i': e, 'd': dom, 'c': dc, 's': states(e), 'n': (state_attr(e, 'friendly_name') or e), 't': state_attr(e, 'temperature'), 'cu': state_attr(e, 'current_temperature'), 'ha': state_attr(e, 'hvac_action'), 'p': state_attr(e, 'current_position')}] -%}
+{%- endif -%}
+{%- endif -%}
+{%- endfor -%}
+{%- if es.l | length > 0 -%}
+{%- set rooms.l = rooms.l + [{'a': a, 'n': area_name(a), 'e': es.l}] -%}
+{%- endif -%}
+{%- endfor -%}
+{%- set wl = states.weather | list -%}
+__WIDLINE__
+{{ {'r': rooms.l, 'L': lab, 'w': ({'t': state_attr(wid, 'temperature'), 'c': states(wid), 'h': state_attr(wid, 'humidity'), 'ws': state_attr(wid, 'wind_speed'), 'wu': state_attr(wid, 'wind_speed_unit'), 'wb': state_attr(wid, 'wind_bearing'), 'cl': state_attr(wid, 'cloud_coverage'), 'p': state_attr(wid, 'pressure')} if wid else none)} | tojson }}
+'@
+
+function Lx([string]$de, [string]$en) { if ($state.lang -eq 'en') { return $en } else { return $de } }
+function Num($v) {
+    $o = 0.0
+    if ($null -ne $v -and [double]::TryParse((([string]$v) -replace ',', '.'), [Globalization.NumberStyles]::Float, $inv, [ref]$o)) { return $o }
+    return $null
+}
+function Fmt($v, [int]$dg) {
+    if ($null -eq $v) { return [string][char]0x2013 }
+    $s = ([double]$v).ToString('F' + $dg, $inv)
+    if ($state.lang -ne 'en') { $s = $s.Replace('.', ',') }
+    return $s
+}
+function LvAbove($v, $g, $f) { if ($null -eq $v) { return $null }; if ($v -lt $g) { return 0 }; if ($v -lt $f) { return 1 }; return 2 }
+function LvRange($v, $g1, $g2, $f1, $f2) { if ($null -eq $v) { return $null }; if (($v -ge $g1) -and ($v -le $g2)) { return 0 }; if (($v -ge $f1) -and ($v -le $f2)) { return 1 }; return 2 }
+function Pick-Ent($ents, [string]$dom, [string]$dc) {
+    $c = @($ents | Where-Object { $_.d -eq $dom -and $_.c -eq $dc })
+    if ($c.Count -eq 0) { return $null }
+    $ok = @($c | Where-Object { $null -ne (Num $_.s) })
+    if ($ok.Count -gt 0) { return $ok[0] }
+    return $c[0]
+}
+function Eval-HaRoom($r) {
+    $ents = @($r.e)
+    $eCo2 = Pick-Ent $ents 'sensor' 'carbon_dioxide'
+    $ePm = Pick-Ent $ents 'sensor' 'pm25'
+    $eT = Pick-Ent $ents 'sensor' 'temperature'
+    $eH = Pick-Ent $ents 'sensor' 'humidity'
+    $co2 = $null; if ($eCo2) { $co2 = Num $eCo2.s }
+    $pm = $null; if ($ePm) { $pm = Num $ePm.s }
+    $tt = $null; if ($eT) { $tt = Num $eT.s }
+    $hh = $null; if ($eH) { $hh = Num $eH.s }
+    $lvl = @((LvAbove $co2 1000 1500), (LvAbove $pm 20 50), (LvRange $tt 17 23 13 25), (LvRange $hh 30 60 25 70))
+    $known = @($lvl | Where-Object { $null -ne $_ })
+    $worst = $null; if ($known.Count -gt 0) { $worst = ($known | Measure-Object -Maximum).Maximum }
+    return [pscustomobject]@{ co2 = $co2; pm = $pm; t = $tt; h = $hh; lv = $lvl; worst = $worst; air = [bool]($eCo2 -or $ePm) }
+}
+function Build-HaData($data, [string]$wantRoom) {
+    $en = ($state.lang -eq 'en')
+    $colors = @('#2e9e5b', '#e8a317', '#d9472b')
+    $lnames = @('gut', 'mittel', 'schlecht')
+    $list = @()
+    foreach ($r in @($data.r)) {
+        $ev = Eval-HaRoom $r
+        if ($ev.air) { $list += [pscustomobject]@{ key = [string]$r.a; name = [string]$r.n; raw = $r; ev = $ev } }
+    }
+    if ($list.Count -eq 0) { return $null }
+    $list = @($list | Sort-Object { $_.name })
+    $chosen = $list[0]
+    foreach ($x in $list) { if ($x.key -eq $wantRoom -or $x.name -ieq $wantRoom) { $chosen = $x; break } }
+    $state.room = $chosen.key
+
+    # Wetter
+    $wx = $data.w
+    $ot = $null; $cond = ''
+    if ($wx) { $ot = Num $wx.t; $cond = [string]$wx.c }
+    $condDe = @{ 'clear-night' = 'klar'; cloudy = 'bewölkt'; partlycloudy = 'teils bewölkt'; sunny = 'sonnig'; rainy = 'Regen'; pouring = 'Starkregen'; snowy = 'Schnee'; 'snowy-rainy' = 'Schneeregen'; fog = 'Nebel'; windy = 'windig'; 'windy-variant' = 'windig'; hail = 'Hagel'; lightning = 'Gewitter'; 'lightning-rainy' = 'Gewitter mit Regen'; exceptional = 'Unwetter' }
+    $condEn = @{ 'clear-night' = 'clear'; cloudy = 'cloudy'; partlycloudy = 'partly cloudy'; sunny = 'sunny'; rainy = 'rain'; pouring = 'heavy rain'; snowy = 'snow'; 'snowy-rainy' = 'sleet'; fog = 'fog'; windy = 'windy'; 'windy-variant' = 'windy'; hail = 'hail'; lightning = 'thunderstorm'; 'lightning-rainy' = 'thunderstorm with rain'; exceptional = 'severe weather' }
+    $iconCp = @{ 'clear-night' = 0x1F319; cloudy = 0x2601; partlycloudy = 0x26C5; sunny = 0x2600; rainy = 0x1F327; pouring = 0x1F327; snowy = 0x1F328; 'snowy-rainy' = 0x1F328; fog = 0x1F32B; windy = 0x1F4A8; 'windy-variant' = 0x1F4A8; hail = 0x1F328; lightning = 0x26C8; 'lightning-rainy' = 0x26C8; exceptional = 0x26A0 }
+    $badOut = (@('pouring', 'lightning', 'lightning-rainy', 'hail', 'snowy-rainy', 'exceptional') -contains $cond)
+
+    $rooms = @()
+    foreach ($x in $list) {
+        $ew = $x.ev.worst
+        $nm = 'unbekannt'; $cl = '#7a8594'
+        if ($null -ne $ew) { $nm = $lnames[$ew]; $cl = $colors[$ew] }
+        $c2 = ''; if ($null -ne $x.ev.co2) { $c2 = [string][int][Math]::Round($x.ev.co2) }
+        $rooms += [pscustomobject]@{ key = $x.key; name = $x.name; level = $nm; color = $cl; co2 = $c2 }
+    }
+
+    $ev = $chosen.ev
+    $co2 = $ev.co2; $pm = $ev.pm; $tt = $ev.t; $hh = $ev.h; $worst = $ev.worst
+    $wins = @($chosen.raw.e | Where-Object { $_.d -eq 'binary_sensor' -and $_.c -eq 'window' })
+    $hasWindow = ($wins.Count -gt 0)
+    $wst = 'unbekannt'
+    if ($hasWindow) {
+        if (@($wins | Where-Object { $_.s -eq 'on' }).Count -gt 0) { $wst = 'offen' }
+        elseif (@($wins | Where-Object { $_.s -eq 'off' }).Count -eq $wins.Count) { $wst = 'zu' }
+    }
+    $needVent = (($null -ne $co2) -and ($co2 -ge 1000)) -or (($null -ne $hh) -and ($hh -gt 60)) -or (($null -ne $tt) -and ($tt -ge 25) -and ($null -ne $ot) -and ($ot -lt ($tt - 2)))
+    if ($null -ne $ot -and $ot -lt 5) { $howT = (Lx 'Ganz öffnen, 5 Minuten lüften.' 'Open fully, ventilate for 5 minutes.'); $howM = 5 }
+    elseif ($null -ne $ot -and $ot -lt 15) { $howT = (Lx 'Ganz öffnen, 10 Minuten lüften.' 'Open fully, ventilate for 10 minutes.'); $howM = 10 }
+    else { $howT = (Lx 'Fenster öffnen, ca. 15 Minuten lüften.' 'Open the window, ventilate for about 15 minutes.'); $howM = 15 }
+    $action = ''; $headline = ''; $detail = ''; $ventMin = 0
+    if (($null -eq $co2) -and ($null -eq $pm)) {
+        $action = 'unbekannt'; $headline = (Lx 'Keine Messwerte' 'No data'); $detail = (Lx 'Der Sensor meldet gerade nichts. Bitte später nochmal schauen.' 'The sensor is not reporting right now. Please check again later.')
+    } elseif ($wst -eq 'offen') {
+        if (($null -ne $co2) -and ($co2 -lt 700) -and -not (($null -ne $tt) -and ($tt -ge 25)) -and -not (($null -ne $hh) -and ($hh -gt 60))) {
+            $action = 'schliessen'; $headline = (Lx 'Bitte Fenster schließen' 'Please close the window'); $detail = (Lx 'Die Luft ist wieder frisch.' 'The air is fresh again.')
+            if ($null -ne $ot -and $ot -lt 15) { $detail += (Lx ' Sonst wird es kalt im Zimmer.' ' Otherwise the room gets cold.') }
+        } else {
+            $action = 'offen_lassen'; $headline = (Lx 'Fenster offen lassen' 'Keep the window open'); $detail = (Lx 'Die Luft wird gerade besser.' 'The air is getting better.'); $ventMin = $howM
+        }
+    } elseif ($needVent) {
+        if ($badOut) {
+            $cd = $condDe[$cond]; if (-not $cd) { $cd = 'Unwetter' }
+            $ce = $condEn[$cond]; if (-not $ce) { $ce = 'severe weather' }
+            $action = 'warten'; $headline = (Lx 'Jetzt noch nicht lüften' 'Do not ventilate yet'); $detail = (Lx ('Draußen ist ' + $cd + '. Später lüften.') ('Outside: ' + $ce + '. Ventilate later.'))
+        } else {
+            $action = 'oeffnen'
+            if ($hasWindow) { $headline = (Lx 'Bitte Fenster öffnen' 'Please open the window') } else { $headline = (Lx 'Bitte lüften' 'Please ventilate') }
+            $detail = $howT
+            if (($null -ne $co2) -and ($co2 -ge 1500)) { $detail += (Lx ' Die Luft ist verbraucht.' ' The air is stale.') }
+        }
+    } elseif (($null -ne $pm) -and ($pm -ge 35)) {
+        $action = 'zu_lassen'
+        if ($hasWindow) { $headline = (Lx 'Fenster zu lassen' 'Keep the window closed') } else { $headline = (Lx 'Nicht dauerhaft lüften' 'Do not ventilate continuously') }
+        $detail = (Lx 'Viel Feinstaub im Raum. Nicht dauerhaft lüften.' 'High fine dust in the room. Do not ventilate continuously.')
+    } else {
+        $action = 'zu_lassen'; $headline = (Lx 'Alles in Ordnung' 'All good')
+        if ($hasWindow) { $detail = (Lx 'Das Fenster kann zu bleiben.' 'The window can stay closed.') } else { $detail = (Lx 'Die Luft ist in Ordnung.' 'The air is fine.') }
+    }
+    $values = @(
+        [pscustomobject]@{ key = 'CO₂'; value = (Fmt $co2 0); unit = 'ppm'; level = $ev.lv[0] },
+        [pscustomobject]@{ key = 'Feinstaub'; value = (Fmt $pm 0); unit = 'µg'; level = $ev.lv[1] },
+        [pscustomobject]@{ key = 'Temperatur'; value = (Fmt $tt 1); unit = '°C'; level = $ev.lv[2] },
+        [pscustomobject]@{ key = 'Luftfeuchte'; value = (Fmt $hh 0); unit = '%'; level = $ev.lv[3] }
+    )
+
+    # Wetter-Anzeige
+    $outside = $null
+    if ($null -ne $ot) {
+        $ws = Num $wx.ws
+        $wu = [string]$wx.wu
+        if ($null -ne $ws) { if ($wu -eq 'm/s') { $ws = $ws * 3.6 } elseif ($wu -eq 'mph') { $ws = $ws * 1.609344 } elseif ($wu -eq 'kn') { $ws = $ws * 1.852 } }
+        $dirs = $(if ($en) { @('N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW') } else { @('N', 'NO', 'O', 'SO', 'S', 'SW', 'W', 'NW') })
+        $wbN = Num $wx.wb
+        $windDir = ''
+        if ($null -ne $wbN) { $windDir = $dirs[[int]([Math]::Round($wbN / 45.0)) % 8] } elseif ($wx.wb) { $windDir = [string]$wx.wb }
+        $oh = Num $wx.h
+        $tip = (Lx 'Gute Zeit zum Lüften.' 'Good time to ventilate.')
+        if ($cond -eq 'rainy' -or $cond -eq 'pouring') { $tip = (Lx 'Es regnet: Fenster nur kurz öffnen (Stoßlüften 3 Min) oder in einer Regenpause lüften.' 'It is raining: open the window only briefly (3 min burst) or wait for a break in the rain.') }
+        elseif ($ot -lt 5) { $tip = (Lx 'Es ist kalt: lieber kurz und ganz öffnen (Stoßlüften 5 Min), das spart Heizenergie.' 'It is cold: better open fully for a short time (5 min burst), it saves heating energy.') }
+        elseif ($ot -ge 25) { $tip = (Lx 'Es ist warm draußen: morgens oder abends lüften, tagsüber Fenster zu lassen.' 'It is warm outside: ventilate in the morning or evening, keep windows closed during the day.') }
+        elseif (($null -ne $oh) -and ($oh -gt 90)) { $tip = (Lx 'Draußen ist es feucht: kurz lüften, nicht dauerhaft kippen.' 'It is humid outside: ventilate briefly, do not leave the window tilted.') }
+        $cn = $(if ($en) { $condEn[$cond] } else { $condDe[$cond] }); if (-not $cn) { $cn = $cond }
+        $ic = ''; if ($iconCp.ContainsKey($cond)) { $ic = [char]::ConvertFromUtf32([int]$iconCp[$cond]) }
+        $outside = [pscustomobject]@{ temp = (Fmt $ot 0); cond = [string]$cn; icon = $ic; wind = (Fmt $ws 0); windDir = $windDir; hum = (Fmt $oh 0); cloud = (Fmt (Num $wx.cl) 0); press = (Fmt (Num $wx.p) 0); tip = $tip }
+    }
+
+    # Geräte des Raums
+    $script:haDevs = @{}
+    $lab = @($data.L)
+    $useLab = ($lab.Count -gt 0)
+    $devices = @()
+    $grp = @{ light = @('Licht', 'switch'); switch = @('Strom', 'switch'); climate = @('Heizung', 'climate'); cover = @('Rollo', 'cover'); button = @('Strom', 'button') }
+    foreach ($x in @($chosen.raw.e)) {
+        $dom = [string]$x.d
+        if (-not $grp.ContainsKey($dom)) { continue }
+        if ($dom -eq 'button' -and -not $useLab) { continue }
+        if ($useLab -and ($lab -notcontains [string]$x.i)) { continue }
+        if ($x.s -eq 'unavailable' -or $x.s -eq 'unknown') { continue }
+        $nm = [string]$x.n
+        if ($nm.StartsWith($chosen.name + ' ', [StringComparison]::OrdinalIgnoreCase) -and $nm.Length -gt ($chosen.name.Length + 1)) { $nm = $nm.Substring($chosen.name.Length + 1) }
+        $o = [pscustomobject]@{ group = $grp[$dom][0]; entity = [string]$x.i; name = $nm; type = $grp[$dom][1]; state = [string]$x.s; detail = ''; target = $null; value = '' }
+        if ($dom -eq 'climate') {
+            $tg = Num $x.t; $cu = Num $x.cu
+            if ($null -eq $tg) { $tg = 21 }
+            $o.target = $tg
+            $d1 = ''; if ($null -ne $cu) { $d1 = (Lx 'Ist ' 'Now ') + (Fmt $cu 1) + ' °C' }
+            if ($x.ha -eq 'heating') { $d1 += (Lx ' · heizt' ' · heating') } elseif ($x.ha -eq 'idle') { $d1 += (Lx ' · aus' ' · off') }
+            $o.detail = $d1
+        }
+        if ($dom -eq 'cover') {
+            $pp = Num $x.p
+            if ($x.s -eq 'open') { $o.detail = (Lx 'offen' 'open') } elseif ($x.s -eq 'closed') { $o.detail = (Lx 'zu' 'closed') } elseif ($x.s -eq 'opening') { $o.detail = (Lx 'öffnet' 'opening') } elseif ($x.s -eq 'closing') { $o.detail = (Lx 'schließt' 'closing') } elseif ($null -ne $pp) { $o.detail = [string][int][Math]::Round($pp) + ' %' } else { $o.detail = [string]$x.s }
+        }
+        $script:haDevs[[string]$x.i] = $true
+        $devices += $o
+    }
+
+    $wk = 'unbekannt'; $wc = '#7a8594'
+    if ($null -ne $worst) { $wk = $lnames[$worst]; $wc = $colors[$worst] }
+    return [pscustomobject]@{
+        room = [pscustomobject]@{ key = $chosen.key; name = $chosen.name }; rooms = $rooms
+        level = $wk; color = $wc; headline = $headline; detail = $detail; action = $action
+        window = $wst; hasWindow = $hasWindow; ventMin = $ventMin; values = $values; colors = $colors
+        mold = $false; outside = $outside; devices = $devices; updated = (Get-Date).ToString('HH:mm:ss')
+    }
+}
+function Get-HaData([string]$wantRoom) {
+    $wid = [string]$cfg.weatherEntity
+    if ($wid -match '^weather\.[a-z0-9_]+$') { $wl = "{%- set wid = '" + $wid + "' -%}" }
+    else { $wl = "{%- set wid = (wl | first) if (wl | length) > 0 else none -%}`n{%- set wid = wid.entity_id if wid else none -%}" }
+    $tpl = $script:HaTpl.Replace('__WIDLINE__', $wl)
+    $body = (@{ template = $tpl } | ConvertTo-Json -Compress)
+    try { $txt = Invoke-Ha $script:haUrl $script:haTok 'POST' '/api/template' $body }
+    catch {
+        $body = (@{ template = $tpl.Replace("label_entities('airguard')", '[]') } | ConvertTo-Json -Compress)
+        $txt = Invoke-Ha $script:haUrl $script:haTok 'POST' '/api/template' $body
+    }
+    $data = $txt | ConvertFrom-Json
+    return (Build-HaData $data $wantRoom)
+}
+function Send-HaCommand($body) {
+    $ent = [string]$body.entity; $act = [string]$body.action
+    if (-not $script:haDevs.ContainsKey($ent)) { Write-Log ('Schalten abgelehnt (nicht in der Liste): ' + $ent); return }
+    $dom = $ent.Split('.')[0]
+    $svc = ''; $payload = @{ entity_id = $ent }
+    switch ($act) {
+        'toggle' { if ($dom -eq 'light' -or $dom -eq 'switch') { $svc = $dom + '/toggle' } }
+        'temp' { if ($dom -eq 'climate') { $tv = Num $body.value; if ($null -ne $tv) { $payload.temperature = [Math]::Max(5.0, [Math]::Min(30.0, $tv)); $svc = 'climate/set_temperature' } } }
+        'open' { if ($dom -eq 'cover') { $svc = 'cover/open_cover' } }
+        'close' { if ($dom -eq 'cover') { $svc = 'cover/close_cover' } }
+        'stop' { if ($dom -eq 'cover') { $svc = 'cover/stop_cover' } }
+        'press' { if ($dom -eq 'button') { $svc = 'button/press' } }
+    }
+    if (-not $svc) { Write-Log ('Schalten: unbekannte Aktion ' + $act + ' für ' + $ent); return }
+    [void](Invoke-Ha $script:haUrl $script:haTok 'POST' ('/api/services/' + $svc) ($payload | ConvertTo-Json -Compress))
+}
+
+function Show-HaDialog {
+    $x = @"
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Luftwächter" Width="480" SizeToContent="Height" WindowStartupLocation="CenterScreen" Topmost="True" ResizeMode="NoResize" Background="#FF1B222D" FontFamily="Segoe UI">
+  <StackPanel Margin="22">
+    <TextBlock x:Name="HTitle" Foreground="White" FontSize="21" FontWeight="Bold" TextWrapping="Wrap"/>
+    <TextBlock x:Name="HIntro" Foreground="#FFB3BECD" FontSize="13" TextWrapping="Wrap" Margin="0,6,0,14"/>
+    <TextBlock x:Name="HUrlL" Foreground="White" FontSize="13" FontWeight="SemiBold"/>
+    <DockPanel Margin="0,4,0,12"><Button x:Name="HFind" DockPanel.Dock="Right" Padding="12,4" Margin="8,0,0,0"/><TextBox x:Name="HUrl" Padding="6,4" FontSize="13"/></DockPanel>
+    <TextBlock x:Name="HTokL" Foreground="White" FontSize="13" FontWeight="SemiBold"/>
+    <PasswordBox x:Name="HTok" Padding="6,4" FontSize="13" Margin="0,4,0,6"/>
+    <TextBlock x:Name="HOpen" Foreground="#FF7CB7FF" FontSize="12" Cursor="Hand" Margin="0,0,0,10"/>
+    <TextBlock x:Name="HMsg" Foreground="#FFFFD27A" FontSize="12.5" TextWrapping="Wrap" Margin="0,0,0,10"/>
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"><Button x:Name="HNo" Padding="16,6" Margin="0,0,8,0"/><Button x:Name="HYes" Padding="16,6" IsDefault="True"/></StackPanel>
+  </StackPanel>
+</Window>
+"@
+    $d = [Windows.Markup.XamlReader]::Load((New-Object System.Xml.XmlNodeReader ([xml]$x)))
+    $script:hdDlg = $d
+    $script:hdUrl = $d.FindName('HUrl'); $script:hdTok = $d.FindName('HTok'); $script:hdMsg = $d.FindName('HMsg')
+    $d.FindName('HTitle').Text = (T 'ha_title'); $d.FindName('HIntro').Text = (T 'ha_intro')
+    $d.FindName('HUrlL').Text = (T 'ha_url'); $d.FindName('HTokL').Text = (T 'ha_tok')
+    $d.FindName('HOpen').Text = (T 'ha_open'); $d.FindName('HFind').Content = (T 'ha_find')
+    $d.FindName('HNo').Content = (T 'ha_cancel'); $d.FindName('HYes').Content = (T 'ha_go')
+    $script:hdUrl.Text = $(if ($script:haUrl) { $script:haUrl } else { 'http://homeassistant.local:8123' })
+    $d.FindName('HOpen').Add_MouseLeftButtonDown({ try { $u0 = Normalize-HaUrl $script:hdUrl.Text; if ($u0) { Start-Process ($u0 + '/profile/security') } } catch {} })
+    $d.FindName('HFind').Add_Click({
+        $script:hdMsg.Text = (T 'ha_searching'); $script:hdDlg.Dispatcher.Invoke([Action]{}, [Windows.Threading.DispatcherPriority]::Render)
+        $f = @(Find-Ha)
+        if ($f.Count -gt 0) { $script:hdUrl.Text = $f[0]; $script:hdMsg.Text = (T 'ha_found' $f[0]) } else { $script:hdMsg.Text = (T 'ha_nofind') }
+    })
+    $d.FindName('HNo').Add_Click({ $script:hdDlg.DialogResult = $false })
+    $d.FindName('HYes').Add_Click({
+        $u1 = Normalize-HaUrl $script:hdUrl.Text; $t1 = ([string]$script:hdTok.Password).Trim()
+        if (-not $u1 -or -not $t1) { $script:hdMsg.Text = (T 'ha_empty'); return }
+        $script:hdMsg.Text = (T 'ha_testing'); $script:hdDlg.Dispatcher.Invoke([Action]{}, [Windows.Threading.DispatcherPriority]::Render)
+        $r1 = Test-Ha $u1 $t1
+        if ($r1 -eq 'ok') {
+            Save-HaUrl $cfgFile $u1; Save-HaToken $t1
+            $script:haUrl = $u1; $script:haTok = $t1; $script:haMode = $true; $script:canSwitch = $true
+            $script:devSig = ''; $script:last = $null; $script:fails = 0
+            $script:hdDlg.DialogResult = $true
+        } elseif ($r1 -eq 'auth') { $script:hdMsg.Text = (T 'ha_auth') } else { $script:hdMsg.Text = (T 'ha_net') }
+    })
+    $f0 = @(); $r = $d.ShowDialog()
+    if ($r -eq $true) { Update-Widget }
+}
+
 function Update-Widget {
-    if ($url -notmatch '^https?://') { Show-Setup; return }
+    if (-not $script:haMode -and $url -notmatch '^https?://') { Show-Setup; return }
     try {
-        $u = $url
-        if ($u.Contains('?')) { $u += '&' } else { $u += '?' }
-        $u += 'room=' + [Uri]::EscapeDataString([string]$state.room) + '&lang=' + [string]$state.lang
-        $d = Get-Json $u
+        if ($script:haMode) {
+            $d = Get-HaData ([string]$state.room)
+            if ($null -eq $d) { Show-Setup; return }
+        } else {
+            $u = $url
+            if ($u.Contains('?')) { $u += '&' } else { $u += '?' }
+            $u += 'room=' + [Uri]::EscapeDataString([string]$state.room) + '&lang=' + [string]$state.lang
+            $d = Get-Json $u
+        }
         $script:fails = 0
         $script:last = $d
         Show-Data $d
@@ -1135,6 +1609,7 @@ $miLog = New-Object System.Windows.Controls.MenuItem; $miLog.Header = 'Protokoll
 $miReset = New-Object System.Windows.Controls.MenuItem; $miReset.Header = 'Fenster zurücksetzen (oben rechts)'
 $miSound = New-Object System.Windows.Controls.MenuItem; $miSound.Header = 'Hinweiston beim Lüften'; $miSound.IsCheckable = $true; $miSound.IsChecked = [bool]$state.sound
 $miTray = New-Object System.Windows.Controls.MenuItem; $miTray.IsCheckable = $true; $miTray.IsChecked = [bool]$state.tray
+$miHa = New-Object System.Windows.Controls.MenuItem
 $miHelp = New-Object System.Windows.Controls.MenuItem
 $miUpd = New-Object System.Windows.Controls.MenuItem
 $miCfg = New-Object System.Windows.Controls.MenuItem
@@ -1147,10 +1622,11 @@ $miLog.Add_Click({ try { if (-not (Test-Path $logFile)) { Set-Content -Path $log
 $miReset.Add_Click({ $w0 = [System.Windows.SystemParameters]::WorkArea; $win.Left = [Math]::Max($w0.Left, $w0.Right - $win.ActualWidth - 20); $win.Top = $w0.Top + 20; Save-State })
 $miSound.Add_Click({ $state.sound = $miSound.IsChecked; Save-State })
 $miExit.Add_Click({ Exit-App })
+$miHa.Add_Click({ Show-HaDialog })
 $miHelp.Add_Click({ $script:helpOpen = $true; Apply-View })
 $miCfg.Add_Click({ try { if (-not (Test-Path $cfgFile)) { Copy-Item (Join-Path $dir 'config.example.json') $cfgFile }; Start-Process notepad.exe -ArgumentList ('"' + $cfgFile + '"') } catch { Write-Log ('Konfig: ' + $_.Exception.Message) } })
 $miUpd.Add_Click({ Invoke-UpdateFlow $true })
-[void]$menu.Items.Add($miRefresh); [void]$menu.Items.Add($miTop); [void]$menu.Items.Add($miPop); [void]$menu.Items.Add($miTray); [void]$menu.Items.Add($miSound); [void]$menu.Items.Add($miReset); [void]$menu.Items.Add($miLog); [void]$menu.Items.Add($miHelp); [void]$menu.Items.Add($miCfg); [void]$menu.Items.Add($miUpd); [void]$menu.Items.Add((New-Object System.Windows.Controls.Separator)); [void]$menu.Items.Add($miExit)
+[void]$menu.Items.Add($miRefresh); [void]$menu.Items.Add($miTop); [void]$menu.Items.Add($miPop); [void]$menu.Items.Add($miTray); [void]$menu.Items.Add($miSound); [void]$menu.Items.Add($miReset); [void]$menu.Items.Add($miLog); [void]$menu.Items.Add($miHa); [void]$menu.Items.Add($miHelp); [void]$menu.Items.Add($miCfg); [void]$menu.Items.Add($miUpd); [void]$menu.Items.Add((New-Object System.Windows.Controls.Separator)); [void]$menu.Items.Add($miExit)
 $win.ContextMenu = $menu
 
 
@@ -1158,7 +1634,7 @@ $win.ContextMenu = $menu
 function Get-FooterText { if ($footerCfg) { return $footerCfg }; return (T 'footer') }
 function Build-Help {
     $ui.HelpBody.Children.Clear()
-    for ($i = 1; $i -le 15; $i++) {
+    for ($i = 1; $i -le 16; $i++) {
         $h = New-Text (T ('h' + $i)) 15 '#FFFFFFFF' $true
         $h.Margin = New-Object Windows.Thickness(0, 10, 0, 2)
         $bk = 'b' + $i; $bt = $(if ($i -eq 12) { T $bk $repoUrl } else { T $bk }); $b = New-Text $bt 13 '#FFDFE5EE' $false
@@ -1175,7 +1651,7 @@ function Apply-Lang {
     $ui.BtnHelp.ToolTip = (T 'help_tip'); $ui.BtnLang.ToolTip = (T 'lang_tip')
     foreach ($k in 'De', 'En') { $ui.('Lang' + $k).Foreground = Brush '#FFA9B4C4'; $ui.('Lang' + $k).FontWeight = 'Normal' }
     if ($state.lang -eq 'en') { $ui.LangEn.Foreground = Brush '#FFFFFFFF'; $ui.LangEn.FontWeight = 'Bold' } else { $ui.LangDe.Foreground = Brush '#FFFFFFFF'; $ui.LangDe.FontWeight = 'Bold' }
-    $miRefresh.Header = (T 'm_refresh'); $miTop.Header = (T 'm_top'); $miPop.Header = (T 'm_pop'); $miTray.Header = (T 'm_tray'); if ($script:trayMiOpen) { $script:trayMiOpen.Text = (T 'tray_open'); $script:trayMiExit.Text = (T 'm_exit') }; $miSound.Header = (T 'm_sound'); $miReset.Header = (T 'm_reset'); $miLog.Header = (T 'm_log'); $miHelp.Header = (T 'm_help'); $miCfg.Header = (T 'm_cfg'); $miUpd.Header = (T 'm_upd'); $miExit.Header = (T 'm_exit')
+    $miRefresh.Header = (T 'm_refresh'); $miTop.Header = (T 'm_top'); $miPop.Header = (T 'm_pop'); $miTray.Header = (T 'm_tray'); if ($script:trayMiOpen) { $script:trayMiOpen.Text = (T 'tray_open'); $script:trayMiExit.Text = (T 'm_exit') }; $miSound.Header = (T 'm_sound'); $miReset.Header = (T 'm_reset'); $miLog.Header = (T 'm_log'); $miHelp.Header = (T 'm_help'); $miHa.Header = (T 'm_ha'); $miCfg.Header = (T 'm_cfg'); $miUpd.Header = (T 'm_upd'); $miExit.Header = (T 'm_exit')
     $ui.Footer.Text = (Get-FooterText)
     $ui.Copy.Text = $copyright + ' · GitHub'; $ui.Copy.ToolTip = (T 'copy_tip'); $ui.Ver.ToolTip = (T 'ver_tip')
     Set-UpdateButton
@@ -1341,6 +1817,8 @@ $checkTimer.Add_Tick({ Invoke-UpdateFlow $false })
 
 $win.Add_Closing({ Save-State; $timer.Stop(); $pulseTimer.Stop(); $saveTimer.Stop(); $firstCheck.Stop(); $checkTimer.Stop(); Close-Tray })
 if ($dir -eq $installDir -and -not (Test-Path $startMenuLnk)) { New-StartMenuShortcut }
+$script:firstRun = $true
+$win.Add_ContentRendered({ if ($script:firstRun) { $script:firstRun = $false; if (-not $script:haMode -and $url -notmatch '^https?://') { Show-HaDialog } } })
 Init-Tray
 Apply-Lang
 Apply-View

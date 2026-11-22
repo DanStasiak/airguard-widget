@@ -14,22 +14,27 @@ Made by **Dan Stasiak** · MIT License · [github.com/DanStasiak/airguard-widget
 
 ## How it works
 
-The widget is only the display. It talks to a small **server** that you run, for example a workflow in [n8n](https://n8n.io) connected to your [Home Assistant](https://www.home-assistant.io). The widget asks the server for the data of a room and sends switch commands back. The server decides which rooms, sensors and devices exist, so nothing about your home is in the widget.
+**Direct mode (recommended, since v4):** the widget connects straight to your [Home Assistant](https://www.home-assistant.io). The installer finds Home Assistant in your network and asks for a long-lived access token. Every **area** that has a CO₂ or fine-dust sensor becomes a room; readings, window contacts, lights, plugs, heaters and blinds of the area are found automatically. Nothing about your home is stored in the widget. Details: [`docs/HOME-ASSISTANT.md`](docs/HOME-ASSISTANT.md).
 
-- [`docs/API.md`](docs/API.md): the JSON contract (any backend that speaks it works)
-- [`backend/n8n/`](backend/n8n): ready-to-use reference backend for n8n + Home Assistant (with example entity IDs you replace by your own)
+**Server mode (optional):** instead of Home Assistant directly, the widget can talk to your own small server (for example an [n8n](https://n8n.io) workflow) that speaks a simple JSON contract.
+
+- [`docs/HOME-ASSISTANT.md`](docs/HOME-ASSISTANT.md): how the direct mode finds rooms, sensors and devices
+- [`docs/API.md`](docs/API.md): the JSON contract for server mode
+- [`backend/n8n/`](backend/n8n): reference backend for server mode (with example entity IDs you replace by your own)
 
 ## Install (Windows 10/11)
 
 1. Download `Luftwaechter-<version>.zip` from the [latest release](https://github.com/DanStasiak/airguard-widget/releases/latest) and unzip it.
-2. Double-click `Installieren.bat`. The widget appears at the top right and starts with Windows from now on.
-3. Right-click the widget → **Open configuration**, enter your server link as `url` (and `switchUrl` for switching), save, then right-click → Quit and start it again (or log in again).
+2. Double-click `Installieren.bat`. It searches your network for Home Assistant, asks you to confirm the address and to paste a long-lived access token (Home Assistant → your profile → Security → Long-lived access tokens). The token is stored encrypted for your Windows account only.
+3. The widget appears at the top right and starts with Windows from now on. A Start menu entry "Luftwächter" lets you start it again at any time. Change the connection later: right-click → **Connect to Home Assistant…**.
 
 `config.json` is your private file: it is kept during updates and is never uploaded.
 
 | key | meaning |
 | --- | --- |
-| `url` | server link that returns the room data |
+| `haUrl` | Home Assistant address (set by the installer; the token is NOT in this file) |
+| `weatherEntity` | a specific weather entity, e.g. `weather.home` (optional, default: the first one) |
+| `url` | server mode only: server link that returns the room data |
 | `switchUrl` | server link that accepts switch commands (optional, without it the device panel is display-only) |
 | `defaultRoom` | start room key (optional) |
 | `refreshSeconds` | refresh interval, 2 to 10 |
@@ -55,7 +60,7 @@ MIT License, Copyright (c) 2026 Dan Stasiak. You may use, change and share it fr
 
 **Luftwächter** ist ein kleines Windows-Widget, das zeigt, wie gut die Luft in deinen Räumen ist, und in einfachen Worten sagt, ob du lüften sollst. Kostenlos und quelloffen (MIT).
 
-**Installieren:** ZIP von der [aktuellen Version](https://github.com/DanStasiak/airguard-widget/releases/latest) laden, entpacken, `Installieren.bat` doppelklicken. Danach Rechtsklick auf das Widget → *Konfiguration öffnen* und den Server-Link (`url`) eintragen. Das Widget zeigt nur an; Räume, Sensoren und Geräte kommen von deinem Server (siehe [`docs/API.md`](docs/API.md) und [`backend/n8n/`](backend/n8n)).
+**Installieren:** ZIP von der [aktuellen Version](https://github.com/DanStasiak/airguard-widget/releases/latest) laden, entpacken, `Installieren.bat` doppelklicken. Der Installer sucht Home Assistant im Netzwerk, fragt nach einem langlebigen Zugangstoken (Home Assistant → Profil → Sicherheit) und speichert ihn verschlüsselt. Räume (Bereiche mit CO₂- oder Feinstaub-Sensor), Messwerte, Fenster und Geräte werden automatisch gefunden (siehe [`docs/HOME-ASSISTANT.md`](docs/HOME-ASSISTANT.md)). Optional gibt es einen Servermodus ([`docs/API.md`](docs/API.md)).
 
 **Aktualisieren:** Knopf **⟳ Update** unten rechts. Das Widget vergleicht seine Version mit GitHub, zeigt die Änderungen, fragt nach deiner Bestätigung, prüft den Download und tauscht sich selbst aus. Einstellungen bleiben erhalten.
 

@@ -2,6 +2,11 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [4.0.0] - 2026-11-22
+- New: direct connection to Home Assistant. Rooms are found automatically (areas with a CO2 or fine-dust sensor), together with readings, window contacts, lights, plugs, heaters, blinds and the weather. No server needed.
+- New: the installer searches your network for Home Assistant and asks for a long-lived access token; the token is stored encrypted for your Windows account. Right-click: Connect to Home Assistant (with a Find button).
+- Optional label "airguard" in Home Assistant to choose which devices appear. Server mode (url/switchUrl) still works.
+
 ## [3.15.0] - 2026-11-22
 - New: the four value tiles (CO2, fine dust, temperature, humidity) are now buttons. Tap one and the history curve shows that value (own color and reference lines, plus today's min/max). Your choice is remembered.
 - The history now stores all four values per room (older entries keep working; the new curves fill up from now on).
