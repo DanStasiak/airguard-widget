@@ -2,6 +2,10 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [5.2.0] - 2026-11-22
+- New: the widget now checks for updates by itself every 60 minutes (set `updateCheckMinutes` in config.json, 15 to 1440). When a new version exists, the Update button turns green, pulses gently and shows the version number, and a tray notice appears once. Hover the button to see when it was last checked.
+- Docs: new screenshots and descriptions on the GitHub page.
+
 ## [5.1.0] - 2026-11-22
 - New: a short welcome card in the simple view explains in three sentences what the face, the big sentence and the "Details" button are. It shows once and goes away with "Got it".
 

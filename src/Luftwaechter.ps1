@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall)
 
 $appName = 'Luftwaechter'
-$appVersion = '5.1.0'
+$appVersion = '5.2.0'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -325,6 +325,8 @@ $script:haMode = [bool]($script:haUrl -and $script:haTok)
 $script:canSwitch = [bool]($script:haMode -or $switchUrl)
 $script:haDevs = @{}
 $interval = 10
+$updMinutes = 60
+if ($cfg.updateCheckMinutes) { $updMinutes = [Math]::Max(15, [Math]::Min([int]$cfg.updateCheckMinutes, 1440)) }
 if ($cfg.refreshSeconds) { $interval = [Math]::Max(2, [Math]::Min([int]$cfg.refreshSeconds, 10)) }
 
 # ---------- gespeicherter Zustand ----------
@@ -505,6 +507,10 @@ $script:Strings = @{
     b16 = @('Das Widget spricht direkt mit deinem Home Assistant. Jeder Bereich (Area) mit einem CO₂- oder Feinstaub-Sensor wird ein Raum. Messwerte, Fensterkontakte (Geräteklasse "window"), Lichter, Steckdosen, Heizungen und Rollos des Bereichs werden automatisch gefunden. Das Wetter kommt aus der ersten Wetter-Entität. Stört ein Gerät: Rechtsklick auf die Zeile, Ausblenden (unten bringt "ausgeblendet · alle anzeigen" sie zurück). Typische Einstellungs-Schalter (Kindersicherung, Internetzugang, Kalibrierung) blendet das Widget selbst aus. Nur bestimmte Geräte anzeigen: In Home Assistant das Label "airguard" an diese Entitäten hängen. Verbindung ändern: Rechtsklick, "Mit Home Assistant verbinden…".', 'The widget talks directly to your Home Assistant. Every area with a CO₂ or fine-dust sensor becomes a room. Readings, window contacts (device class "window"), lights, plugs, heaters and blinds of the area are found automatically. Weather comes from the first weather entity. If a device is in the way: right-click its row and choose Hide ("{0} hidden · show all" at the bottom brings them back). Typical setting switches (child lock, internet access, calibration) are hidden automatically. To show only certain devices: give those entities the label "airguard" in Home Assistant. Change the connection: right-click, "Connect to Home Assistant…".')
     m_cfg = @('Konfiguration öffnen', 'Open configuration')
     m_upd = @('Nach Updates suchen', 'Check for updates')
+    upd_tip = @('Zuletzt geprüft: {0} · nächste Prüfung in ca. {1} Min.', 'Last checked: {0} · next check in about {1} min')
+    upd_tip_new = @('Neue Version {0} wartet · Klicken zum Ansehen', 'New version {0} is waiting · click to view')
+    upd_tip_never = @('Noch nicht geprüft · Klicken zum Prüfen', 'Not checked yet · click to check')
+    upd_balloon = @('Luftwächter {0} ist da. Auf „Update“ klicken.', 'Luftwächter {0} is available. Click Update.')
     upd_btn = @('⟳ Update', '⟳ Update')
     upd_new = @('⬆ {0} verfügbar', '⬆ {0} available')
     upd_title = @('Neue Version verfügbar', 'New version available')
@@ -2006,6 +2012,9 @@ $script:newVer = $null
 function Set-UpdateButton {
     if ($script:newVer) { $ui.BtnUpdT.Text = (T 'upd_new' ('v' + $script:newVer)); $ui.BtnUpd.Background = Brush '#FF2E9E5B' }
     else { $ui.BtnUpdT.Text = (T 'upd_btn'); $ui.BtnUpd.Background = Brush '#33FFFFFF' }
+    if ($script:newVer) { $ui.BtnUpd.ToolTip = (T 'upd_tip_new' ('v' + $script:newVer)) }
+    elseif ($script:lastUpdCheck) { $ui.BtnUpd.ToolTip = (T 'upd_tip' $script:lastUpdCheck.ToString('HH:mm') $updMinutes) }
+    else { $ui.BtnUpd.ToolTip = (T 'upd_tip_never') }
     Apply-Simple
 }
 function Get-LatestRelease {
@@ -2154,9 +2163,14 @@ Start-Process 'wscript.exe' -ArgumentList ('"' + (Join-Path $Dst 'Start.vbs') + 
 function Invoke-UpdateFlow([bool]$manual) {
     try {
         $rel = Get-LatestRelease
+        $script:lastUpdCheck = Get-Date
         $remote = ([string]$rel.tag_name).TrimStart('v')
         if (Test-Newer $remote $appVersion) {
             $script:newVer = $remote; Set-UpdateButton
+            if (-not $manual -and $script:notifiedVer -ne $remote) {
+                $script:notifiedVer = $remote
+                try { if ($script:tray -and $state.tray) { $script:tray.ShowBalloonTip(8000, 'Luftwächter', (T 'upd_balloon' ('v' + $remote)), [System.Windows.Forms.ToolTipIcon]::Info) } } catch {}
+            }
             if ($manual) { if (Show-UpdateDialog $rel $remote $true) { Start-Update $rel } }
         } else {
             $script:newVer = $null; Set-UpdateButton
@@ -2182,6 +2196,7 @@ $pulseTimer.Interval = [TimeSpan]::FromMilliseconds(1000)
 $pulseTimer.Add_Tick({
     $h = (Get-Date).Hour
     if ($h -ge 22 -or $h -lt 7) { $win.Opacity = 0.62 } else { $win.Opacity = 1.0 }
+    if ($script:newVer -and $ui.BtnUpd) { $script:updOn = -not $script:updOn; if ($script:updOn) { $ui.BtnUpd.Background = Brush '#FF2E9E5B' } else { $ui.BtnUpd.Background = Brush '#FF237A47' } }
     if ($script:pulse) { $script:pulseOn = -not $script:pulseOn; if ($script:pulseOn) { $ui.Glow.Opacity = 0.95 } else { $ui.Glow.Opacity = 0.25 } }
     else { $ui.Glow.Opacity = 0.5 }
 })
@@ -2194,7 +2209,7 @@ $firstCheck = New-Object System.Windows.Threading.DispatcherTimer
 $firstCheck.Interval = [TimeSpan]::FromSeconds(12)
 $firstCheck.Add_Tick({ $firstCheck.Stop(); Invoke-UpdateFlow $false })
 $checkTimer = New-Object System.Windows.Threading.DispatcherTimer
-$checkTimer.Interval = [TimeSpan]::FromHours(6)
+$checkTimer.Interval = [TimeSpan]::FromMinutes($updMinutes)
 $checkTimer.Add_Tick({ Invoke-UpdateFlow $false })
 
 $win.Add_Closing({ Save-State; $timer.Stop(); $pulseTimer.Stop(); $saveTimer.Stop(); $firstCheck.Stop(); $checkTimer.Stop(); Close-Tray })

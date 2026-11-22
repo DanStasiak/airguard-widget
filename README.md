@@ -2,7 +2,7 @@
 
 [![Latest release](https://img.shields.io/github/v/release/DanStasiak/airguard-widget)](https://github.com/DanStasiak/airguard-widget/releases/latest) [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE) ![Windows 10/11](https://img.shields.io/badge/Windows-10%2F11-blue) ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-direct-41BDF5)
 
-![Luftwächter widget (illustration with sample data)](docs/screenshot.png)
+![Luftwächter: simple view, update notice and details view (illustration with sample data)](docs/screenshot.png)
 
 A small always-on-top **Windows desktop widget** that shows how good the air is in your rooms and tells you in plain words whether to ventilate. Free and open source (MIT).
 
@@ -15,7 +15,8 @@ A small always-on-top **Windows desktop widget** that shows how good the air is 
 - German and English UI (toggle in the widget), built-in help (`?`)
 - Pick the sensor per reading, or let the widget average all suitable sensors in a room; it warns when a sensor stops reporting
 - Hourly weather outlook, rain-aware advice, tray icon with notifications
-- **Update button:** checks this repository for a newer release, shows what changed, updates itself after you confirm
+- **Update button:** checks this repository by itself (every 60 minutes by default) and turns green with the new version number when one is waiting; one click shows what changed and updates after you confirm
+- **Welcome card** on first start explains the simple view in three sentences
 
 Made by **Dan Stasiak** · MIT License · [github.com/DanStasiak/airguard-widget](https://github.com/DanStasiak/airguard-widget)
 
@@ -45,6 +46,7 @@ Made by **Dan Stasiak** · MIT License · [github.com/DanStasiak/airguard-widget
 | `switchUrl` | server link that accepts switch commands (optional, without it the device panel is display-only) |
 | `defaultRoom` | start room key (optional) |
 | `refreshSeconds` | refresh interval, 2 to 10 |
+| `updateCheckMinutes` | how often the widget looks for a new release, 15 to 1440 (default 60) |
 | `place` | place name shown in the weather row (optional) |
 | `footer` | source note at the bottom (optional) |
 | `roomShort`, `roomShortEn` | short names for the room overview, e.g. `{"living": "Living"}` |
@@ -65,7 +67,7 @@ If a room has several sensors of one kind, the widget shows their **average** an
 
 ## Updating
 
-Press **⟳ Update** at the bottom right (or right-click → *Check for updates*). The widget compares its version with the latest GitHub release, shows the changes and asks whether to proceed. It then downloads the release, verifies the SHA-256 checksum and the script syntax, keeps a backup of the old version and restarts itself. Your `config.json` and state are untouched. A silent check runs every few hours; the button turns green when a new version exists.
+Press **⟳ Update** at the bottom right (or right-click → *Check for updates*). The widget compares its version with the latest GitHub release, shows the changes and asks whether to proceed. It then downloads the release, verifies the SHA-256 checksum and the script syntax, keeps a backup of the old version and restarts itself. Your `config.json` and state are untouched. The widget also checks silently on its own (default every 60 minutes, `updateCheckMinutes` in `config.json`): when a new version exists, the button turns green, pulses gently and shows the version number, and a tray notice appears once. Hover the button to see when it last checked.
 
 ## Uninstall
 
@@ -85,6 +87,6 @@ MIT License, Copyright (c) 2026 Dan Stasiak. You may use, change and share it fr
 
 **Sensoren wählen:** Hat ein Raum mehrere Sensoren derselben Art, zeigt das Widget den Mittelwert (Taupunkt, Geräte-Temperatur und veraltete Sensoren werden ignoriert). Rechtsklick → „Sensoren für diesen Raum wählen…“ legt je Messwert genau einen Sensor fest. Meldet ein Sensor 20 Minuten nichts, warnt die Fußzeile in Gelb.
 
-**Aktualisieren:** Knopf **⟳ Update** unten rechts. Das Widget vergleicht seine Version mit GitHub, zeigt die Änderungen, fragt nach deiner Bestätigung, prüft den Download und tauscht sich selbst aus. Einstellungen bleiben erhalten.
+**Aktualisieren:** Knopf **⟳ Update** unten rechts. Das Widget vergleicht seine Version mit GitHub, zeigt die Änderungen, fragt nach deiner Bestätigung, prüft den Download und tauscht sich selbst aus. Einstellungen bleiben erhalten. Das Widget prüft auch von selbst (standardmäßig alle 60 Minuten, `updateCheckMinutes` in `config.json`): Gibt es eine neue Version, wird der Knopf grün und zeigt die Versionsnummer; zusätzlich erscheint einmal eine Hinweis-Meldung im Infobereich. Beim ersten Start erklärt eine kurze Willkommenskarte die einfache Ansicht.
 
 **Lizenz:** MIT, © 2026 Dan Stasiak. Frei nutzbar, änderbar und weitergebbar; der Urheberhinweis muss erhalten bleiben.
