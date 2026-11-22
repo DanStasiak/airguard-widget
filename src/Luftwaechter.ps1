@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall)
 
 $appName = 'Luftwaechter'
-$appVersion = '3.14.1'
+$appVersion = '3.14.2'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -14,6 +14,19 @@ $copyright = '© 2026 Dan Stasiak · MIT'
 $installDir = Join-Path $env:LOCALAPPDATA $appName
 $stateDir = Join-Path $env:APPDATA $appName
 $startupLnk = Join-Path ([Environment]::GetFolderPath('Startup')) 'Luftwaechter.lnk'
+
+$startMenuLnk = Join-Path ([Environment]::GetFolderPath('Programs')) 'Luftwächter.lnk'
+function New-StartMenuShortcut {
+    try {
+        $sh = New-Object -ComObject WScript.Shell
+        $l = $sh.CreateShortcut($startMenuLnk)
+        $l.TargetPath = 'wscript.exe'
+        $l.Arguments = '"' + (Join-Path $installDir 'Start.vbs') + '"'
+        $l.WorkingDirectory = $installDir
+        $l.Description = 'Luftwächter / Airguard'
+        $l.Save()
+    } catch {}
+}
 
 if ($Install) {
     $src = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -31,12 +44,13 @@ if ($Install) {
     $lnk.Arguments = '"' + (Join-Path $installDir 'Start.vbs') + '"'
     $lnk.WorkingDirectory = $installDir
     $lnk.Save()
+    New-StartMenuShortcut
     Start-Process 'wscript.exe' -ArgumentList ('"' + (Join-Path $installDir 'Start.vbs') + '"')
     exit 0
 }
 if ($Uninstall) {
     Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" | Where-Object { $_.CommandLine -like '*Luftwaechter.ps1*' -and $_.ProcessId -ne $PID } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
-    Remove-Item -Force $startupLnk -ErrorAction SilentlyContinue
+    Remove-Item -Force $startupLnk, $startMenuLnk -ErrorAction SilentlyContinue
     exit 0
 }
 
@@ -1272,6 +1286,7 @@ $checkTimer.Interval = [TimeSpan]::FromHours(6)
 $checkTimer.Add_Tick({ Invoke-UpdateFlow $false })
 
 $win.Add_Closing({ Save-State; $timer.Stop(); $pulseTimer.Stop(); $saveTimer.Stop(); $firstCheck.Stop(); $checkTimer.Stop(); Close-Tray })
+if ($dir -eq $installDir -and -not (Test-Path $startMenuLnk)) { New-StartMenuShortcut }
 Init-Tray
 Apply-Lang
 Apply-View

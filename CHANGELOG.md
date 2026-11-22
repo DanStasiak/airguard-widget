@@ -2,6 +2,10 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [3.14.2] - 2026-11-22
+- New: a Start menu entry "Luftwächter" is created by the installer (and re-created at program start if missing). Use it, or type Luftwächter in the Start menu, to start the program again at any time.
+- Start (Start menu, autostart) now always ends a stuck or hidden old copy first, so starting never silently fails.
+
 ## [3.14.1] - 2026-11-22
 - Fix: quitting via the tray icon or the menu now ends the program completely (it could stay running invisibly and block a restart). Quit always releases the tray icon and the single-instance lock.
 
