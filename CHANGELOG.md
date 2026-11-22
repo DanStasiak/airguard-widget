@@ -2,6 +2,10 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [4.6.0] - 2026-11-22
+- New: sensor watchdog. If a sensor stops reporting (20 minutes or more) or is ignored because its data is stale, the footer shows an amber warning with its name, so you never trust an old value without knowing.
+- Improved: with Home Assistant the footer now says how many sensors feed the readings instead of a fixed text.
+
 ## [4.5.0] - 2026-11-22
 - New: weather outlook. "More" now shows the next 12 hours (every 2 hours: time, weather symbol, temperature) from your Home Assistant weather entity.
 

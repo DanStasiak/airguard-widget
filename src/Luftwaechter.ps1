@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall)
 
 $appName = 'Luftwaechter'
-$appVersion = '4.5.0'
+$appVersion = '4.6.0'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -1235,7 +1235,9 @@ function Show-Data($d) {
     } else { $ui.WLineText.Text = (T 'w_na'); $ui.WTip.Text = ''; $ui.WOutB.Visibility = 'Collapsed' }
 
     $ui.Time.Text = [string]$d.updated
-    $ui.Footer.Text = (Get-FooterText)
+    if ($d.warn) { $ui.Footer.Text = [string]$d.warn; $ui.Footer.Foreground = Brush '#FFFFC857'; $ui.Footer.ToolTip = (Lx 'Ein Sensor liefert keine aktuellen Werte. Rechtsklick: Sensoren für diesen Raum wählen.' 'A sensor is not delivering current values. Right-click: choose sensors for this room.') }
+    elseif ($null -ne $d.nsrc) { $ui.Footer.Text = (Lx ('Messwerte: ' + $d.nsrc + ' Sensoren · Home Assistant') ('Readings: ' + $d.nsrc + ' sensors · Home Assistant')); $ui.Footer.Foreground = Brush '#FFA9B4C4'; $ui.Footer.ToolTip = $null }
+    else { $ui.Footer.Text = (Get-FooterText); $ui.Footer.Foreground = Brush '#FFA9B4C4' }
 
     # Geräte nur neu bauen, wenn sich etwas geändert hat
     $sig = (@($d.devices) | ForEach-Object { [string]$_.entity + ':' + [string]$_.state + ':' + [string]$_.target + ':' + [string]$_.detail }) -join '|'
@@ -1322,13 +1324,16 @@ function Get-Cands($ents, [string]$dc) {
 function Pick-Val($ents, [string]$dc, $lab, [string]$selId) {
     $c = @(Get-Cands $ents $dc)
     if ($c.Count -eq 0) { return $null }
-    if ($selId) { $one = @($c | Where-Object { [string]$_.i -eq $selId }); if ($one.Count -gt 0) { return [pscustomobject]@{ v = (Num $one[0].s); n = 1 } } }
+    $nowE = [double][DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+    if ($selId) { $one = @($c | Where-Object { [string]$_.i -eq $selId }); if ($one.Count -gt 0) { $ag = 0; if ([double]$one[0].lr -gt 0) { $ag = [int][Math]::Max(0, ($nowE - [double]$one[0].lr) / 60) }; return [pscustomobject]@{ v = (Num $one[0].s); n = 1; age = $ag; skipped = @(); name = [string]$one[0].n } } }
     $lb = @($c | Where-Object { @($lab) -contains [string]$_.i })
     if ($lb.Count -gt 0) { $c = $lb }
     $mx = ($c | ForEach-Object { [double]$_.lr } | Measure-Object -Maximum).Maximum
-    if ($mx -gt 0) { $fresh = @($c | Where-Object { [double]$_.lr -ge ($mx - 1800) }); if ($fresh.Count -gt 0) { $c = $fresh } }
+    $skipped = @()
+    if ($mx -gt 0) { $fresh = @($c | Where-Object { [double]$_.lr -ge ($mx - 1800) }); if ($fresh.Count -gt 0) { $skipped = @($c | Where-Object { [double]$_.lr -lt ($mx - 1800) } | ForEach-Object { [string]$_.n }); $c = $fresh } }
     $sum = 0.0; foreach ($e in $c) { $sum += (Num $e.s) }
-    return [pscustomobject]@{ v = ($sum / $c.Count); n = $c.Count }
+    $ag = 0; if ($mx -gt 0) { $ag = [int][Math]::Max(0, ($nowE - $mx) / 60) }
+    return [pscustomobject]@{ v = ($sum / $c.Count); n = $c.Count; age = $ag; skipped = $skipped; name = [string]$c[0].n }
 }
 function Eval-HaRoom($r, $lab, $sel) {
     $ents = @($r.e)
@@ -1340,11 +1345,18 @@ function Eval-HaRoom($r, $lab, $sel) {
     $pm = $null; if ($vPm) { $pm = $vPm.v }
     $tt = $null; if ($vT) { $tt = $vT.v }
     $hh = $null; if ($vH) { $hh = $vH.v }
+    $warn = ''
+    foreach ($pv in @($vCo2, $vPm, $vT, $vH)) {
+        if (-not $pv -or $warn) { continue }
+        if ($pv.age -ge 20) { $warn = (Lx ('⚠ ' + $pv.name + ' meldet seit ' + $pv.age + ' min nichts') ('⚠ ' + $pv.name + ' silent for ' + $pv.age + ' min')) }
+        elseif (@($pv.skipped).Count -gt 0) { $warn = (Lx ('⚠ ignoriert (veraltet): ' + [string]@($pv.skipped)[0]) ('⚠ ignored (stale): ' + [string]@($pv.skipped)[0])) }
+    }
+    $nsrc = 0; foreach ($pv in @($vCo2, $vPm, $vT, $vH)) { if ($pv) { $nsrc += $pv.n } }
     $hasAir = (@($ents | Where-Object { $_.d -eq 'sensor' -and ($_.c -eq 'carbon_dioxide' -or $_.c -eq 'pm25') }).Count -gt 0)
     $lvl = @((LvAbove $co2 1000 1500), (LvAbove $pm 20 50), (LvRange $tt 17 23 13 25), (LvRange $hh 30 60 25 70))
     $known = @($lvl | Where-Object { $null -ne $_ })
     $worst = $null; if ($known.Count -gt 0) { $worst = ($known | Measure-Object -Maximum).Maximum }
-    return [pscustomobject]@{ co2 = $co2; pm = $pm; t = $tt; h = $hh; lv = $lvl; worst = $worst; air = $hasAir }
+    return [pscustomobject]@{ co2 = $co2; pm = $pm; t = $tt; h = $hh; lv = $lvl; worst = $worst; air = $hasAir; warn = $warn; nsrc = $nsrc }
 }
 $script:fcCache = $null
 $script:fcAt = [DateTime]::MinValue
@@ -1535,7 +1547,7 @@ function Build-HaData($data, [string]$wantRoom) {
         room = [pscustomobject]@{ key = $chosen.key; name = $chosen.name }; rooms = $rooms
         level = $wk; color = $wc; headline = $headline; detail = $detail; action = $action
         window = $wst; hasWindow = $hasWindow; ventMin = $ventMin; values = $values; colors = $colors
-        mold = $false; outside = $outside; devices = $devices; updated = (Get-Date).ToString('HH:mm:ss')
+        mold = $false; warn = $ev.warn; nsrc = $ev.nsrc; outside = $outside; devices = $devices; updated = (Get-Date).ToString('HH:mm:ss')
     }
 }
 function Get-HaData([string]$wantRoom) {
