@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall)
 
 $appName = 'Luftwaechter'
-$appVersion = '4.7.2'
+$appVersion = '4.8.0'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -167,6 +167,88 @@ function Install-AskHa([string]$cfgPath) {
     Write-Host 'Nicht eingerichtet - das geht spaeter im Widget per Rechtsklick. / Not set up - you can do it later in the widget via right-click.'
 }
 
+function Show-InstallWizard([string]$cfgPath) {
+    Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase
+    $script:wzDe = ((Get-Culture).TwoLetterISOLanguageName -eq 'de')
+    $x = @"
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Luftwächter" Width="540" SizeToContent="Height" WindowStartupLocation="CenterScreen" Topmost="True" ResizeMode="NoResize" Background="#FF1B222D" FontFamily="Segoe UI">
+  <StackPanel Margin="26">
+    <DockPanel><Button x:Name="WLang" DockPanel.Dock="Right" Padding="10,2" VerticalAlignment="Top"/><TextBlock Text="Luftwächter" Foreground="White" FontSize="30" FontWeight="Bold"/></DockPanel>
+    <TextBlock x:Name="WIntro" Foreground="#FFB3BECD" FontSize="13" TextWrapping="Wrap" Margin="0,4,0,18"/>
+    <TextBlock x:Name="WStep1" Foreground="White" FontSize="14" FontWeight="SemiBold"/>
+    <DockPanel Margin="0,6,0,0"><Button x:Name="WFind" DockPanel.Dock="Right" Padding="12,4" Margin="8,0,0,0"/><TextBox x:Name="WUrl" Padding="6,5" FontSize="13"/></DockPanel>
+    <ComboBox x:Name="WFound" Margin="0,6,0,0" Padding="6,4" FontSize="13" Visibility="Collapsed"/>
+    <TextBlock x:Name="WStep2" Foreground="White" FontSize="14" FontWeight="SemiBold" Margin="0,16,0,0"/>
+    <PasswordBox x:Name="WTok" Padding="6,5" FontSize="13" Margin="0,6,0,4"/>
+    <TextBlock x:Name="WOpen" Foreground="#FF7CB7FF" FontSize="12" Cursor="Hand"/>
+    <TextBlock x:Name="WStep3" Foreground="White" FontSize="14" FontWeight="SemiBold" Margin="0,16,0,0"/>
+    <CheckBox x:Name="WAuto" Foreground="#FFDFE5EE" FontSize="13" Margin="0,6,0,0" IsChecked="True"/>
+    <CheckBox x:Name="WMenu" Foreground="#FFDFE5EE" FontSize="13" Margin="0,4,0,0" IsChecked="True"/>
+    <TextBlock x:Name="WMsg" Foreground="#FFFFD27A" FontSize="13" TextWrapping="Wrap" Margin="0,16,0,0" MinHeight="20"/>
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0"><Button x:Name="WSkip" Padding="16,7" Margin="0,0,8,0"/><Button x:Name="WGo" Padding="22,7" IsDefault="True" FontWeight="SemiBold"/></StackPanel>
+  </StackPanel>
+</Window>
+"@
+    $d = [Windows.Markup.XamlReader]::Load((New-Object System.Xml.XmlNodeReader ([xml]$x)))
+    $script:wzWin = $d
+    $script:wzCfg = $cfgPath
+    $script:wzRes = $null
+    foreach ($nm in 'WLang', 'WIntro', 'WStep1', 'WFind', 'WUrl', 'WFound', 'WStep2', 'WTok', 'WOpen', 'WStep3', 'WAuto', 'WMenu', 'WMsg', 'WSkip', 'WGo') { Set-Variable -Scope Script -Name ('wz' + $nm) -Value ($d.FindName($nm)) }
+    $script:wzApply = {
+        $de = $script:wzDe
+        $script:wzWLang.Content = $(if ($de) { 'DE | EN' } else { 'EN | DE' })
+        $script:wzWIntro.Text = $(if ($de) { 'Willkommen! Hier verbindest du das Widget mit deinem Home Assistant. Räume, Sensoren und Geräte werden danach automatisch gefunden.' } else { 'Welcome! Connect the widget to your Home Assistant here. Rooms, sensors and devices are found automatically afterwards.' })
+        $script:wzWStep1.Text = $(if ($de) { '1  Adresse von Home Assistant' } else { '1  Home Assistant address' })
+        $script:wzWFind.Content = $(if ($de) { 'Im Netzwerk suchen' } else { 'Search network' })
+        $script:wzWStep2.Text = $(if ($de) { '2  Langlebiger Zugangstoken' } else { '2  Long-lived access token' })
+        $script:wzWOpen.Text = $(if ($de) { 'Token-Seite in Home Assistant öffnen (Profil → Sicherheit → Token erstellen)' } else { 'Open the token page in Home Assistant (Profile → Security → Create token)' })
+        $script:wzWStep3.Text = $(if ($de) { '3  Optionen' } else { '3  Options' })
+        $script:wzWAuto.Content = $(if ($de) { 'Mit Windows starten' } else { 'Start with Windows' })
+        $script:wzWMenu.Content = $(if ($de) { 'Eintrag im Startmenü anlegen' } else { 'Add a Start menu entry' })
+        $script:wzWSkip.Content = $(if ($de) { 'Später einrichten' } else { 'Set up later' })
+        $script:wzWGo.Content = $(if ($de) { 'Verbinden und installieren' } else { 'Connect and install' })
+    }
+    & $script:wzApply
+    $script:wzWUrl.Text = 'http://homeassistant.local:8123'
+    $script:wzWLang.Add_Click({ $script:wzDe = -not $script:wzDe; & $script:wzApply })
+    $script:wzWOpen.Add_MouseLeftButtonDown({ try { $u0 = Normalize-HaUrl $script:wzWUrl.Text; if ($u0) { Start-Process ($u0 + '/profile/security') } } catch {} })
+    $script:wzWFound.Add_SelectionChanged({ if ($script:wzWFound.SelectedItem) { $script:wzWUrl.Text = [string]$script:wzWFound.SelectedItem } })
+    $script:wzWFind.Add_Click({
+        $script:wzWMsg.Text = $(if ($script:wzDe) { 'Suche Home Assistant im Netzwerk …' } else { 'Searching the network for Home Assistant …' })
+        $script:wzWin.Dispatcher.Invoke([Action]{}, [Windows.Threading.DispatcherPriority]::Render)
+        $f = @(Find-Ha)
+        $script:wzWFound.Items.Clear(); $script:wzWFound.Visibility = 'Collapsed'
+        if ($f.Count -eq 0) { $script:wzWMsg.Text = $(if ($script:wzDe) { 'Nichts gefunden. Bitte die Adresse selbst eintragen.' } else { 'Nothing found. Please type the address yourself.' }); return }
+        $script:wzWUrl.Text = $f[0]
+        if ($f.Count -gt 1) { foreach ($u in $f) { [void]$script:wzWFound.Items.Add($u) }; $script:wzWFound.Visibility = 'Visible' }
+        $script:wzWMsg.Text = $(if ($script:wzDe) { 'Gefunden: ' + $f[0] } else { 'Found: ' + $f[0] })
+    })
+    $script:wzWSkip.Add_Click({ $script:wzRes = [pscustomobject]@{ ok = $false; auto = [bool]$script:wzWAuto.IsChecked; menu = [bool]$script:wzWMenu.IsChecked }; $script:wzWin.DialogResult = $false })
+    $script:wzWGo.Add_Click({
+        $de = $script:wzDe
+        $u1 = Normalize-HaUrl $script:wzWUrl.Text; $t1 = ([string]$script:wzWTok.Password).Trim()
+        if (-not $u1 -or -not $t1) { $script:wzWMsg.Text = $(if ($de) { 'Bitte Adresse und Token eintragen, oder „Später einrichten“ wählen.' } else { 'Please enter the address and the token, or choose "Set up later".' }); return }
+        $script:wzWMsg.Text = $(if ($de) { 'Teste die Verbindung …' } else { 'Testing the connection …' })
+        $script:wzWin.Dispatcher.Invoke([Action]{}, [Windows.Threading.DispatcherPriority]::Render)
+        $r1 = Test-Ha $u1 $t1
+        if ($r1 -eq 'auth') { $script:wzWMsg.Text = $(if ($de) { 'Der Token wurde abgelehnt. Bitte einen neuen erstellen.' } else { 'The token was rejected. Please create a new one.' }); return }
+        if ($r1 -ne 'ok') { $script:wzWMsg.Text = $(if ($de) { 'Keine Verbindung. Stimmen Adresse und Netzwerk?' } else { 'No connection. Are the address and network correct?' }); return }
+        Save-HaUrl $script:wzCfg $u1; Save-HaToken $t1
+        $n = ''
+        try {
+            $tpl = '{% set ns = namespace(n=0) %}{% for a in areas() %}{% set ok = namespace(v=false) %}{% for e in area_entities(a) %}{% if state_attr(e, "device_class") in ["carbon_dioxide", "pm25"] and states[e] is not none %}{% set ok.v = true %}{% endif %}{% endfor %}{% if ok.v %}{% set ns.n = ns.n + 1 %}{% endif %}{% endfor %}{{ ns.n }}'
+            $n = (Invoke-Ha $u1 $t1 'POST' '/api/template' (@{ template = $tpl } | ConvertTo-Json -Compress)).Trim()
+        } catch {}
+        $script:wzRes = [pscustomobject]@{ ok = $true; auto = [bool]$script:wzWAuto.IsChecked; menu = [bool]$script:wzWMenu.IsChecked; rooms = $n }
+        if ($n -match '^\d+$') { $script:wzWMsg.Text = $(if ($de) { 'Verbunden. ' + $n + ' Räume mit Luftsensor gefunden.' } else { 'Connected. Found ' + $n + ' rooms with an air sensor.' }) } else { $script:wzWMsg.Text = $(if ($de) { 'Verbunden.' } else { 'Connected.' }) }
+        $script:wzWin.Dispatcher.Invoke([Action]{}, [Windows.Threading.DispatcherPriority]::Render)
+        Start-Sleep -Milliseconds 1400
+        $script:wzWin.DialogResult = $true
+    })
+    [void]$d.ShowDialog()
+    return $script:wzRes
+}
 $startMenuLnk = Join-Path ([Environment]::GetFolderPath('Programs')) 'Luftwächter.lnk'
 function New-StartMenuShortcut {
     try {
@@ -195,14 +277,20 @@ if ($Install) {
     if ($haOld) { try { $nc = Get-Content $dc -Raw -Encoding UTF8 | ConvertFrom-Json; if (-not $nc.haUrl) { Save-HaUrl $dc $haOld } } catch {} }
     $haCur = ''
     try { $haCur = [string]((Get-Content $dc -Raw -Encoding UTF8 | ConvertFrom-Json).haUrl) } catch {}
-    if (-not ($haCur -and (Test-Path (Get-HaTokenFile)))) { Install-AskHa $dc }
-    $sh = New-Object -ComObject WScript.Shell
-    $lnk = $sh.CreateShortcut($startupLnk)
-    $lnk.TargetPath = 'wscript.exe'
-    $lnk.Arguments = '"' + (Join-Path $installDir 'Start.vbs') + '"'
-    $lnk.WorkingDirectory = $installDir
-    $lnk.Save()
-    New-StartMenuShortcut
+    $wiz = [pscustomobject]@{ ok = $false; auto = $true; menu = $true }
+    if (-not ($haCur -and (Test-Path (Get-HaTokenFile)))) {
+        try { $w0 = Show-InstallWizard $dc; if ($w0) { $wiz = $w0 } }
+        catch { Write-Host ('Fenster nicht verfügbar, Text-Einrichtung: ' + $_.Exception.Message); Install-AskHa $dc }
+    }
+    if ($wiz.auto) {
+        $sh = New-Object -ComObject WScript.Shell
+        $lnk = $sh.CreateShortcut($startupLnk)
+        $lnk.TargetPath = 'wscript.exe'
+        $lnk.Arguments = '"' + (Join-Path $installDir 'Start.vbs') + '"'
+        $lnk.WorkingDirectory = $installDir
+        $lnk.Save()
+    } else { Remove-Item -Force $startupLnk -ErrorAction SilentlyContinue }
+    if ($wiz.menu) { New-StartMenuShortcut }
     Start-Process 'wscript.exe' -ArgumentList ('"' + (Join-Path $installDir 'Start.vbs') + '"')
     exit 0
 }

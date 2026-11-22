@@ -2,6 +2,9 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [4.8.0] - 2026-11-22
+- New: setup wizard. Installieren.bat now opens one window (German or English) for the Home Assistant address (with network search), the access token, and the options "Start with Windows" and "Start menu entry". It tests the connection and tells you how many rooms with an air sensor it found. If the window cannot open, the old text setup is used.
+
 ## [4.7.2] - 2026-11-22
 - Quality: automatic checks run on every change and before every release (script syntax, matching version numbers, all window controls present, no private data). A broken update can no longer be published. No change to the program itself.
 

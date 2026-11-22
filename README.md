@@ -31,7 +31,7 @@ Made by **Dan Stasiak** · MIT License · [github.com/DanStasiak/airguard-widget
 ## Install (Windows 10/11)
 
 1. Download `Luftwaechter-<version>.zip` from the [latest release](https://github.com/DanStasiak/airguard-widget/releases/latest) and unzip it.
-2. Double-click `Installieren.bat`. It searches your network for Home Assistant, asks you to confirm the address and to paste a long-lived access token (Home Assistant → your profile → Security → Long-lived access tokens). The token is stored encrypted for your Windows account only.
+2. Double-click `Installieren.bat`. A setup window (German or English) opens: press **Search network** to find Home Assistant, paste a long-lived access token (Home Assistant → your profile → Security → Long-lived access tokens), and choose whether it starts with Windows and gets a Start menu entry. It tests the connection and shows how many rooms it found. The token is stored encrypted for your Windows account only.
 3. The widget appears at the top right and starts with Windows from now on. A Start menu entry "Luftwächter" lets you start it again at any time. Change the connection later: right-click → **Connect to Home Assistant…**.
 
 `config.json` is your private file: it is kept during updates and is never uploaded.
