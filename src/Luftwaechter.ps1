@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall)
 
 $appName = 'Luftwaechter'
-$appVersion = '3.13.1'
+$appVersion = '3.14.0'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -46,6 +46,7 @@ $mutex = New-Object System.Threading.Mutex($true, 'Local\LuftwaechterWidget', [r
 if (-not $created) { exit 0 }
 
 Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase
+try { Add-Type -AssemblyName System.Windows.Forms, System.Drawing; Add-Type -Namespace LW -Name Native -MemberDefinition '[System.Runtime.InteropServices.DllImport("user32.dll")] public static extern bool DestroyIcon(System.IntPtr h);' } catch {}
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $inv = [Globalization.CultureInfo]::InvariantCulture
 
@@ -71,7 +72,7 @@ function Write-Log([string]$m) {
         Add-Content -Path $logFile -Value ((Get-Date).ToString('yyyy-MM-dd HH:mm:ss') + '  ' + $m) -Encoding UTF8
     } catch {}
 }
-$state = @{ left = $null; top = $null; topmost = $false; topmostSet = $false; popup = $true; room = [string]$cfg.defaultRoom; size = 'M'; weatherOpen = $false; drawerOpen = $false; sound = $true; sparkHours = 3; lang = 'de'; hist = @{} }
+$state = @{ left = $null; top = $null; topmost = $false; topmostSet = $false; popup = $true; tray = $true; room = [string]$cfg.defaultRoom; size = 'M'; weatherOpen = $false; drawerOpen = $false; sound = $true; sparkHours = 3; lang = 'de'; hist = @{} }
 try { if ((Get-Culture).TwoLetterISOLanguageName -ne 'de') { $state.lang = 'en' } } catch {}
 if (Test-Path $stateFile) {
     try {
@@ -80,6 +81,7 @@ if (Test-Path $stateFile) {
         if ($null -ne $s.top) { $state.top = [double]$s.top }
         if ($s.topmostSet -and $null -ne $s.topmost) { $state.topmost = [bool]$s.topmost; $state.topmostSet = $true }
         if ($null -ne $s.popup) { $state.popup = [bool]$s.popup }
+        if ($null -ne $s.tray) { $state.tray = [bool]$s.tray }
         if ($s.room) { $state.room = [string]$s.room }
         if ($s.size) { $state.size = [string]$s.size }
         if ($null -ne $s.weatherOpen) { $state.weatherOpen = [bool]$s.weatherOpen }
@@ -168,6 +170,11 @@ $script:Strings = @{
     asof = @('Stand ', 'As of ')
     rooms_loading = @('Räume werden geladen …', 'Loading rooms …')
     m_refresh = @('Jetzt aktualisieren', 'Refresh now')
+    m_tray = @('Symbol im Infobereich (neben der Uhr)', 'Icon in the notification area (next to the clock)')
+    tray_open = @('Luftwächter öffnen', 'Open Luftwächter')
+    tray_none = @('Keine Daten', 'No data')
+    h15 = @('Infobereich-Symbol (neben der Uhr)', 'Tray icon (next to the clock)')
+    b15 = @('Neben der Uhr zeigt ein farbiger Punkt die Luft im Raum: grün gut, gelb mittel, rot schlecht. Fahr mit der Maus darüber für CO₂ und Rat. Ein Klick holt das Widget nach vorn, auch wenn es hinter anderen Fenstern oder minimiert ist. Wenn gelüftet werden soll, erscheint dort zusätzlich eine kleine Windows-Meldung (7–22 Uhr, höchstens alle 30 Minuten). Abschaltbar per Rechtsklick: "Symbol im Infobereich".', 'Next to the clock a colored dot shows the room air: green good, yellow fair, red poor. Hover for CO₂ and advice. One click brings the widget to the front, even when it is behind other windows or minimized. When ventilation is needed a small Windows notification appears as well (07:00-22:00, at most every 30 minutes). Switch it off via right-click: "Icon in the notification area".')
     m_pop = @('Beim Lüften kurz nach vorn holen', 'Bring to front briefly when ventilation is needed')
     m_top = @('Immer im Vordergrund', 'Always on top')
     m_sound = @('Hinweiston beim Lüften', 'Sound when ventilating')
@@ -403,12 +410,81 @@ $script:lastPop = (Get-Date).AddHours(-2)
 $popTimer = New-Object System.Windows.Threading.DispatcherTimer
 $popTimer.Interval = [TimeSpan]::FromSeconds(12)
 $popTimer.Add_Tick({ $popTimer.Stop(); $win.Topmost = [bool]$state.topmost })
+$script:tray = $null
+$script:trayIcons = @{}
+$script:lastBalloon = (Get-Date).AddHours(-2)
+function Show-Window {
+    try {
+        $win.Show()
+        if ($win.WindowState -eq 'Minimized') { $win.WindowState = 'Normal' }
+        $win.Topmost = $true; $win.Activate() | Out-Null
+        $popTimer.Stop(); $popTimer.Start()
+    } catch { Write-Log ('Show-Window: ' + $_.Exception.Message) }
+}
+function Get-TrayIcon([string]$hex) {
+    if ($script:trayIcons.ContainsKey($hex)) { return $script:trayIcons[$hex] }
+    $bmp = New-Object System.Drawing.Bitmap(32, 32)
+    $g = [System.Drawing.Graphics]::FromImage($bmp)
+    $g.SmoothingMode = 'AntiAlias'
+    $g.Clear([System.Drawing.Color]::Transparent)
+    $col = [System.Drawing.ColorTranslator]::FromHtml($hex)
+    $br = New-Object System.Drawing.SolidBrush($col)
+    $pen = New-Object System.Drawing.Pen([System.Drawing.Color]::White, 3)
+    $g.FillEllipse($br, 3, 3, 25, 25); $g.DrawEllipse($pen, 3, 3, 25, 25)
+    $g.Dispose(); $br.Dispose(); $pen.Dispose()
+    $h = $bmp.GetHicon()
+    $ic = [System.Drawing.Icon]::FromHandle($h)
+    $script:trayIcons[$hex] = @{ icon = $ic; handle = $h }
+    $bmp.Dispose()
+    return $script:trayIcons[$hex]
+}
+function Init-Tray {
+    try {
+        $script:tray = New-Object System.Windows.Forms.NotifyIcon
+        $cm = New-Object System.Windows.Forms.ContextMenuStrip
+        $script:trayMiOpen = $cm.Items.Add('Luftwächter')
+        $script:trayMiExit = $cm.Items.Add('Exit')
+        $script:trayMiOpen.Add_Click({ Show-Window })
+        $script:trayMiExit.Add_Click({ $win.Close() })
+        $script:tray.ContextMenuStrip = $cm
+        $script:tray.Add_MouseClick({ param($s, $e) if ($e.Button -eq [System.Windows.Forms.MouseButtons]::Left) { Show-Window } })
+        $script:tray.Icon = (Get-TrayIcon '#9AA5B1').icon
+        $script:tray.Text = 'Luftwächter'
+        $script:tray.Visible = [bool]$state.tray
+    } catch { Write-Log ('Tray: ' + $_.Exception.Message); $script:tray = $null }
+}
+function Update-Tray($d, [string]$act) {
+    if (-not $script:tray) { return }
+    try {
+        $script:tray.Visible = [bool]$state.tray
+        if (-not $state.tray) { return }
+        $hex = [string]$d.color
+        if ($hex -notmatch '^#[0-9A-Fa-f]{6}$') { $hex = '#9AA5B1' }
+        $script:tray.Icon = (Get-TrayIcon $hex).icon
+        $co2 = ''
+        foreach ($v in @($d.values)) { if ([string]$v.key -like 'CO*') { $co2 = ' · ' + [string]$v.value + ' ' + [string]$v.unit; break } }
+        $tip = [string]$d.room.name + $co2 + ' · ' + [string]$d.headline
+        if ($tip.Length -gt 62) { $tip = $tip.Substring(0, 61) + '…' }
+        $script:tray.Text = $tip
+        $h = (Get-Date).Hour
+        if ($null -ne $script:lastAction -and $act -ne $script:lastAction -and ($act -eq 'oeffnen' -or $act -eq 'schliessen') -and $h -ge 7 -and $h -lt 22 -and (((Get-Date) - $script:lastBalloon).TotalMinutes -gt 30)) {
+            $script:lastBalloon = Get-Date
+            $script:tray.ShowBalloonTip(8000, [string]$d.headline, [string]$d.detail, [System.Windows.Forms.ToolTipIcon]::Info)
+        }
+    } catch { Write-Log ('Update-Tray: ' + $_.Exception.Message) }
+}
+function Close-Tray {
+    try {
+        if ($script:tray) { $script:tray.Visible = $false; $script:tray.Dispose() }
+        foreach ($k in @($script:trayIcons.Keys)) { try { [LW.Native]::DestroyIcon([IntPtr]$script:trayIcons[$k].handle) | Out-Null } catch {} }
+    } catch {}
+}
 $script:compact = ($state.size -eq 'C')
 $script:helpOpen = $false
 
 function Save-State {
     try {
-        $o = @{ left = $win.Left; top = $win.Top; topmost = $state.topmost; topmostSet = $state.topmostSet; popup = $state.popup; room = $state.room; size = $state.size; weatherOpen = $state.weatherOpen; drawerOpen = $state.drawerOpen; sound = $state.sound; sparkHours = $state.sparkHours; lang = $state.lang; hist = $state.hist }
+        $o = @{ left = $win.Left; top = $win.Top; topmost = $state.topmost; topmostSet = $state.topmostSet; popup = $state.popup; tray = $state.tray; room = $state.room; size = $state.size; weatherOpen = $state.weatherOpen; drawerOpen = $state.drawerOpen; sound = $state.sound; sparkHours = $state.sparkHours; lang = $state.lang; hist = $state.hist }
         ($o | ConvertTo-Json -Depth 4) | Set-Content -Path $stateFile -Encoding UTF8
     } catch { Write-Log ('Speichern: ' + $_.Exception.Message) }
 }
@@ -872,6 +948,7 @@ function Show-Data($d) {
         $win.Topmost = $true
         $popTimer.Stop(); $popTimer.Start()
     }
+    Update-Tray $d $act
     $script:lastAction = $act
     Apply-View
 }
@@ -983,12 +1060,14 @@ $miTop = New-Object System.Windows.Controls.MenuItem; $miTop.Header = 'Immer im 
 $miLog = New-Object System.Windows.Controls.MenuItem; $miLog.Header = 'Protokoll öffnen (bei Problemen)'
 $miReset = New-Object System.Windows.Controls.MenuItem; $miReset.Header = 'Fenster zurücksetzen (oben rechts)'
 $miSound = New-Object System.Windows.Controls.MenuItem; $miSound.Header = 'Hinweiston beim Lüften'; $miSound.IsCheckable = $true; $miSound.IsChecked = [bool]$state.sound
+$miTray = New-Object System.Windows.Controls.MenuItem; $miTray.IsCheckable = $true; $miTray.IsChecked = [bool]$state.tray
 $miHelp = New-Object System.Windows.Controls.MenuItem
 $miUpd = New-Object System.Windows.Controls.MenuItem
 $miCfg = New-Object System.Windows.Controls.MenuItem
 $miExit = New-Object System.Windows.Controls.MenuItem
 $miRefresh.Add_Click({ Update-Widget })
 $miTop.Add_Click({ $state.topmost = [bool]$miTop.IsChecked; $state.topmostSet = $true; $win.Topmost = $state.topmost; Save-State })
+$miTray.Add_Click({ $state.tray = [bool]$miTray.IsChecked; if ($script:tray) { $script:tray.Visible = $state.tray }; Save-State })
 $miPop.Add_Click({ $state.popup = [bool]$miPop.IsChecked; Save-State })
 $miLog.Add_Click({ try { if (-not (Test-Path $logFile)) { Set-Content -Path $logFile -Value (T 'no_errors') -Encoding UTF8 }; Start-Process notepad.exe -ArgumentList ('"' + $logFile + '"') } catch {} })
 $miReset.Add_Click({ $w0 = [System.Windows.SystemParameters]::WorkArea; $win.Left = [Math]::Max($w0.Left, $w0.Right - $win.ActualWidth - 20); $win.Top = $w0.Top + 20; Save-State })
@@ -997,7 +1076,7 @@ $miExit.Add_Click({ $win.Close() })
 $miHelp.Add_Click({ $script:helpOpen = $true; Apply-View })
 $miCfg.Add_Click({ try { if (-not (Test-Path $cfgFile)) { Copy-Item (Join-Path $dir 'config.example.json') $cfgFile }; Start-Process notepad.exe -ArgumentList ('"' + $cfgFile + '"') } catch { Write-Log ('Konfig: ' + $_.Exception.Message) } })
 $miUpd.Add_Click({ Invoke-UpdateFlow $true })
-[void]$menu.Items.Add($miRefresh); [void]$menu.Items.Add($miTop); [void]$menu.Items.Add($miPop); [void]$menu.Items.Add($miSound); [void]$menu.Items.Add($miReset); [void]$menu.Items.Add($miLog); [void]$menu.Items.Add($miHelp); [void]$menu.Items.Add($miCfg); [void]$menu.Items.Add($miUpd); [void]$menu.Items.Add((New-Object System.Windows.Controls.Separator)); [void]$menu.Items.Add($miExit)
+[void]$menu.Items.Add($miRefresh); [void]$menu.Items.Add($miTop); [void]$menu.Items.Add($miPop); [void]$menu.Items.Add($miTray); [void]$menu.Items.Add($miSound); [void]$menu.Items.Add($miReset); [void]$menu.Items.Add($miLog); [void]$menu.Items.Add($miHelp); [void]$menu.Items.Add($miCfg); [void]$menu.Items.Add($miUpd); [void]$menu.Items.Add((New-Object System.Windows.Controls.Separator)); [void]$menu.Items.Add($miExit)
 $win.ContextMenu = $menu
 
 
@@ -1005,7 +1084,7 @@ $win.ContextMenu = $menu
 function Get-FooterText { if ($footerCfg) { return $footerCfg }; return (T 'footer') }
 function Build-Help {
     $ui.HelpBody.Children.Clear()
-    for ($i = 1; $i -le 14; $i++) {
+    for ($i = 1; $i -le 15; $i++) {
         $h = New-Text (T ('h' + $i)) 15 '#FFFFFFFF' $true
         $h.Margin = New-Object Windows.Thickness(0, 10, 0, 2)
         $bk = 'b' + $i; $bt = $(if ($i -eq 12) { T $bk $repoUrl } else { T $bk }); $b = New-Text $bt 13 '#FFDFE5EE' $false
@@ -1022,7 +1101,7 @@ function Apply-Lang {
     $ui.BtnHelp.ToolTip = (T 'help_tip'); $ui.BtnLang.ToolTip = (T 'lang_tip')
     foreach ($k in 'De', 'En') { $ui.('Lang' + $k).Foreground = Brush '#FFA9B4C4'; $ui.('Lang' + $k).FontWeight = 'Normal' }
     if ($state.lang -eq 'en') { $ui.LangEn.Foreground = Brush '#FFFFFFFF'; $ui.LangEn.FontWeight = 'Bold' } else { $ui.LangDe.Foreground = Brush '#FFFFFFFF'; $ui.LangDe.FontWeight = 'Bold' }
-    $miRefresh.Header = (T 'm_refresh'); $miTop.Header = (T 'm_top'); $miPop.Header = (T 'm_pop'); $miSound.Header = (T 'm_sound'); $miReset.Header = (T 'm_reset'); $miLog.Header = (T 'm_log'); $miHelp.Header = (T 'm_help'); $miCfg.Header = (T 'm_cfg'); $miUpd.Header = (T 'm_upd'); $miExit.Header = (T 'm_exit')
+    $miRefresh.Header = (T 'm_refresh'); $miTop.Header = (T 'm_top'); $miPop.Header = (T 'm_pop'); $miTray.Header = (T 'm_tray'); if ($script:trayMiOpen) { $script:trayMiOpen.Text = (T 'tray_open'); $script:trayMiExit.Text = (T 'm_exit') }; $miSound.Header = (T 'm_sound'); $miReset.Header = (T 'm_reset'); $miLog.Header = (T 'm_log'); $miHelp.Header = (T 'm_help'); $miCfg.Header = (T 'm_cfg'); $miUpd.Header = (T 'm_upd'); $miExit.Header = (T 'm_exit')
     $ui.Footer.Text = (Get-FooterText)
     $ui.Copy.Text = $copyright + ' · GitHub'; $ui.Copy.ToolTip = (T 'copy_tip'); $ui.Ver.ToolTip = (T 'ver_tip')
     Set-UpdateButton
@@ -1186,7 +1265,8 @@ $checkTimer = New-Object System.Windows.Threading.DispatcherTimer
 $checkTimer.Interval = [TimeSpan]::FromHours(6)
 $checkTimer.Add_Tick({ Invoke-UpdateFlow $false })
 
-$win.Add_Closing({ Save-State; $timer.Stop(); $pulseTimer.Stop(); $saveTimer.Stop(); $firstCheck.Stop(); $checkTimer.Stop() })
+$win.Add_Closing({ Save-State; $timer.Stop(); $pulseTimer.Stop(); $saveTimer.Stop(); $firstCheck.Stop(); $checkTimer.Stop(); Close-Tray })
+Init-Tray
 Apply-Lang
 Apply-View
 Write-Log ('Start ' + $version)
