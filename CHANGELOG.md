@@ -2,6 +2,10 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [4.8.1] - 2026-11-22
+- Fix: battery temperature and humidity sensors report only when the value changes, so they are no longer treated as "stale" after 30 minutes (now 6 hours). Air-quality monitors keep the strict limit.
+- Improved: the sensor warning in the footer is shorter (room name left out) and clickable: a click opens "Choose sensors for this room".
+
 ## [4.8.0] - 2026-11-22
 - New: setup wizard. Installieren.bat now opens one window (German or English) for the Home Assistant address (with network search), the access token, and the options "Start with Windows" and "Start menu entry". It tests the connection and tells you how many rooms with an air sensor it found. If the window cannot open, the old text setup is used.
 

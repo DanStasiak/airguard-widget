@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall)
 
 $appName = 'Luftwaechter'
-$appVersion = '4.8.0'
+$appVersion = '4.8.1'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -1327,9 +1327,9 @@ function Show-Data($d) {
     } else { $ui.WLineText.Text = (T 'w_na'); $ui.WTip.Text = ''; $ui.WOutB.Visibility = 'Collapsed' }
 
     $ui.Time.Text = [string]$d.updated
-    if ($d.warn) { $ui.Footer.Text = [string]$d.warn; $ui.Footer.Foreground = Brush '#FFFFC857'; $ui.Footer.ToolTip = (Lx 'Ein Sensor liefert keine aktuellen Werte. Rechtsklick: Sensoren für diesen Raum wählen.' 'A sensor is not delivering current values. Right-click: choose sensors for this room.') }
-    elseif ($null -ne $d.nsrc) { $ui.Footer.Text = (Lx ('Messwerte: ' + $d.nsrc + ' Sensoren · Home Assistant') ('Readings: ' + $d.nsrc + ' sensors · Home Assistant')); $ui.Footer.Foreground = Brush '#FFA9B4C4'; $ui.Footer.ToolTip = $null }
-    else { $ui.Footer.Text = (Get-FooterText); $ui.Footer.Foreground = Brush '#FFA9B4C4' }
+    if ($d.warn) { $ui.Footer.Text = [string]$d.warn; $ui.Footer.Foreground = Brush '#FFFFC857'; $ui.Footer.Cursor = 'Hand'; $ui.Footer.ToolTip = (Lx 'Ein Sensor liefert keine aktuellen Werte. Klick: Sensoren für diesen Raum wählen.' 'A sensor is not delivering current values. Click: choose sensors for this room.') }
+    elseif ($null -ne $d.nsrc) { $ui.Footer.Text = (Lx ('Messwerte: ' + $d.nsrc + ' Sensoren · Home Assistant') ('Readings: ' + $d.nsrc + ' sensors · Home Assistant')); $ui.Footer.Foreground = Brush '#FFA9B4C4'; $ui.Footer.Cursor = 'Arrow'; $ui.Footer.ToolTip = $null }
+    else { $ui.Footer.Text = (Get-FooterText); $ui.Footer.Foreground = Brush '#FFA9B4C4'; $ui.Footer.Cursor = 'Arrow' }
 
     # Geräte nur neu bauen, wenn sich etwas geändert hat
     $sig = (@($d.devices) | ForEach-Object { [string]$_.entity + ':' + [string]$_.state + ':' + [string]$_.target + ':' + [string]$_.detail }) -join '|'
@@ -1413,26 +1413,33 @@ function Get-Cands($ents, [string]$dc) {
     return @($ents | Where-Object { $_.d -eq 'sensor' -and $_.c -eq $dc -and (Test-Cand $_ $dc) })
 }
 # liefert den Wert eines Raums: gewählter Sensor, sonst Mittelwert der Sensoren (Label "airguard" bevorzugt, veraltete ausgenommen)
-function Pick-Val($ents, [string]$dc, $lab, [string]$selId) {
+function Short-Name([string]$n, [string]$room) {
+    if ($room -and $n.StartsWith($room, [StringComparison]::OrdinalIgnoreCase)) { $n = $n.Substring($room.Length).TrimStart(' ', '-', ':', '·').Trim() }
+    if ($n.Length -gt 34) { $n = $n.Substring(0, 33) + '…' }
+    return $n
+}
+function Pick-Val($ents, [string]$dc, $lab, [string]$selId, [string]$room) {
     $c = @(Get-Cands $ents $dc)
     if ($c.Count -eq 0) { return $null }
     $nowE = [double][DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
-    if ($selId) { $one = @($c | Where-Object { [string]$_.i -eq $selId }); if ($one.Count -gt 0) { $ag = 0; if ([double]$one[0].lr -gt 0) { $ag = [int][Math]::Max(0, ($nowE - [double]$one[0].lr) / 60) }; return [pscustomobject]@{ v = (Num $one[0].s); n = 1; age = $ag; skipped = @(); name = [string]$one[0].n } } }
+    if ($selId) { $one = @($c | Where-Object { [string]$_.i -eq $selId }); if ($one.Count -gt 0) { $ag = 0; if ([double]$one[0].lr -gt 0) { $ag = [int][Math]::Max(0, ($nowE - [double]$one[0].lr) / 60) }; return [pscustomobject]@{ v = (Num $one[0].s); n = 1; age = $ag; skipped = @(); name = (Short-Name ([string]$one[0].n) $room); dc = $dc } } }
     $lb = @($c | Where-Object { @($lab) -contains [string]$_.i })
     if ($lb.Count -gt 0) { $c = $lb }
     $mx = ($c | ForEach-Object { [double]$_.lr } | Measure-Object -Maximum).Maximum
     $skipped = @()
-    if ($mx -gt 0) { $fresh = @($c | Where-Object { [double]$_.lr -ge ($mx - 1800) }); if ($fresh.Count -gt 0) { $skipped = @($c | Where-Object { [double]$_.lr -lt ($mx - 1800) } | ForEach-Object { [string]$_.n }); $c = $fresh } }
+    # Luftqualitäts-Monitore melden alle paar Sekunden (30 min = veraltet); Temperatur-/Feuchte-Sensoren auf Batterie melden nur bei Änderung (6 h)
+    $lim = 1800; if ($dc -eq 'temperature' -or $dc -eq 'humidity') { $lim = 21600 }
+    if ($mx -gt 0) { $fresh = @($c | Where-Object { [double]$_.lr -ge ($mx - $lim) }); if ($fresh.Count -gt 0) { $skipped = @($c | Where-Object { [double]$_.lr -lt ($mx - $lim) } | ForEach-Object { Short-Name ([string]$_.n) $room }); $c = $fresh } }
     $sum = 0.0; foreach ($e in $c) { $sum += (Num $e.s) }
     $ag = 0; if ($mx -gt 0) { $ag = [int][Math]::Max(0, ($nowE - $mx) / 60) }
-    return [pscustomobject]@{ v = ($sum / $c.Count); n = $c.Count; age = $ag; skipped = $skipped; name = [string]$c[0].n }
+    return [pscustomobject]@{ v = ($sum / $c.Count); n = $c.Count; age = $ag; skipped = $skipped; name = (Short-Name ([string]$c[0].n) $room); dc = $dc }
 }
 function Eval-HaRoom($r, $lab, $sel) {
     $ents = @($r.e)
-    $vCo2 = Pick-Val $ents 'carbon_dioxide' $lab ([string]$sel.co2)
-    $vPm = Pick-Val $ents 'pm25' $lab ([string]$sel.pm)
-    $vT = Pick-Val $ents 'temperature' $lab ([string]$sel.t)
-    $vH = Pick-Val $ents 'humidity' $lab ([string]$sel.h)
+    $vCo2 = Pick-Val $ents 'carbon_dioxide' $lab ([string]$sel.co2) ([string]$r.n)
+    $vPm = Pick-Val $ents 'pm25' $lab ([string]$sel.pm) ([string]$r.n)
+    $vT = Pick-Val $ents 'temperature' $lab ([string]$sel.t) ([string]$r.n)
+    $vH = Pick-Val $ents 'humidity' $lab ([string]$sel.h) ([string]$r.n)
     $co2 = $null; if ($vCo2) { $co2 = $vCo2.v }
     $pm = $null; if ($vPm) { $pm = $vPm.v }
     $tt = $null; if ($vT) { $tt = $vT.v }
@@ -1440,7 +1447,8 @@ function Eval-HaRoom($r, $lab, $sel) {
     $warn = ''
     foreach ($pv in @($vCo2, $vPm, $vT, $vH)) {
         if (-not $pv -or $warn) { continue }
-        if ($pv.age -ge 20) { $warn = (Lx ('⚠ ' + $pv.name + ' meldet seit ' + $pv.age + ' min nichts') ('⚠ ' + $pv.name + ' silent for ' + $pv.age + ' min')) }
+        $lim = 20; if ($pv.dc -eq 'temperature' -or $pv.dc -eq 'humidity') { $lim = 360 }
+        if ($pv.age -ge $lim) { $warn = (Lx ('⚠ ' + $pv.name + ' meldet seit ' + $pv.age + ' min nichts') ('⚠ ' + $pv.name + ' silent for ' + $pv.age + ' min')) }
         elseif (@($pv.skipped).Count -gt 0) { $warn = (Lx ('⚠ ignoriert (veraltet): ' + [string]@($pv.skipped)[0]) ('⚠ ignored (stale): ' + [string]@($pv.skipped)[0])) }
     }
     $nsrc = 0; foreach ($pv in @($vCo2, $vPm, $vT, $vH)) { if ($pv) { $nsrc += $pv.n } }
@@ -1857,6 +1865,7 @@ $ui.SparkBox.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; if ($st
 $ui.Tab.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; $state.drawerOpen = $true; Apply-View; Save-State })
 $ui.DrawerClose.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; $state.drawerOpen = $false; Apply-View; Save-State })
 
+$ui.Footer.Add_MouseLeftButtonUp({ if ($script:last -and $script:last.warn) { Show-SensorDialog } })
 $ui.TitleBox.Add_MouseLeftButtonUp({ param($s, $e) try { Start-Process $script:repoUrl } catch {} })
 
 $menu = New-Object System.Windows.Controls.ContextMenu
