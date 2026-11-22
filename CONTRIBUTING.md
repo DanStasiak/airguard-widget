@@ -14,3 +14,7 @@ Contributions are welcome: bug reports, ideas, translations, backends for other 
 3. Push to `main`. The GitHub Action sees the new `VERSION`, builds the ZIP + SHA256SUMS.txt and publishes the release (it also works when you push a `vX.Y.Z` tag). The changelog section becomes the release notes shown in the in-app update dialog.
 
 By contributing you agree that your contribution is licensed under the MIT License.
+
+## Checks
+
+Run `powershell -File tools\check.ps1` before you push. The same checks run automatically on GitHub (syntax, version numbers, controls, no secrets); a release is only published when they pass.

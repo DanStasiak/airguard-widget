@@ -2,6 +2,9 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [4.7.2] - 2026-11-22
+- Quality: automatic checks run on every change and before every release (script syntax, matching version numbers, all window controls present, no private data). A broken update can no longer be published. No change to the program itself.
+
 ## [4.7.1] - 2026-11-22
 - Docs: README with screenshot, badges, a section on choosing sensors and a troubleshooting table. Issue and pull request templates on GitHub. No change to the program itself.
 

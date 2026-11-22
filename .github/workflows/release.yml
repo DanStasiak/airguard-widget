@@ -8,7 +8,15 @@ on:
 permissions:
   contents: write
 jobs:
+  check:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Quality checks
+        shell: powershell
+        run: .\tools\check.ps1
   release:
+    needs: check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
