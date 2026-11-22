@@ -2,6 +2,20 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [5.13.0] - 2026-11-22
+- New: keyboard. Click the widget once, then ← / → switches rooms, D switches simple/details, + / − resizes, F5 refreshes, Esc closes help and the device panel.
+- New: the widget snaps to the screen edges when you move it close to them.
+- New: while quiet time is on, the header shows "🔕 Quiet until 23:30", so you know alerts are muted.
+- Improved: without a connection the widget says when the last values came in, e.g. "Last values from 22:31 (6 min ago)".
+- Improved: "What's new" and the update window now show German notes in the German view.
+- Quality: every push now starts the widget on Windows with demo data and checks every view automatically.
+- DE: Neu: Tastatur. Einmal ins Widget klicken, dann: ← / → anderer Raum, D einfache Ansicht oder Details, + / − Größe, F5 aktualisieren, Esc schließt Hilfe und Geräte-Fenster.
+- DE: Neu: Das Widget rastet beim Verschieben an den Bildschirmrändern ein.
+- DE: Neu: Während der Ruhezeit steht oben „🔕 Ruhe bis 23:30“, damit du weißt, dass Hinweise stumm sind.
+- DE: Besser: Ohne Verbindung zeigt das Widget, wann die letzten Werte kamen, z. B. „Letzte Werte von 22:31 (vor 6 Min)“.
+- DE: Besser: „Neu in dieser Version“ und das Update-Fenster zeigen die Hinweise jetzt auf Deutsch.
+- DE: Qualität: Bei jeder Änderung startet GitHub das Widget automatisch unter Windows und prüft alle Ansichten.
+
 ## [5.12.0] - 2026-11-22
 - New: after an update, a small card at the top shows what is new in this version, so you never have to look it up. It shows once and goes away with "Got it".
 

@@ -18,3 +18,7 @@ By contributing you agree that your contribution is licensed under the MIT Licen
 ## Checks
 
 Run `powershell -File tools\check.ps1` before you push. The same checks run automatically on GitHub (syntax, version numbers, controls, no secrets); a release is only published when they pass.
+
+## Release notes
+
+Each version gets a section in `CHANGELOG.md`. Write each point in English, then the same points again in German, prefixed with `- DE: `. The widget shows the German lines in the German view ("What's new" card and update window).

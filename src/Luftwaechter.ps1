@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall, [switch]$SmokeTest)
 
 $appName = 'Luftwaechter'
-$appVersion = '5.12.0'
+$appVersion = '5.13.0'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -526,6 +526,10 @@ $script:Strings = @{
     m_snooze = @('Ruhe für 1 Stunde', 'Quiet for 1 hour')
     m_snooze_off = @('Ruhe beenden (bis {0})', 'End quiet time (until {0})')
     m_export = @('Verlauf als CSV speichern (7 Tage)', 'Save history as CSV (7 days)')
+    stale2 = @('Letzte Werte von {0} (vor {1} Min). Es wird weiter versucht.', 'Last values from {0} ({1} min ago). Still trying.')
+    quiet_tag = @('🔕 Ruhe bis {0}', '🔕 Quiet until {0}')
+    h18 = @('Tastatur', 'Keyboard')
+    b18 = @('Klicke einmal auf das Widget, dann: ← / → anderer Raum · D einfache Ansicht oder Details · + / − größer oder kleiner · F5 sofort aktualisieren · Esc schließt Hilfe und Geräte-Fenster. Beim Verschieben rastet das Widget an den Bildschirmrändern ein.', 'Click the widget once, then: ← / → other room · D simple view or details · + / − bigger or smaller · F5 refresh now · Esc closes help and the device panel. When you move the widget it snaps to the screen edges.')
     news_h = @('Neu in Version {0}', 'New in version {0}')
     m_bigger = @('Größer anzeigen', 'Make bigger')
     m_smaller = @('Kleiner anzeigen', 'Make smaller')
@@ -1347,6 +1351,7 @@ function Export-History {
 $script:snoozeUntil = $null
 function Test-Snooze { return ($null -ne $script:snoozeUntil -and (Get-Date) -lt $script:snoozeUntil) }
 function Show-Data($d) {
+    $ui.TitleTag.Text = $(if (Test-Snooze) { T 'quiet_tag' ($script:snoozeUntil.ToString('HH:mm')) } else { T 'tagline' })
     $script:rooms = @($d.rooms)
     Build-Strip
     if (-not $state.room -and $d.room.key) { $state.room = [string]$d.room.key }
@@ -2008,6 +2013,7 @@ function Update-Widget {
         }
         $script:fails = 0
         $script:last = $d
+        $script:lastOkAt = Get-Date
         Show-Data $d
     } catch {
         Write-Log ('Aktualisieren: ' + $_.Exception.Message + ' @' + $_.InvocationInfo.ScriptLineNumber)
@@ -2021,7 +2027,10 @@ function Update-Widget {
             $ui.Panel.Background = Brush '#FF494E57'
             $ui.Headline.Text = (T 'no_conn')
             $script:pulse = $false
-            if ($script:last) { $ui.Detail.Text = (T 'stale'); $ui.Time.Text = (T 'asof') + [string]$script:last.updated }
+            if ($script:last) {
+                if ($script:lastOkAt) { $ui.Detail.Text = (T 'stale2' $script:lastOkAt.ToString('HH:mm') ([int][Math]::Floor(((Get-Date) - $script:lastOkAt).TotalMinutes))) } else { $ui.Detail.Text = (T 'stale') }
+                $ui.Time.Text = (T 'asof') + [string]$script:last.updated
+            }
             else { $ui.Detail.Text = (T 'no_air') }
         }
     }
@@ -2045,7 +2054,36 @@ $ui.Pill.Add_MouseLeftButtonDown({ param($s, $e)
         $state.size = $back; Apply-View; Save-State
     }
 })
-$win.Add_MouseLeftButtonDown({ param($s, $e) if ($e.ClickCount -eq 2) { Update-Widget } else { try { $win.DragMove(); Save-State } catch {} } })
+$win.Add_MouseLeftButtonDown({ param($s, $e) if ($e.ClickCount -eq 2) { Update-Widget } else { try { $win.DragMove(); Snap-Edges; Save-State } catch {} } })
+function Snap-Edges {
+    # rastet an den Rändern des Hauptbildschirms ein (Abstand unter 18 px)
+    $wa0 = [System.Windows.SystemParameters]::WorkArea
+    $w = $win.ActualWidth; $h = $win.ActualHeight; $m = 18
+    if ($win.Left -gt ($wa0.Right + 5) -or ($win.Left + $w) -lt ($wa0.Left - 5) -or $win.Top -gt ($wa0.Bottom + 5)) { return }
+    if ([Math]::Abs($win.Left - $wa0.Left) -lt $m) { $win.Left = $wa0.Left }
+    elseif ([Math]::Abs(($win.Left + $w) - $wa0.Right) -lt $m) { $win.Left = $wa0.Right - $w }
+    if ([Math]::Abs($win.Top - $wa0.Top) -lt $m) { $win.Top = $wa0.Top }
+    elseif ([Math]::Abs(($win.Top + $h) - $wa0.Bottom) -lt $m) { $win.Top = $wa0.Bottom - $h }
+}
+function Switch-Room([int]$dir) {
+    $keys = @($script:rooms | ForEach-Object { [string]$_.key })
+    if ($keys.Count -lt 2) { return }
+    $i = [Array]::IndexOf($keys, [string]$state.room); if ($i -lt 0) { $i = 0 }
+    $state.room = $keys[(($i + $dir) % $keys.Count + $keys.Count) % $keys.Count]
+    $script:ventEnd = $null; $script:prevOpen = $null; $script:sumText = ''; $script:lastAction = $null; $script:devSig = ''; $script:openSince = $null
+    Save-State; Update-Widget
+}
+$win.Add_KeyDown({ param($s, $e)
+    switch ($e.Key) {
+        'Left' { Switch-Room -1; $e.Handled = $true }
+        'Right' { Switch-Room 1; $e.Handled = $true }
+        'D' { Toggle-Mode; $e.Handled = $true }
+        'F5' { Update-Widget; $e.Handled = $true }
+        'Escape' { $script:helpOpen = $false; $state.drawerOpen = $false; Apply-View; $e.Handled = $true }
+        { $_ -eq 'OemPlus' -or $_ -eq 'Add' } { Step-Size 1; $e.Handled = $true }
+        { $_ -eq 'OemMinus' -or $_ -eq 'Subtract' } { Step-Size -1; $e.Handled = $true }
+    }
+})
 
 foreach ($k in 'S', 'M', 'L', 'C', 'P') {
     $ui.('Sz' + $k).Tag = $k
@@ -2109,7 +2147,7 @@ $miExit.Add_Click({ Exit-App })
 $miHa.Add_Click({ Show-HaDialog })
 $miMode.Add_Click({ Toggle-Mode })
 $miExport.Add_Click({ Export-History })
-$miSnooze.Add_Click({ if (Test-Snooze) { $script:snoozeUntil = $null } else { $script:snoozeUntil = (Get-Date).AddHours(1) }; Apply-Lang })
+$miSnooze.Add_Click({ if (Test-Snooze) { $script:snoozeUntil = $null } else { $script:snoozeUntil = (Get-Date).AddHours(1) }; Apply-Lang; if ($script:last) { Show-Data $script:last } })
 $miTheme.Add_Click({ $state.theme = $(switch ([string]$state.theme) { 'auto' { 'day' } 'day' { 'night' } default { 'auto' } }); Apply-Theme; Save-State; Apply-Lang })
 $miDemo.Add_Click({ $state.demo = -not [bool]$state.demo; $state.room = ''; Save-State; Apply-Lang; Update-Widget })
 $miHaSup.Add_Click({ try { Start-Process 'https://www.home-assistant.io/' } catch {} })
@@ -2135,7 +2173,7 @@ $win.ContextMenu = $menu
 function Get-FooterText { if ($footerCfg) { return $footerCfg }; return (T 'footer') }
 function Build-Help {
     $ui.HelpBody.Children.Clear()
-    for ($i = 1; $i -le 17; $i++) {
+    for ($i = 1; $i -le 18; $i++) {
         $h = New-Text (T ('h' + $i)) 15 '#FFFFFFFF' $true
         $h.Margin = New-Object Windows.Thickness(0, 10, 0, 2)
         $bk = 'b' + $i; $bt = $(if ($i -eq 12) { T $bk $repoUrl } else { T $bk }); $b = New-Text $bt 13 '#FFDFE5EE' $false
@@ -2197,11 +2235,15 @@ function Read-Changelog {
         foreach ($ln in (Get-Content -Path $f -Encoding UTF8)) {
             if ($ln -match '^##\s+\[(.+?)\]\s*-?\s*(.*)$') {
                 $v = $Matches[1]; $mj = ($v -split '[\. ]')[0]
-                $cur = [pscustomobject]@{ ver = $v; date = [string]$Matches[2]; major = $mj; lines = @() }
+                $cur = [pscustomobject]@{ ver = $v; date = [string]$Matches[2]; major = $mj; lines = @(); de = @() }
                 $list += $cur
-            } elseif ($cur -and $ln.Trim() -ne '') { $cur.lines += ($ln.Trim() -replace '^-\s+', '') }
+            } elseif ($cur -and $ln.Trim() -ne '') {
+                $t = ($ln.Trim() -replace '^-\s+', '')
+                if ($t -match '^DE:\s*(.*)$') { $cur.de += $Matches[1] } else { $cur.lines += $t }
+            }
         }
     } catch { Write-Log ('Changelog: ' + $_.Exception.Message) }
+    if ($state.lang -ne 'en') { foreach ($e in $list) { if (@($e.de).Count -gt 0) { $e.lines = @($e.de) } } }
     return $list
 }
 function Show-UpdateDialog($rel, [string]$remote, [bool]$isNew) {
@@ -2417,6 +2459,11 @@ if ($SmokeTest) {
     Smoke 'update button states' { $script:newVer = '99.0.0'; Set-UpdateButton; $script:newVer = $null; Set-UpdateButton; $true }
     Smoke 'quiet time' { Apply-Lang; (Test-Snooze) }
     Smoke 'what is new card' { $state.simple = $true; $state.tourDone = $true; $state.seenVer = ''; $script:newsText = $null; Apply-View; $true }
+    Smoke 'keyboard room switch' { $state.demo = $true; $state.room = 'living'; Update-Widget; Switch-Room 1; ([string]$state.room -eq 'office') }
+    Smoke 'snap to edges' { $wa1 = [System.Windows.SystemParameters]::WorkArea; $state.size = 'M'; Apply-View; $win.UpdateLayout(); $win.Left = $wa1.Left + 7; $win.Top = $wa1.Top + 9; Snap-Edges; ($win.Left -eq $wa1.Left -and $win.Top -eq $wa1.Top) }
+    Smoke 'quiet tag' { Show-Data $script:last; ($ui.TitleTag.Text -match '🔕') }
+    Smoke 'German changelog' { $state.lang = 'de'; $e1 = @(Read-Changelog) | Select-Object -First 1; $state.lang = 'en'; $e2 = @(Read-Changelog) | Select-Object -First 1; $state.lang = 'de'; ($e1 -and $e2 -and ((@($e1.lines) -join ' ') -ne (@($e2.lines) -join ' '))) }
+    Smoke 'offline message' { $script:lastOkAt = (Get-Date).AddMinutes(-6); $t = (T 'stale2' $script:lastOkAt.ToString('HH:mm') 6); ($t -match '6') }
     Smoke 'CSV export' { $state.hist7['smoke'] = $state.hist['smoke']; Export-History; ($script:lastExport -and (Test-Path $script:lastExport)) }
     Smoke 'no errors logged' {
         $new = @(); if (Test-Path $logFile) { $new = @(Get-Content -Path $logFile -Encoding UTF8 | Select-Object -Skip $l0 | Where-Object { $_ -notmatch 'Start v' }) }
