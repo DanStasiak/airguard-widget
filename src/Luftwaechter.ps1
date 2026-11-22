@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall)
 
 $appName = 'Luftwaechter'
-$appVersion = '5.8.0'
+$appVersion = '5.8.1'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -1306,8 +1306,8 @@ function Show-Data($d) {
     $ui.Card.BorderBrush = $b
     $ui.Tab.BorderBrush = $b; $ui.Drawer.BorderBrush = $b
     $ui.Glow.Color = ([Windows.Media.ColorConverter]::ConvertFromString($col))
-    $ui.Card.Background = New-Object Windows.Media.LinearGradientBrush ((([Windows.Media.ColorConverter]::ConvertFromString((Blend $col '#1B222D' 0.22)))), ([Windows.Media.ColorConverter]::ConvertFromString('#FF1B222D')), 90)
-    $ui.Drawer.Background = Brush '#FF1B222D'
+    if (-not $script:themeBg) { $script:themeBg = '#FF1B222D' }
+    $ui.Card.Background = Brush $script:themeBg; $ui.Drawer.Background = Brush $script:themeBg
     $ui.Panel.Background = Brush (Blend-Hex $col 0.2)
     $ui.Level.Foreground = $b
     $ui.RoomSub.Text = [string]$d.room.name
@@ -1940,6 +1940,7 @@ function Apply-Theme {
     $hh = (Get-Date).Hour
     switch ([string]$state.theme) { 'night' { $night = $true } 'day' { $night = $false } default { $night = ($hh -ge 22 -or $hh -lt 7) } }
     $bg = $(if ($night) { '#FF0E1218' } else { '#FF1B222D' })
+    $script:themeBg = $bg
     foreach ($b in @($ui.Card, $ui.Drawer, $ui.Pill)) { if ($b) { $b.Background = Brush $bg } }
     $script:nightOn = $night
 }

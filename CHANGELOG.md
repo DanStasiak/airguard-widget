@@ -2,6 +2,9 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [5.8.1] - 2026-11-22
+- Fixed: the crisp dark background flipped back to a brownish, milky tint after a second, because each refresh repainted the card with a status-coloured gradient. The card is now one solid colour; the status colour stays on the border, ring and panel.
+
 ## [5.8.0] - 2026-11-22
 - New: a crisper look and a real day/night design. The window is always solid; night mode no longer fades anything. Tiles, room buttons and the advice panel use solid colours instead of see-through white, which removes the milky look. At night (22:00 to 07:00) the background switches to a deeper, darker tone. Right-click, "Theme" cycles Automatic, Day and Night.
 - Removed: the `nightDim` setting from 5.7.2.
