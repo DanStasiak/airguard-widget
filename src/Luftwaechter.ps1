@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall)
 
 $appName = 'Luftwaechter'
-$appVersion = '5.9.0'
+$appVersion = '5.9.1'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -604,7 +604,7 @@ $xaml = @"
     <Border.Effect><DropShadowEffect x:Name="Glow" BlurRadius="24" ShadowDepth="0" Color="#FF7A8594" Opacity="0.5"/></Border.Effect>
     <StackPanel Margin="18,14,18,12">
       <StackPanel>
-        <Border x:Name="TitleBox" HorizontalAlignment="Left" Background="Transparent" Padding="2,0,0,0" Cursor="Hand">
+        <Border x:Name="TitleBox" HorizontalAlignment="Left" Background="Transparent" Padding="2,0,0,0">
           <StackPanel>
             <TextBlock x:Name="RoomName" Foreground="White" FontSize="30" FontWeight="Bold"/>
             <StackPanel Orientation="Horizontal" Margin="1,0,0,0"><TextBlock x:Name="RoomSub" Foreground="#FFFFFFFF" FontSize="15" FontWeight="SemiBold"/><TextBlock x:Name="TitleTag" Foreground="#FF9AA7B8" FontSize="12" VerticalAlignment="Bottom" Margin="8,0,0,1"/></StackPanel>
@@ -2030,7 +2030,6 @@ $ui.Tab.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; $state.drawe
 $ui.DrawerClose.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; $state.drawerOpen = $false; Apply-View; Save-State })
 
 $ui.Footer.Add_MouseLeftButtonDown({ param($s, $e) if ($script:last -and $script:last.warn) { $e.Handled = $true; Show-SensorDialog } })
-$ui.TitleBox.Add_MouseLeftButtonDown({ param($s, $e) if ($e.ClickCount -eq 1) { $e.Handled = $true; try { Start-Process $script:repoUrl } catch {} } })
 
 $menu = New-Object System.Windows.Controls.ContextMenu
 $miRefresh = New-Object System.Windows.Controls.MenuItem; $miRefresh.Header = 'Jetzt aktualisieren'
@@ -2107,7 +2106,7 @@ function Apply-Lang {
     foreach ($k in 'De', 'En') { $ui.('Lang' + $k).Foreground = Brush '#FFA9B4C4'; $ui.('Lang' + $k).FontWeight = 'Normal' }
     if ($state.lang -eq 'en') { $ui.LangEn.Foreground = Brush '#FFFFFFFF'; $ui.LangEn.FontWeight = 'Bold' } else { $ui.LangDe.Foreground = Brush '#FFFFFFFF'; $ui.LangDe.FontWeight = 'Bold' }
     $miSnooze.Header = $(if (Test-Snooze) { T 'm_snooze_off' ($script:snoozeUntil.ToString('HH:mm')) } else { T 'm_snooze' }); $miTheme.Header = $(switch ([string]$state.theme) { 'day' { T 'm_theme_day' } 'night' { T 'm_theme_night' } default { T 'm_theme_auto' } }); $miDemo.Header = $(if ($state.demo) { T 'm_demo_off' } else { T 'm_demo' }); $miHaSup.Header = (T 'm_ha_support'); $miBig.Header = (T 'm_bigger'); $miSmall.Header = (T 'm_smaller'); $miRefresh.Header = (T 'm_refresh'); $miTop.Header = (T 'm_top'); $miPop.Header = (T 'm_pop'); $miTray.Header = (T 'm_tray'); if ($script:trayMiOpen) { $script:trayMiOpen.Text = (T 'tray_open'); $script:trayMiExit.Text = (T 'm_exit') }; $miSound.Header = (T 'm_sound'); $miReset.Header = (T 'm_reset'); $miLog.Header = (T 'm_log'); $miHelp.Header = (T 'm_help'); $miHa.Header = (T 'm_ha'); $miMode.Header = $(if ($state.simple) { T 'm_mode_full' } else { T 'm_mode_simple' }); $miSens.Header = (T 'm_sens'); $miCfg.Header = (T 'm_cfg'); $miUpd.Header = (T 'm_upd'); $miExit.Header = (T 'm_exit')
-    $ui.RoomName.Text = 'Luftwächter'; $ui.TitleTag.Text = (T 'tagline'); $ui.TitleBox.ToolTip = (T 'copy_tip')
+    $ui.RoomName.Text = 'Luftwächter'; $ui.TitleTag.Text = (T 'tagline')
     $ui.Footer.Text = (Get-FooterText)
     $ui.Copy.Text = $copyright + ' · GitHub'; $ui.Copy.ToolTip = (T 'copy_tip'); $ui.Ver.ToolTip = (T 'ver_tip')
     Set-UpdateButton

@@ -2,6 +2,9 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [5.9.1] - 2026-11-22
+- Changed: the title area at the top no longer opens GitHub, so you can grab it and move the window without surprises. The GitHub link stays in the footer.
+
 ## [5.9.0] - 2026-11-22
 - New: quiet time. Right-click, "Quiet for 1 hour" silences the pop-up, the tray notice and the chime for an hour (for a call, a meeting or a nap). The widget keeps showing the air as usual; "End quiet time" brings the alerts back. It resets when the widget restarts.
 
