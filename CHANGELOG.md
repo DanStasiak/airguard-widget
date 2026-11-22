@@ -2,6 +2,9 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [5.5.0] - 2026-11-22
+- New: a thank-you to Home Assistant. The help has a new section and the right-click menu has "Support Home Assistant" (opens home-assistant.io). Text only, no logo; the widget states that it is an independent project, not affiliated with or endorsed by Home Assistant or the Open Home Foundation.
+
 ## [5.4.0] - 2026-11-22
 - New: easier to read for everyone. Right-click offers "Make bigger" and "Make smaller" (also Ctrl + mouse wheel on the widget), with a new extra-large size. This works in the simple view too, where the size buttons are hidden.
 

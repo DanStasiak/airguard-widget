@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall)
 
 $appName = 'Luftwaechter'
-$appVersion = '5.4.0'
+$appVersion = '5.5.0'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -503,6 +503,9 @@ $script:Strings = @{
     ha_testing = @('Prüfe die Verbindung …', 'Checking the connection …')
     ha_auth = @('Der Token wurde abgelehnt. Bitte neu erstellen und einfügen.', 'The token was rejected. Please create a new one and paste it.')
     ha_net = @('Keine Verbindung. Adresse und Netzwerk prüfen.', 'No connection. Check the address and the network.')
+    h17 = @('♥ Dank an Home Assistant', '♥ Thanks to Home Assistant')
+    b17 = @('Luftwächter funktioniert dank Home Assistant, der freien, lokalen Smart-Home-Software, die dein Zuhause steuert. Wenn dir Home Assistant gefällt, kannst du das Projekt unterstützen: Besuche home-assistant.io (Rechtsklick → „Home Assistant unterstützen“), spende an die Open Home Foundation oder abonniere Home Assistant Cloud. Luftwächter ist ein unabhängiges Projekt und steht in keiner Verbindung zu Home Assistant oder zur Open Home Foundation und wird von ihnen nicht empfohlen oder unterstützt. „Home Assistant“ ist eine Marke der jeweiligen Inhaber.', 'Luftwächter works thanks to Home Assistant, the free, local smart-home software that runs your home. If you like Home Assistant, you can support the project: visit home-assistant.io (right-click → "Support Home Assistant"), donate to the Open Home Foundation or subscribe to Home Assistant Cloud. Luftwächter is an independent project and is not affiliated with, endorsed by or sponsored by Home Assistant or the Open Home Foundation. "Home Assistant" is a trademark of its respective owners.')
+    m_ha_support = @('♥ Home Assistant unterstützen', '♥ Support Home Assistant')
     h16 = @('Home Assistant direkt', 'Home Assistant direct')
     b16 = @('Das Widget spricht direkt mit deinem Home Assistant. Jeder Bereich (Area) mit einem CO₂- oder Feinstaub-Sensor wird ein Raum. Messwerte, Fensterkontakte (Geräteklasse "window"), Lichter, Steckdosen, Heizungen und Rollos des Bereichs werden automatisch gefunden. Das Wetter kommt aus der ersten Wetter-Entität. Stört ein Gerät: Rechtsklick auf die Zeile, Ausblenden (unten bringt "ausgeblendet · alle anzeigen" sie zurück). Typische Einstellungs-Schalter (Kindersicherung, Internetzugang, Kalibrierung) blendet das Widget selbst aus. Nur bestimmte Geräte anzeigen: In Home Assistant das Label "airguard" an diese Entitäten hängen. Verbindung ändern: Rechtsklick, "Mit Home Assistant verbinden…".', 'The widget talks directly to your Home Assistant. Every area with a CO₂ or fine-dust sensor becomes a room. Readings, window contacts (device class "window"), lights, plugs, heaters and blinds of the area are found automatically. Weather comes from the first weather entity. If a device is in the way: right-click its row and choose Hide ("{0} hidden · show all" at the bottom brings them back). Typical setting switches (child lock, internet access, calibration) are hidden automatically. To show only certain devices: give those entities the label "airguard" in Home Assistant. Change the connection: right-click, "Connect to Home Assistant…".')
     m_cfg = @('Konfiguration öffnen', 'Open configuration')
@@ -1970,6 +1973,7 @@ $miHa = New-Object System.Windows.Controls.MenuItem
 $miMode = New-Object System.Windows.Controls.MenuItem
 $miBig = New-Object System.Windows.Controls.MenuItem
 $miSmall = New-Object System.Windows.Controls.MenuItem
+$miHaSup = New-Object System.Windows.Controls.MenuItem
 $miSens = New-Object System.Windows.Controls.MenuItem
 $miHelp = New-Object System.Windows.Controls.MenuItem
 $miUpd = New-Object System.Windows.Controls.MenuItem
@@ -1985,6 +1989,7 @@ $miSound.Add_Click({ $state.sound = $miSound.IsChecked; Save-State })
 $miExit.Add_Click({ Exit-App })
 $miHa.Add_Click({ Show-HaDialog })
 $miMode.Add_Click({ Toggle-Mode })
+$miHaSup.Add_Click({ try { Start-Process 'https://www.home-assistant.io/' } catch {} })
 function Step-Size([int]$dir) {
     $ord = @('S', 'M', 'L', 'XL')
     $i = [Array]::IndexOf($ord, [string]$state.size)
@@ -1999,7 +2004,7 @@ $miSens.Add_Click({ Show-SensorDialog })
 $miHelp.Add_Click({ $script:helpOpen = $true; Apply-View })
 $miCfg.Add_Click({ try { if (-not (Test-Path $cfgFile)) { Copy-Item (Join-Path $dir 'config.example.json') $cfgFile }; Start-Process notepad.exe -ArgumentList ('"' + $cfgFile + '"') } catch { Write-Log ('Konfig: ' + $_.Exception.Message) } })
 $miUpd.Add_Click({ Invoke-UpdateFlow $true })
-[void]$menu.Items.Add($miMode); [void]$menu.Items.Add($miBig); [void]$menu.Items.Add($miSmall); [void]$menu.Items.Add($miRefresh); [void]$menu.Items.Add($miTop); [void]$menu.Items.Add($miPop); [void]$menu.Items.Add($miTray); [void]$menu.Items.Add($miSound); [void]$menu.Items.Add($miReset); [void]$menu.Items.Add($miLog); [void]$menu.Items.Add($miHa); [void]$menu.Items.Add($miSens); [void]$menu.Items.Add($miHelp); [void]$menu.Items.Add($miCfg); [void]$menu.Items.Add($miUpd); [void]$menu.Items.Add((New-Object System.Windows.Controls.Separator)); [void]$menu.Items.Add($miExit)
+[void]$menu.Items.Add($miMode); [void]$menu.Items.Add($miBig); [void]$menu.Items.Add($miHaSup); [void]$menu.Items.Add($miSmall); [void]$menu.Items.Add($miRefresh); [void]$menu.Items.Add($miTop); [void]$menu.Items.Add($miPop); [void]$menu.Items.Add($miTray); [void]$menu.Items.Add($miSound); [void]$menu.Items.Add($miReset); [void]$menu.Items.Add($miLog); [void]$menu.Items.Add($miHa); [void]$menu.Items.Add($miSens); [void]$menu.Items.Add($miHelp); [void]$menu.Items.Add($miCfg); [void]$menu.Items.Add($miUpd); [void]$menu.Items.Add((New-Object System.Windows.Controls.Separator)); [void]$menu.Items.Add($miExit)
 $win.ContextMenu = $menu
 
 
@@ -2007,7 +2012,7 @@ $win.ContextMenu = $menu
 function Get-FooterText { if ($footerCfg) { return $footerCfg }; return (T 'footer') }
 function Build-Help {
     $ui.HelpBody.Children.Clear()
-    for ($i = 1; $i -le 16; $i++) {
+    for ($i = 1; $i -le 17; $i++) {
         $h = New-Text (T ('h' + $i)) 15 '#FFFFFFFF' $true
         $h.Margin = New-Object Windows.Thickness(0, 10, 0, 2)
         $bk = 'b' + $i; $bt = $(if ($i -eq 12) { T $bk $repoUrl } else { T $bk }); $b = New-Text $bt 13 '#FFDFE5EE' $false
@@ -2024,7 +2029,7 @@ function Apply-Lang {
     $ui.BtnHelp.ToolTip = (T 'help_tip'); $ui.BtnLang.ToolTip = (T 'lang_tip')
     foreach ($k in 'De', 'En') { $ui.('Lang' + $k).Foreground = Brush '#FFA9B4C4'; $ui.('Lang' + $k).FontWeight = 'Normal' }
     if ($state.lang -eq 'en') { $ui.LangEn.Foreground = Brush '#FFFFFFFF'; $ui.LangEn.FontWeight = 'Bold' } else { $ui.LangDe.Foreground = Brush '#FFFFFFFF'; $ui.LangDe.FontWeight = 'Bold' }
-    $miBig.Header = (T 'm_bigger'); $miSmall.Header = (T 'm_smaller'); $miRefresh.Header = (T 'm_refresh'); $miTop.Header = (T 'm_top'); $miPop.Header = (T 'm_pop'); $miTray.Header = (T 'm_tray'); if ($script:trayMiOpen) { $script:trayMiOpen.Text = (T 'tray_open'); $script:trayMiExit.Text = (T 'm_exit') }; $miSound.Header = (T 'm_sound'); $miReset.Header = (T 'm_reset'); $miLog.Header = (T 'm_log'); $miHelp.Header = (T 'm_help'); $miHa.Header = (T 'm_ha'); $miMode.Header = $(if ($state.simple) { T 'm_mode_full' } else { T 'm_mode_simple' }); $miSens.Header = (T 'm_sens'); $miCfg.Header = (T 'm_cfg'); $miUpd.Header = (T 'm_upd'); $miExit.Header = (T 'm_exit')
+    $miHaSup.Header = (T 'm_ha_support'); $miBig.Header = (T 'm_bigger'); $miSmall.Header = (T 'm_smaller'); $miRefresh.Header = (T 'm_refresh'); $miTop.Header = (T 'm_top'); $miPop.Header = (T 'm_pop'); $miTray.Header = (T 'm_tray'); if ($script:trayMiOpen) { $script:trayMiOpen.Text = (T 'tray_open'); $script:trayMiExit.Text = (T 'm_exit') }; $miSound.Header = (T 'm_sound'); $miReset.Header = (T 'm_reset'); $miLog.Header = (T 'm_log'); $miHelp.Header = (T 'm_help'); $miHa.Header = (T 'm_ha'); $miMode.Header = $(if ($state.simple) { T 'm_mode_full' } else { T 'm_mode_simple' }); $miSens.Header = (T 'm_sens'); $miCfg.Header = (T 'm_cfg'); $miUpd.Header = (T 'm_upd'); $miExit.Header = (T 'm_exit')
     $ui.RoomName.Text = 'Luftwächter'; $ui.TitleTag.Text = (T 'tagline'); $ui.TitleBox.ToolTip = (T 'copy_tip')
     $ui.Footer.Text = (Get-FooterText)
     $ui.Copy.Text = $copyright + ' · GitHub'; $ui.Copy.ToolTip = (T 'copy_tip'); $ui.Ver.ToolTip = (T 'ver_tip')
