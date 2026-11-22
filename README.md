@@ -11,7 +11,7 @@ A small always-on-top **Windows desktop widget** that shows how good the air is 
 - Ventilation advice ("open the window", "close it", "wait") with a ventilation timer
 - All rooms at a glance, weather row with a ventilation tip
 - Slide-out device panel: lights, plugs (watts), heating, blinds
-- Starts with Windows and restores its look and place exactly; sizes S / M / L / compact / pill
+- Starts with Windows and restores its look and place exactly; sizes S / M / L / compact / pill, plus an extra-large size; right-click → *Make bigger / smaller* (or Ctrl + mouse wheel) works in the simple view too
 - German and English UI (toggle in the widget), built-in help (`?`)
 - Pick the sensor per reading, or let the widget average all suitable sensors in a room; it warns when a sensor stops reporting
 - Hourly weather outlook, rain-aware advice, tray icon with notifications
@@ -88,6 +88,6 @@ MIT License, Copyright (c) 2026 Dan Stasiak. You may use, change and share it fr
 
 **Sensoren wählen:** Hat ein Raum mehrere Sensoren derselben Art, zeigt das Widget den Mittelwert (Taupunkt, Geräte-Temperatur und veraltete Sensoren werden ignoriert). Rechtsklick → „Sensoren für diesen Raum wählen…“ legt je Messwert genau einen Sensor fest. Meldet ein Sensor 20 Minuten nichts, warnt die Fußzeile in Gelb.
 
-**Aktualisieren:** Knopf **⟳ Update** unten rechts. Das Widget vergleicht seine Version mit GitHub, zeigt die Änderungen, fragt nach deiner Bestätigung, prüft den Download und tauscht sich selbst aus. Einstellungen bleiben erhalten. Das Widget prüft auch von selbst (standardmäßig alle 60 Minuten, `updateCheckMinutes` in `config.json`): Gibt es eine neue Version, wird der Knopf grün und zeigt die Versionsnummer; zusätzlich erscheint einmal eine Hinweis-Meldung im Infobereich. Beim ersten Start erklärt eine kurze Willkommenskarte die einfache Ansicht. In der einfachen Ansicht zeigt eine Tagesnote, wie oft die Luft heute gut war (CO₂ unter 1000 ppm).
+**Aktualisieren:** Knopf **⟳ Update** unten rechts. Das Widget vergleicht seine Version mit GitHub, zeigt die Änderungen, fragt nach deiner Bestätigung, prüft den Download und tauscht sich selbst aus. Einstellungen bleiben erhalten. Das Widget prüft auch von selbst (standardmäßig alle 60 Minuten, `updateCheckMinutes` in `config.json`): Gibt es eine neue Version, wird der Knopf grün und zeigt die Versionsnummer; zusätzlich erscheint einmal eine Hinweis-Meldung im Infobereich. Beim ersten Start erklärt eine kurze Willkommenskarte die einfache Ansicht. Rechtsklick → *Größer anzeigen* (oder Strg + Mausrad) vergrößert das Widget bis „extra groß“, auch in der einfachen Ansicht. In der einfachen Ansicht zeigt eine Tagesnote, wie oft die Luft heute gut war (CO₂ unter 1000 ppm).
 
 **Lizenz:** MIT, © 2026 Dan Stasiak. Frei nutzbar, änderbar und weitergebbar; der Urheberhinweis muss erhalten bleiben.

@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall)
 
 $appName = 'Luftwaechter'
-$appVersion = '5.3.0'
+$appVersion = '5.4.0'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -510,6 +510,8 @@ $script:Strings = @{
     day_good = @('Heute: {0} % der Zeit gute Luft ⭐', 'Today: good air {0} % of the time ⭐')
     day_ok = @('Heute: {0} % der Zeit gute Luft 👍', 'Today: good air {0} % of the time 👍')
     day_low = @('Heute: nur {0} % gute Luft – lüfte öfter 🌬', 'Today: only {0} % good air – ventilate more often 🌬')
+    m_bigger = @('Größer anzeigen', 'Make bigger')
+    m_smaller = @('Kleiner anzeigen', 'Make smaller')
     upd_tip = @('Zuletzt geprüft: {0} · nächste Prüfung in ca. {1} Min.', 'Last checked: {0} · next check in about {1} min')
     upd_tip_new = @('Neue Version {0} wartet · Klicken zum Ansehen', 'New version {0} is waiting · click to view')
     upd_tip_never = @('Noch nicht geprüft · Klicken zum Prüfen', 'Not checked yet · click to check')
@@ -1247,12 +1249,12 @@ function Apply-Simple {
 }
 function Apply-View {
     $scale = 1.0
-    switch ($state.size) { 'S' { $scale = 0.82 } 'L' { $scale = 1.2 } default { $scale = 1.0 } }
+    switch ($state.size) { 'S' { $scale = 0.82 } 'L' { $scale = 1.2 } 'XL' { $scale = 1.45 } default { $scale = 1.0 } }
     $ui.Scaler.LayoutTransform = New-Object Windows.Media.ScaleTransform($scale, $scale)
     $ui.Ver.Text = $version
     if ($state.drawerOpen -and -not ($state.size -eq 'C')) { $ui.Card.CornerRadius = New-Object Windows.CornerRadius(24, 0, 0, 24) } else { $ui.Card.CornerRadius = New-Object Windows.CornerRadius(24) }
     foreach ($k in 'S', 'M', 'L', 'C', 'P') { $ui.('Sz' + $k).Foreground = Brush '#FFA9B4C4'; $ui.('Sz' + $k).FontWeight = 'Normal' }
-    $ui.('Sz' + $state.size).Foreground = Brush '#FFFFFFFF'; $ui.('Sz' + $state.size).FontWeight = 'Bold'
+    if ($state.size -ne 'XL') { $ui.('Sz' + $state.size).Foreground = Brush '#FFFFFFFF'; $ui.('Sz' + $state.size).FontWeight = 'Bold' }
     $script:compact = ($state.size -eq 'C' -or $state.size -eq 'P')
     if ($state.size -eq 'P') { $ui.Card.Visibility = 'Collapsed'; $ui.Pill.Visibility = 'Visible' } else { $ui.Card.Visibility = 'Visible'; $ui.Pill.Visibility = 'Collapsed' }
     if ($script:compact) { $ui.Details.Visibility = 'Collapsed'; $ui.Detail.Visibility = 'Collapsed'; $ui.Drawer.Visibility = 'Collapsed'; $ui.Tab.Visibility = 'Collapsed' }
@@ -1966,6 +1968,8 @@ $miSound = New-Object System.Windows.Controls.MenuItem; $miSound.Header = 'Hinwe
 $miTray = New-Object System.Windows.Controls.MenuItem; $miTray.IsCheckable = $true; $miTray.IsChecked = [bool]$state.tray
 $miHa = New-Object System.Windows.Controls.MenuItem
 $miMode = New-Object System.Windows.Controls.MenuItem
+$miBig = New-Object System.Windows.Controls.MenuItem
+$miSmall = New-Object System.Windows.Controls.MenuItem
 $miSens = New-Object System.Windows.Controls.MenuItem
 $miHelp = New-Object System.Windows.Controls.MenuItem
 $miUpd = New-Object System.Windows.Controls.MenuItem
@@ -1981,11 +1985,21 @@ $miSound.Add_Click({ $state.sound = $miSound.IsChecked; Save-State })
 $miExit.Add_Click({ Exit-App })
 $miHa.Add_Click({ Show-HaDialog })
 $miMode.Add_Click({ Toggle-Mode })
+function Step-Size([int]$dir) {
+    $ord = @('S', 'M', 'L', 'XL')
+    $i = [Array]::IndexOf($ord, [string]$state.size)
+    if ($i -lt 0) { $i = 1 }
+    $n = [Math]::Max(0, [Math]::Min($ord.Count - 1, $i + $dir))
+    $state.size = $ord[$n]; Apply-View; Save-State
+}
+$miBig.Add_Click({ Step-Size 1 })
+$miSmall.Add_Click({ Step-Size -1 })
+$win.Add_PreviewMouseWheel({ param($s, $e) if ([System.Windows.Input.Keyboard]::Modifiers -band [System.Windows.Input.ModifierKeys]::Control) { $e.Handled = $true; if ($e.Delta -gt 0) { Step-Size 1 } else { Step-Size -1 } } })
 $miSens.Add_Click({ Show-SensorDialog })
 $miHelp.Add_Click({ $script:helpOpen = $true; Apply-View })
 $miCfg.Add_Click({ try { if (-not (Test-Path $cfgFile)) { Copy-Item (Join-Path $dir 'config.example.json') $cfgFile }; Start-Process notepad.exe -ArgumentList ('"' + $cfgFile + '"') } catch { Write-Log ('Konfig: ' + $_.Exception.Message) } })
 $miUpd.Add_Click({ Invoke-UpdateFlow $true })
-[void]$menu.Items.Add($miMode); [void]$menu.Items.Add($miRefresh); [void]$menu.Items.Add($miTop); [void]$menu.Items.Add($miPop); [void]$menu.Items.Add($miTray); [void]$menu.Items.Add($miSound); [void]$menu.Items.Add($miReset); [void]$menu.Items.Add($miLog); [void]$menu.Items.Add($miHa); [void]$menu.Items.Add($miSens); [void]$menu.Items.Add($miHelp); [void]$menu.Items.Add($miCfg); [void]$menu.Items.Add($miUpd); [void]$menu.Items.Add((New-Object System.Windows.Controls.Separator)); [void]$menu.Items.Add($miExit)
+[void]$menu.Items.Add($miMode); [void]$menu.Items.Add($miBig); [void]$menu.Items.Add($miSmall); [void]$menu.Items.Add($miRefresh); [void]$menu.Items.Add($miTop); [void]$menu.Items.Add($miPop); [void]$menu.Items.Add($miTray); [void]$menu.Items.Add($miSound); [void]$menu.Items.Add($miReset); [void]$menu.Items.Add($miLog); [void]$menu.Items.Add($miHa); [void]$menu.Items.Add($miSens); [void]$menu.Items.Add($miHelp); [void]$menu.Items.Add($miCfg); [void]$menu.Items.Add($miUpd); [void]$menu.Items.Add((New-Object System.Windows.Controls.Separator)); [void]$menu.Items.Add($miExit)
 $win.ContextMenu = $menu
 
 
@@ -2010,7 +2024,7 @@ function Apply-Lang {
     $ui.BtnHelp.ToolTip = (T 'help_tip'); $ui.BtnLang.ToolTip = (T 'lang_tip')
     foreach ($k in 'De', 'En') { $ui.('Lang' + $k).Foreground = Brush '#FFA9B4C4'; $ui.('Lang' + $k).FontWeight = 'Normal' }
     if ($state.lang -eq 'en') { $ui.LangEn.Foreground = Brush '#FFFFFFFF'; $ui.LangEn.FontWeight = 'Bold' } else { $ui.LangDe.Foreground = Brush '#FFFFFFFF'; $ui.LangDe.FontWeight = 'Bold' }
-    $miRefresh.Header = (T 'm_refresh'); $miTop.Header = (T 'm_top'); $miPop.Header = (T 'm_pop'); $miTray.Header = (T 'm_tray'); if ($script:trayMiOpen) { $script:trayMiOpen.Text = (T 'tray_open'); $script:trayMiExit.Text = (T 'm_exit') }; $miSound.Header = (T 'm_sound'); $miReset.Header = (T 'm_reset'); $miLog.Header = (T 'm_log'); $miHelp.Header = (T 'm_help'); $miHa.Header = (T 'm_ha'); $miMode.Header = $(if ($state.simple) { T 'm_mode_full' } else { T 'm_mode_simple' }); $miSens.Header = (T 'm_sens'); $miCfg.Header = (T 'm_cfg'); $miUpd.Header = (T 'm_upd'); $miExit.Header = (T 'm_exit')
+    $miBig.Header = (T 'm_bigger'); $miSmall.Header = (T 'm_smaller'); $miRefresh.Header = (T 'm_refresh'); $miTop.Header = (T 'm_top'); $miPop.Header = (T 'm_pop'); $miTray.Header = (T 'm_tray'); if ($script:trayMiOpen) { $script:trayMiOpen.Text = (T 'tray_open'); $script:trayMiExit.Text = (T 'm_exit') }; $miSound.Header = (T 'm_sound'); $miReset.Header = (T 'm_reset'); $miLog.Header = (T 'm_log'); $miHelp.Header = (T 'm_help'); $miHa.Header = (T 'm_ha'); $miMode.Header = $(if ($state.simple) { T 'm_mode_full' } else { T 'm_mode_simple' }); $miSens.Header = (T 'm_sens'); $miCfg.Header = (T 'm_cfg'); $miUpd.Header = (T 'm_upd'); $miExit.Header = (T 'm_exit')
     $ui.RoomName.Text = 'Luftwächter'; $ui.TitleTag.Text = (T 'tagline'); $ui.TitleBox.ToolTip = (T 'copy_tip')
     $ui.Footer.Text = (Get-FooterText)
     $ui.Copy.Text = $copyright + ' · GitHub'; $ui.Copy.ToolTip = (T 'copy_tip'); $ui.Ver.ToolTip = (T 'ver_tip')

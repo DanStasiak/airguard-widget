@@ -2,6 +2,9 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [5.4.0] - 2026-11-22
+- New: easier to read for everyone. Right-click offers "Make bigger" and "Make smaller" (also Ctrl + mouse wheel on the widget), with a new extra-large size. This works in the simple view too, where the size buttons are hidden.
+
 ## [5.3.0] - 2026-11-22
 - New: the simple view shows a friendly daily air score under the advice, for example "Today: good air 92 % of the time ⭐". It counts the share of today's readings with CO₂ under 1000 ppm (needs about 20 minutes of data) and resets at midnight.
 
