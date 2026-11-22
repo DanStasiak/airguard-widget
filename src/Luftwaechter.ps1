@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall)
 
 $appName = 'Luftwaechter'
-$appVersion = '5.6.0'
+$appVersion = '5.7.0'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -467,7 +467,7 @@ $script:Strings = @{
     m_exit = @('Beenden', 'Quit')
     no_errors = @('Keine Fehler protokolliert.', 'No errors logged.')
     setup = @('Noch nicht eingerichtet', 'Not set up yet')
-    setup_d = @('Rechtsklick, dann "Mit Home Assistant verbinden…". Siehe Hilfe.', 'Right-click, then "Connect to Home Assistant…". See Help.')
+    setup_d = @('Rechtsklick, dann "Mit Home Assistant verbinden…" – oder zum Ausprobieren "Demo ausprobieren". Siehe Hilfe.', 'Right-click, then "Connect to Home Assistant…" – or "Try the demo" to look around. See Help.')
     ha_norooms = @('Keine Räume gefunden', 'No rooms found')
     ha_norooms_d = @('In Home Assistant braucht ein Bereich (Area) einen CO₂- oder Feinstaub-Sensor (Geräteklasse carbon_dioxide oder pm25). Siehe Hilfe.', 'In Home Assistant an area needs a CO₂ or fine-dust sensor (device class carbon_dioxide or pm25). See Help.')
     m_sens = @('Sensoren für diesen Raum wählen…', 'Choose sensors for this room…')

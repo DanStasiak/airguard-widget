@@ -2,6 +2,10 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [5.7.0] - 2026-11-22
+- Improved: the "not set up yet" screen now points to the demo, so first-time users see there is a way to look around before connecting Home Assistant.
+- Docs: the demo is highlighted at the top of the GitHub page.
+
 ## [5.6.0] - 2026-11-22
 - New: demo mode. Right-click, "Try the demo" shows three simulated rooms whose air gets stale and fresh again every 14 minutes, so anyone can try Luftwächter without Home Assistant. "Stop the demo" returns to your real rooms. Also useful for screenshots.
 
