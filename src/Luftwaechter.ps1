@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall)
 
 $appName = 'Luftwaechter'
-$appVersion = '5.5.0'
+$appVersion = '5.6.0'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -339,7 +339,7 @@ function Write-Log([string]$m) {
         Add-Content -Path $logFile -Value ((Get-Date).ToString('yyyy-MM-dd HH:mm:ss') + '  ' + $m) -Encoding UTF8
     } catch {}
 }
-$state = @{ left = $null; top = $null; topmost = $false; topmostSet = $false; popup = $true; tray = $true; room = [string]$cfg.defaultRoom; size = 'M'; weatherOpen = $false; drawerOpen = $false; sound = $true; sparkHours = 3; metric = 0; hidden = @(); lang = 'de'; hist = @{}; hist7 = @{}; sensors = @{}; simple = $true; tourDone = $false }
+$state = @{ left = $null; top = $null; topmost = $false; topmostSet = $false; popup = $true; tray = $true; room = [string]$cfg.defaultRoom; size = 'M'; weatherOpen = $false; drawerOpen = $false; sound = $true; sparkHours = 3; metric = 0; hidden = @(); lang = 'de'; hist = @{}; hist7 = @{}; sensors = @{}; simple = $true; tourDone = $false; demo = $false }
 try { if ((Get-Culture).TwoLetterISOLanguageName -ne 'de') { $state.lang = 'en' } } catch {}
 if (Test-Path $stateFile) {
     try {
@@ -355,6 +355,7 @@ if (Test-Path $stateFile) {
         if ($null -ne $s.drawerOpen) { $state.drawerOpen = [bool]$s.drawerOpen }
         if ($null -ne $s.sound) { $state.sound = [bool]$s.sound }
         if ($s.sparkHours -eq 24 -or $s.sparkHours -eq 168) { $state.sparkHours = [int]$s.sparkHours }
+        if ($null -ne $s.demo) { $state.demo = [bool]$s.demo }
         if ($null -ne $s.tourDone) { $state.tourDone = [bool]$s.tourDone }
         if ($null -ne $s.simple) { $state.simple = [bool]$s.simple }
         if ($s.hist7) { foreach ($p in $s.hist7.PSObject.Properties) { $state.hist7[$p.Name] = @($p.Value) } }
@@ -513,6 +514,9 @@ $script:Strings = @{
     day_good = @('Heute: {0} % der Zeit gute Luft ⭐', 'Today: good air {0} % of the time ⭐')
     day_ok = @('Heute: {0} % der Zeit gute Luft 👍', 'Today: good air {0} % of the time 👍')
     day_low = @('Heute: nur {0} % gute Luft – lüfte öfter 🌬', 'Today: only {0} % good air – ventilate more often 🌬')
+    m_demo = @('Demo ausprobieren', 'Try the demo')
+    m_demo_off = @('Demo beenden', 'Stop the demo')
+    demo_tag = @('Demo', 'Demo')
     m_bigger = @('Größer anzeigen', 'Make bigger')
     m_smaller = @('Kleiner anzeigen', 'Make smaller')
     upd_tip = @('Zuletzt geprüft: {0} · nächste Prüfung in ca. {1} Min.', 'Last checked: {0} · next check in about {1} min')
@@ -841,7 +845,7 @@ $script:helpOpen = $false
 
 function Save-State {
     try {
-        $o = @{ left = $win.Left; top = $win.Top; topmost = $state.topmost; topmostSet = $state.topmostSet; popup = $state.popup; tray = $state.tray; room = $state.room; size = $state.size; weatherOpen = $state.weatherOpen; drawerOpen = $state.drawerOpen; sound = $state.sound; sparkHours = $state.sparkHours; metric = $state.metric; hidden = @($state.hidden); lang = $state.lang; hist = $state.hist; hist7 = $state.hist7; sensors = $state.sensors; simple = $state.simple; tourDone = $state.tourDone }
+        $o = @{ left = $win.Left; top = $win.Top; topmost = $state.topmost; topmostSet = $state.topmostSet; popup = $state.popup; tray = $state.tray; room = $state.room; size = $state.size; weatherOpen = $state.weatherOpen; drawerOpen = $state.drawerOpen; sound = $state.sound; sparkHours = $state.sparkHours; metric = $state.metric; hidden = @($state.hidden); lang = $state.lang; hist = $state.hist; hist7 = $state.hist7; sensors = $state.sensors; simple = $state.simple; tourDone = $state.tourDone; demo = $state.demo }
         ($o | ConvertTo-Json -Depth 4) | Set-Content -Path $stateFile -Encoding UTF8
     } catch { Write-Log ('Speichern: ' + $_.Exception.Message) }
 }
@@ -1878,7 +1882,47 @@ function Show-HaDialog {
     if ($r -eq $true) { Update-Widget }
 }
 
+function Get-DemoData([string]$wantRoom) {
+    # Simulierte Räume für Ausprobieren ohne Home Assistant: CO2 steigt, Fenster auf, fällt wieder (Zyklus 14 Minuten)
+    $dn = @(@('living', (Lx 'Wohnzimmer' 'Living room'), 0), @('office', (Lx 'Büro' 'Office'), 4), @('bed', (Lx 'Schlafzimmer' 'Bedroom'), 8))
+    $mins = ([DateTimeOffset]::UtcNow.ToUnixTimeSeconds() / 60.0)
+    $green = '#2e9e5b'; $amber = '#e8a317'; $red = '#d9472b'
+    $rooms = @(); $cur = $null
+    foreach ($r in $dn) {
+        $ph = (($mins + $r[2]) % 14.0)
+        if ($ph -lt 9) { $co2 = 620 + 95 * $ph } else { $co2 = 1475 - 150 * ($ph - 9) }
+        $co2 = [int][Math]::Round($co2)
+        $lv = $(if ($co2 -lt 1000) { 'gut' } elseif ($co2 -lt 1400) { 'mittel' } else { 'schlecht' })
+        $col = $(if ($lv -eq 'gut') { $green } elseif ($lv -eq 'mittel') { $amber } else { $red })
+        $rooms += @{ key = $r[0]; name = $r[1]; level = $lv; color = $col; co2 = [string]$co2; ph = $ph }
+    }
+    foreach ($r in $rooms) { if ($r.key -eq $wantRoom) { $cur = $r } }
+    if ($null -eq $cur) { $cur = $rooms[0] }
+    $co2 = [int]$cur.co2; $ph = [double]$cur.ph
+    if ($ph -ge 9) { $act = 'offen_lassen'; $win = 'offen'; $hl = (Lx 'Fenster offen lassen' 'Keep the window open'); $dt = (Lx 'Frische Luft kommt herein.' 'Fresh air is coming in.') }
+    elseif ($co2 -ge 1000) { $act = 'oeffnen'; $win = 'zu'; $hl = (Lx 'Bitte Fenster öffnen' 'Please open the window'); $dt = (Lx 'Weit öffnen, etwa 5 Minuten lüften.' 'Open fully and ventilate for about 5 minutes.') }
+    else { $act = 'zu_lassen'; $win = 'zu'; $hl = (Lx 'Die Luft ist gut' 'The air is good'); $dt = (Lx 'Gerade ist nichts zu tun.' 'Nothing to do right now.') }
+    $lvl = [string]$cur.level
+    $rr = @(); foreach ($r in $rooms) { $rr += @{ key = $r.key; name = $r.name; level = $r.level; color = $r.color; co2 = $r.co2 } }
+    $cl = $(if ($co2 -lt 1000) { 0 } elseif ($co2 -lt 1400) { 1 } else { 2 })
+    $t = 21.0 + 0.4 * [Math]::Sin($mins / 5.0)
+    return [pscustomobject]@{
+        room = [pscustomobject]@{ key = $cur.key; name = ($cur.name + ' · ' + (T 'demo_tag')) }
+        rooms = @($rr | ForEach-Object { [pscustomobject]$_ })
+        level = $lvl; color = [string]$cur.color; headline = $hl; detail = $dt; action = $act; window = $win; hasWindow = $false; ventMin = 5
+        values = @(
+            [pscustomobject]@{ key = 'CO₂'; value = [string]$co2; unit = 'ppm'; level = $cl },
+            [pscustomobject]@{ key = (Lx 'Feinstaub' 'Fine dust'); value = '7'; unit = 'µg'; level = 0 },
+            [pscustomobject]@{ key = (Lx 'Temperatur' 'Temperature'); value = (Fmt $t 1); unit = '°C'; level = 0 },
+            [pscustomobject]@{ key = (Lx 'Luftfeuchte' 'Humidity'); value = '46'; unit = '%'; level = 0 })
+        colors = @($green, $amber, $red); mold = $false
+        outside = [pscustomobject]@{ temp = '7'; cond = 'cloudy'; icon = [string][char]0x2601; wind = '12'; windDir = 'SW'; hum = '80'; cloud = '90'; press = '1012'; tip = (Lx 'Guter Zeitpunkt zum Lüften.' 'Good time to ventilate.') }
+        devices = @()
+        updated = (Get-Date).ToString('HH:mm:ss')
+    }
+}
 function Update-Widget {
+    if ($state.demo) { try { $d = Get-DemoData ([string]$state.room); $script:fails = 0; $script:last = $d; Show-Data $d } catch { Write-Log ('Demo: ' + $_.Exception.Message) }; return }
     if (-not $script:haMode -and $url -notmatch '^https?://') { Show-Setup; return }
     try {
         if ($script:haMode) {
@@ -1973,6 +2017,7 @@ $miHa = New-Object System.Windows.Controls.MenuItem
 $miMode = New-Object System.Windows.Controls.MenuItem
 $miBig = New-Object System.Windows.Controls.MenuItem
 $miSmall = New-Object System.Windows.Controls.MenuItem
+$miDemo = New-Object System.Windows.Controls.MenuItem
 $miHaSup = New-Object System.Windows.Controls.MenuItem
 $miSens = New-Object System.Windows.Controls.MenuItem
 $miHelp = New-Object System.Windows.Controls.MenuItem
@@ -1989,6 +2034,7 @@ $miSound.Add_Click({ $state.sound = $miSound.IsChecked; Save-State })
 $miExit.Add_Click({ Exit-App })
 $miHa.Add_Click({ Show-HaDialog })
 $miMode.Add_Click({ Toggle-Mode })
+$miDemo.Add_Click({ $state.demo = -not [bool]$state.demo; $state.room = ''; Save-State; Apply-Lang; Update-Widget })
 $miHaSup.Add_Click({ try { Start-Process 'https://www.home-assistant.io/' } catch {} })
 function Step-Size([int]$dir) {
     $ord = @('S', 'M', 'L', 'XL')
@@ -2004,7 +2050,7 @@ $miSens.Add_Click({ Show-SensorDialog })
 $miHelp.Add_Click({ $script:helpOpen = $true; Apply-View })
 $miCfg.Add_Click({ try { if (-not (Test-Path $cfgFile)) { Copy-Item (Join-Path $dir 'config.example.json') $cfgFile }; Start-Process notepad.exe -ArgumentList ('"' + $cfgFile + '"') } catch { Write-Log ('Konfig: ' + $_.Exception.Message) } })
 $miUpd.Add_Click({ Invoke-UpdateFlow $true })
-[void]$menu.Items.Add($miMode); [void]$menu.Items.Add($miBig); [void]$menu.Items.Add($miHaSup); [void]$menu.Items.Add($miSmall); [void]$menu.Items.Add($miRefresh); [void]$menu.Items.Add($miTop); [void]$menu.Items.Add($miPop); [void]$menu.Items.Add($miTray); [void]$menu.Items.Add($miSound); [void]$menu.Items.Add($miReset); [void]$menu.Items.Add($miLog); [void]$menu.Items.Add($miHa); [void]$menu.Items.Add($miSens); [void]$menu.Items.Add($miHelp); [void]$menu.Items.Add($miCfg); [void]$menu.Items.Add($miUpd); [void]$menu.Items.Add((New-Object System.Windows.Controls.Separator)); [void]$menu.Items.Add($miExit)
+[void]$menu.Items.Add($miMode); [void]$menu.Items.Add($miBig); [void]$menu.Items.Add($miDemo); [void]$menu.Items.Add($miHaSup); [void]$menu.Items.Add($miSmall); [void]$menu.Items.Add($miRefresh); [void]$menu.Items.Add($miTop); [void]$menu.Items.Add($miPop); [void]$menu.Items.Add($miTray); [void]$menu.Items.Add($miSound); [void]$menu.Items.Add($miReset); [void]$menu.Items.Add($miLog); [void]$menu.Items.Add($miHa); [void]$menu.Items.Add($miSens); [void]$menu.Items.Add($miHelp); [void]$menu.Items.Add($miCfg); [void]$menu.Items.Add($miUpd); [void]$menu.Items.Add((New-Object System.Windows.Controls.Separator)); [void]$menu.Items.Add($miExit)
 $win.ContextMenu = $menu
 
 
@@ -2029,7 +2075,7 @@ function Apply-Lang {
     $ui.BtnHelp.ToolTip = (T 'help_tip'); $ui.BtnLang.ToolTip = (T 'lang_tip')
     foreach ($k in 'De', 'En') { $ui.('Lang' + $k).Foreground = Brush '#FFA9B4C4'; $ui.('Lang' + $k).FontWeight = 'Normal' }
     if ($state.lang -eq 'en') { $ui.LangEn.Foreground = Brush '#FFFFFFFF'; $ui.LangEn.FontWeight = 'Bold' } else { $ui.LangDe.Foreground = Brush '#FFFFFFFF'; $ui.LangDe.FontWeight = 'Bold' }
-    $miHaSup.Header = (T 'm_ha_support'); $miBig.Header = (T 'm_bigger'); $miSmall.Header = (T 'm_smaller'); $miRefresh.Header = (T 'm_refresh'); $miTop.Header = (T 'm_top'); $miPop.Header = (T 'm_pop'); $miTray.Header = (T 'm_tray'); if ($script:trayMiOpen) { $script:trayMiOpen.Text = (T 'tray_open'); $script:trayMiExit.Text = (T 'm_exit') }; $miSound.Header = (T 'm_sound'); $miReset.Header = (T 'm_reset'); $miLog.Header = (T 'm_log'); $miHelp.Header = (T 'm_help'); $miHa.Header = (T 'm_ha'); $miMode.Header = $(if ($state.simple) { T 'm_mode_full' } else { T 'm_mode_simple' }); $miSens.Header = (T 'm_sens'); $miCfg.Header = (T 'm_cfg'); $miUpd.Header = (T 'm_upd'); $miExit.Header = (T 'm_exit')
+    $miDemo.Header = $(if ($state.demo) { T 'm_demo_off' } else { T 'm_demo' }); $miHaSup.Header = (T 'm_ha_support'); $miBig.Header = (T 'm_bigger'); $miSmall.Header = (T 'm_smaller'); $miRefresh.Header = (T 'm_refresh'); $miTop.Header = (T 'm_top'); $miPop.Header = (T 'm_pop'); $miTray.Header = (T 'm_tray'); if ($script:trayMiOpen) { $script:trayMiOpen.Text = (T 'tray_open'); $script:trayMiExit.Text = (T 'm_exit') }; $miSound.Header = (T 'm_sound'); $miReset.Header = (T 'm_reset'); $miLog.Header = (T 'm_log'); $miHelp.Header = (T 'm_help'); $miHa.Header = (T 'm_ha'); $miMode.Header = $(if ($state.simple) { T 'm_mode_full' } else { T 'm_mode_simple' }); $miSens.Header = (T 'm_sens'); $miCfg.Header = (T 'm_cfg'); $miUpd.Header = (T 'm_upd'); $miExit.Header = (T 'm_exit')
     $ui.RoomName.Text = 'Luftwächter'; $ui.TitleTag.Text = (T 'tagline'); $ui.TitleBox.ToolTip = (T 'copy_tip')
     $ui.Footer.Text = (Get-FooterText)
     $ui.Copy.Text = $copyright + ' · GitHub'; $ui.Copy.ToolTip = (T 'copy_tip'); $ui.Ver.ToolTip = (T 'ver_tip')

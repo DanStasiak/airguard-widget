@@ -2,6 +2,9 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [5.6.0] - 2026-11-22
+- New: demo mode. Right-click, "Try the demo" shows three simulated rooms whose air gets stale and fresh again every 14 minutes, so anyone can try Luftwächter without Home Assistant. "Stop the demo" returns to your real rooms. Also useful for screenshots.
+
 ## [5.5.0] - 2026-11-22
 - New: a thank-you to Home Assistant. The help has a new section and the right-click menu has "Support Home Assistant" (opens home-assistant.io). Text only, no logo; the widget states that it is an independent project, not affiliated with or endorsed by Home Assistant or the Open Home Foundation.
 
