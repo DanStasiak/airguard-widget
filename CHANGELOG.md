@@ -2,6 +2,9 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [4.9.0] - 2026-11-22
+- New: 7-day history. Tap the curve again after 24 hours to see the whole week (one point every 10 minutes, kept on your PC). Works for all four values. The week fills up from now on.
+
 ## [4.8.1] - 2026-11-22
 - Fix: battery temperature and humidity sensors report only when the value changes, so they are no longer treated as "stale" after 30 minutes (now 6 hours). Air-quality monitors keep the strict limit.
 - Improved: the sensor warning in the footer is shorter (room name left out) and clickable: a click opens "Choose sensors for this room".

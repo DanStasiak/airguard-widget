@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall)
 
 $appName = 'Luftwaechter'
-$appVersion = '4.8.1'
+$appVersion = '4.9.0'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -337,7 +337,7 @@ function Write-Log([string]$m) {
         Add-Content -Path $logFile -Value ((Get-Date).ToString('yyyy-MM-dd HH:mm:ss') + '  ' + $m) -Encoding UTF8
     } catch {}
 }
-$state = @{ left = $null; top = $null; topmost = $false; topmostSet = $false; popup = $true; tray = $true; room = [string]$cfg.defaultRoom; size = 'M'; weatherOpen = $false; drawerOpen = $false; sound = $true; sparkHours = 3; metric = 0; hidden = @(); lang = 'de'; hist = @{}; sensors = @{} }
+$state = @{ left = $null; top = $null; topmost = $false; topmostSet = $false; popup = $true; tray = $true; room = [string]$cfg.defaultRoom; size = 'M'; weatherOpen = $false; drawerOpen = $false; sound = $true; sparkHours = 3; metric = 0; hidden = @(); lang = 'de'; hist = @{}; hist7 = @{}; sensors = @{} }
 try { if ((Get-Culture).TwoLetterISOLanguageName -ne 'de') { $state.lang = 'en' } } catch {}
 if (Test-Path $stateFile) {
     try {
@@ -352,7 +352,8 @@ if (Test-Path $stateFile) {
         if ($null -ne $s.weatherOpen) { $state.weatherOpen = [bool]$s.weatherOpen }
         if ($null -ne $s.drawerOpen) { $state.drawerOpen = [bool]$s.drawerOpen }
         if ($null -ne $s.sound) { $state.sound = [bool]$s.sound }
-        if ($s.sparkHours -eq 24) { $state.sparkHours = 24 }
+        if ($s.sparkHours -eq 24 -or $s.sparkHours -eq 168) { $state.sparkHours = [int]$s.sparkHours }
+        if ($s.hist7) { foreach ($p in $s.hist7.PSObject.Properties) { $state.hist7[$p.Name] = @($p.Value) } }
         if ($s.hidden) { $state.hidden = @($s.hidden | ForEach-Object { [string]$_ }) }
         if ($null -ne $s.metric -and [int]$s.metric -ge 0 -and [int]$s.metric -le 3) { $state.metric = [int]$s.metric }
         if ($s.lang -eq 'en' -or $s.lang -eq 'de') { $state.lang = [string]$s.lang }
@@ -401,7 +402,7 @@ $script:Strings = @{
     dev_unhide = @('{0} ausgeblendet · alle anzeigen', '{0} hidden · show all')
     mm = @('Heute: Min {0} · Max {1} {2}', 'Today: min {0} · max {1} {2}')
     chip_tip = @('Tippen: Verlauf dieses Werts anzeigen', 'Tap: show the history of this value')
-    spark_tip = @('Tippen: 3 Std / 24 Std', 'Tap: 3 h / 24 h')
+    spark_tip = @('Tippen: 3 Std / 24 Std / 7 Tage', 'Tap: 3 h / 24 h / 7 days')
     pill_tip = @('Doppelklick: wieder groß', 'Double-click: expand')
     help_tip = @('Hilfe', 'Help')
     lang_tip = @('Sprache / Language', 'Language / Sprache')
@@ -526,7 +527,7 @@ $script:Strings = @{
     h3 = @('Der Rat: lüften oder nicht', 'The advice: ventilate or not')
     b3 = @('Das große Feld sagt, was zu tun ist: Fenster öffnen, offen lassen, schließen oder noch warten (z. B. bei Unwetter). Ist das Fenster offen, zeigt ein Balken, wie lange noch gelüftet werden soll. In Räumen ohne Fensterkontakt tippst du auf das Feld: Dann startet ein Lüftungs-Timer, und am Ende kommt ein Ton. Nach dem Lüften steht kurz da, wie sich der CO₂-Wert verbessert hat. Nachts (22–7 Uhr) ist das Fenster abgedunkelt, und es gibt keinen Hinweiston.', 'The large panel tells you what to do: open the window, keep it open, close it, or wait a bit (for example during a storm). When the window is open, a bar shows how much longer to ventilate. In rooms without a window contact, tap the panel: a ventilation timer starts and a sound plays at the end. After ventilating, the panel briefly shows how the CO₂ value improved. At night (22:00–07:00) the window is dimmed and there is no alert sound.')
     h4 = @('Kurve, Trend und Tagesbilanz', 'Curve, trend and daily summary')
-    b4 = @('Die Kurve zeigt den CO₂-Verlauf der letzten 3 Stunden; die Linie markiert 1000 ppm. Ein Tipp auf die Kurve wechselt zu 24 Stunden. Links daneben steht der Trend (steigt, sinkt, stabil) und, wenn möglich, eine Prognose, z. B. wann die Luft wieder gut ist. Die Tagesbilanz nennt Höchstwert, Durchschnitt und den Anteil der Zeit unter 1000 ppm. Die Werte werden auf deinem PC gesammelt und bleiben beim Neustart erhalten. Tippe auf einen der vier Werte (CO₂, Feinstaub, Temperatur, Luftfeuchte), dann zeigt die Kurve diesen Wert.', 'The curve shows the CO₂ history of the last 3 hours; the line marks 1000 ppm. Tap the curve to switch to 24 hours. The trend (rising, falling, steady) and, when possible, a forecast such as when the air will be good again, appear under the ring. The daily summary gives the peak, the average and the share of time below 1000 ppm. The data is collected on your PC and kept across restarts. Tap one of the four values (CO₂, fine dust, temperature, humidity) and the curve shows that value instead.')
+    b4 = @('Die Kurve zeigt den CO₂-Verlauf der letzten 3 Stunden; die Linie markiert 1000 ppm. Ein Tipp auf die Kurve wechselt zu 24 Stunden, ein weiterer zu 7 Tagen und dann wieder zurück. Links daneben steht der Trend (steigt, sinkt, stabil) und, wenn möglich, eine Prognose, z. B. wann die Luft wieder gut ist. Die Tagesbilanz nennt Höchstwert, Durchschnitt und den Anteil der Zeit unter 1000 ppm. Die Werte werden auf deinem PC gesammelt und bleiben beim Neustart erhalten. Tippe auf einen der vier Werte (CO₂, Feinstaub, Temperatur, Luftfeuchte), dann zeigt die Kurve diesen Wert.', 'The curve shows the CO₂ history of the last 3 hours; the line marks 1000 ppm. Tap the curve to switch to 24 hours, again for 7 days, and once more to go back. The trend (rising, falling, steady) and, when possible, a forecast such as when the air will be good again, appear under the ring. The daily summary gives the peak, the average and the share of time below 1000 ppm. The data is collected on your PC and kept across restarts. Tap one of the four values (CO₂, fine dust, temperature, humidity) and the curve shows that value instead.')
     h5 = @('Die vier Messwerte', 'The four readings')
     b5 = @('CO₂ (ppm), Staub (Feinstaub PM2.5 in µg), Temperatur (°C) und Feuchte (%). Der Punkt vor jedem Wert zeigt seine Farbe.', 'CO₂ (ppm), dust (fine dust PM2.5 in µg), temperature (°C) and humidity (%). The dot in front of each value shows its color.')
     h6 = @('Räume wechseln', 'Switching rooms')
@@ -806,7 +807,7 @@ $script:helpOpen = $false
 
 function Save-State {
     try {
-        $o = @{ left = $win.Left; top = $win.Top; topmost = $state.topmost; topmostSet = $state.topmostSet; popup = $state.popup; tray = $state.tray; room = $state.room; size = $state.size; weatherOpen = $state.weatherOpen; drawerOpen = $state.drawerOpen; sound = $state.sound; sparkHours = $state.sparkHours; metric = $state.metric; hidden = @($state.hidden); lang = $state.lang; hist = $state.hist; sensors = $state.sensors }
+        $o = @{ left = $win.Left; top = $win.Top; topmost = $state.topmost; topmostSet = $state.topmostSet; popup = $state.popup; tray = $state.tray; room = $state.room; size = $state.size; weatherOpen = $state.weatherOpen; drawerOpen = $state.drawerOpen; sound = $state.sound; sparkHours = $state.sparkHours; metric = $state.metric; hidden = @($state.hidden); lang = $state.lang; hist = $state.hist; hist7 = $state.hist7; sensors = $state.sensors }
         ($o | ConvertTo-Json -Depth 4) | Set-Content -Path $stateFile -Encoding UTF8
     } catch { Write-Log ('Speichern: ' + $_.Exception.Message) }
 }
@@ -885,6 +886,16 @@ function Add-Hist([string]$room, $co2, $extra) {
         $cut = $now - 24 * 3600
         $arr = @($arr | Where-Object { [int]($_.Split(':')[0]) -ge $cut })
         $state.hist[$room] = $arr
+        # Wochenverlauf: alle 10 Minuten ein Punkt, 7 Tage lang
+        $a7 = @()
+        if ($state.hist7.ContainsKey($room)) { $a7 = @($state.hist7[$room]) }
+        $l7 = 0
+        if ($a7.Count -gt 0) { $l7 = [int]($a7[$a7.Count - 1].Split(':')[0]) }
+        if (($now - $l7) -ge 600) {
+            $a7 += $arr[$arr.Count - 1]
+            $cut7 = $now - 7 * 24 * 3600
+            $state.hist7[$room] = @($a7 | Where-Object { [int]($_.Split(':')[0]) -ge $cut7 })
+        }
     }
 }
 
@@ -894,10 +905,13 @@ function Show-Spark([string]$room, [string]$col) {
     for ($k = 0; $k -lt 4; $k++) { $ui.('C' + ($k + 1)).Background = Brush $(if ($k -eq $m) { '#55FFFFFF' } else { '#26FFFFFF' }) }
     $lblKey = @('spark_co2', 'spark_dust', 'spark_temp', 'spark_hum')[$m]
     $unit = @('ppm', 'µg', '°C', '%')[$m]
-    $ui.SparkLabel.Text = (T $lblKey $state.sparkHours)
+    $lbl = (T $lblKey $state.sparkHours)
+    if ([int]$state.sparkHours -eq 168) { $lbl = $lbl.Replace('168 Std', (Lx '7 Tage' '7 days')).Replace('168 h', (Lx '7 Tage' '7 days')) }
+    $ui.SparkLabel.Text = $lbl
     $lineCol = @($col, '#C792EA', '#FF8A65', '#4FC3F7')[$m]
     $arr = @()
     if ($state.hist.ContainsKey($room)) { $arr = @($state.hist[$room]) }
+    if ([int]$state.sparkHours -eq 168 -and $state.hist7.ContainsKey($room)) { $arr = @($state.hist7[$room]) }
     $w = 205.0; $h = 62.0
     $now = [double]([DateTimeOffset]::UtcNow.ToUnixTimeSeconds())
     $pts = @()
@@ -1861,7 +1875,7 @@ for ($k = 0; $k -lt 4; $k++) {
     $cb = $ui.('C' + ($k + 1)); $cb.Tag = $k
     $cb.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; $state.metric = [int]$s.Tag; if ($script:last) { Show-Data $script:last }; Save-State })
 }
-$ui.SparkBox.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; if ($state.sparkHours -eq 3) { $state.sparkHours = 24 } else { $state.sparkHours = 3 }; if ($script:last) { Show-Data $script:last }; Save-State })
+$ui.SparkBox.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; if ($state.sparkHours -eq 3) { $state.sparkHours = 24 } elseif ($state.sparkHours -eq 24) { $state.sparkHours = 168 } else { $state.sparkHours = 3 }; if ($script:last) { Show-Data $script:last }; Save-State })
 $ui.Tab.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; $state.drawerOpen = $true; Apply-View; Save-State })
 $ui.DrawerClose.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; $state.drawerOpen = $false; Apply-View; Save-State })
 
