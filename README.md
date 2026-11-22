@@ -6,6 +6,7 @@
 
 A small always-on-top **Windows desktop widget** that shows how good the air is in your rooms and tells you in plain words whether to ventilate. Free and open source (MIT).
 
+- **Simple view by default**: a face, one clear sentence and the rooms, so anyone can use it; all values are one click away ("Details")
 - Traffic-light ring (CO₂), the four readings (CO₂, fine dust, temperature, humidity), a 3 h / 24 h curve with trend, forecast and daily summary
 - Ventilation advice ("open the window", "close it", "wait") with a ventilation timer
 - All rooms at a glance, weather row with a ventilation tip

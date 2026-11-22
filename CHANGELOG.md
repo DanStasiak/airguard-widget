@@ -2,6 +2,11 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [5.0.0] - 2026-11-22
+- New: simple view, now the default. The widget shows only what matters: the face, one clear sentence ("Please open the window") in larger text, the trend, and the rooms. Curve, numbers, weather, sizes and technical notes are one click away behind the "Details" button (top left); "Simple" goes back. Your choice is remembered.
+- New: the device tab on the right edge now says "Lamps & plugs" instead of an arrow.
+- Existing installs start in the simple view after this update; press "Details" once to get your old view back.
+
 ## [4.9.0] - 2026-11-22
 - New: 7-day history. Tap the curve again after 24 hours to see the whole week (one point every 10 minutes, kept on your PC). Works for all four values. The week fills up from now on.
 

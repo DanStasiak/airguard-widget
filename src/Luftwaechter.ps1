@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall)
 
 $appName = 'Luftwaechter'
-$appVersion = '4.9.0'
+$appVersion = '5.0.0'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -337,7 +337,7 @@ function Write-Log([string]$m) {
         Add-Content -Path $logFile -Value ((Get-Date).ToString('yyyy-MM-dd HH:mm:ss') + '  ' + $m) -Encoding UTF8
     } catch {}
 }
-$state = @{ left = $null; top = $null; topmost = $false; topmostSet = $false; popup = $true; tray = $true; room = [string]$cfg.defaultRoom; size = 'M'; weatherOpen = $false; drawerOpen = $false; sound = $true; sparkHours = 3; metric = 0; hidden = @(); lang = 'de'; hist = @{}; hist7 = @{}; sensors = @{} }
+$state = @{ left = $null; top = $null; topmost = $false; topmostSet = $false; popup = $true; tray = $true; room = [string]$cfg.defaultRoom; size = 'M'; weatherOpen = $false; drawerOpen = $false; sound = $true; sparkHours = 3; metric = 0; hidden = @(); lang = 'de'; hist = @{}; hist7 = @{}; sensors = @{}; simple = $true }
 try { if ((Get-Culture).TwoLetterISOLanguageName -ne 'de') { $state.lang = 'en' } } catch {}
 if (Test-Path $stateFile) {
     try {
@@ -353,6 +353,7 @@ if (Test-Path $stateFile) {
         if ($null -ne $s.drawerOpen) { $state.drawerOpen = [bool]$s.drawerOpen }
         if ($null -ne $s.sound) { $state.sound = [bool]$s.sound }
         if ($s.sparkHours -eq 24 -or $s.sparkHours -eq 168) { $state.sparkHours = [int]$s.sparkHours }
+        if ($null -ne $s.simple) { $state.simple = [bool]$s.simple }
         if ($s.hist7) { foreach ($p in $s.hist7.PSObject.Properties) { $state.hist7[$p.Name] = @($p.Value) } }
         if ($s.hidden) { $state.hidden = @($s.hidden | ForEach-Object { [string]$_ }) }
         if ($null -ne $s.metric -and [int]$s.metric -ge 0 -and [int]$s.metric -le 3) { $state.metric = [int]$s.metric }
@@ -474,6 +475,10 @@ $script:Strings = @{
     sens_h = @('Luftfeuchte', 'Humidity')
     sens_none = @('keine Sensoren', 'no sensors')
     sens_save = @('Speichern', 'Save')
+    mode_more = @('Details', 'Details')
+    mode_simple = @('Einfach', 'Simple')
+    mode_tip = @('Zwischen einfacher Ansicht und allen Details wechseln', 'Switch between the simple view and all details')
+    tab_lbl = @('Lampen & Steckdosen', 'Lamps & plugs')
     m_ha = @('Mit Home Assistant verbinden…', 'Connect to Home Assistant…')
     ha_title = @('Mit Home Assistant verbinden', 'Connect to Home Assistant')
     ha_intro = @('Trage die Adresse deines Home Assistant und einen langlebigen Zugangstoken ein. Den Token erstellst du in Home Assistant unter Profil → Sicherheit → Langlebige Zugangstoken. Er wird verschlüsselt auf diesem PC gespeichert (nur für dein Windows-Konto).', 'Enter the address of your Home Assistant and a long-lived access token. Create the token in Home Assistant under Profile → Security → Long-lived access tokens. It is stored encrypted on this PC (only for your Windows account).')
@@ -525,7 +530,7 @@ $script:Strings = @{
     h2 = @('Farben und Ring', 'Colors and ring')
     b2 = @('Grün = gut, gelb = mittel, rot = schlecht. Die Farbe richtet sich nach dem schlechtesten der vier Messwerte. Der Ring zeigt den CO₂-Wert: je voller, desto besser. Grenzen: CO₂ unter 1000 ppm ist gut, bis 1500 mittel, darüber schlecht. Feinstaub unter 20 µg ist gut, bis 50 mittel. Temperatur 17–23 °C und Luftfeuchte 30–60 % sind gut. In allen Räumen gelten dieselben Grenzen.', 'Green = good, yellow = fair, red = poor. The color follows the worst of the four readings. The ring shows the CO₂ value: the fuller, the better. Limits: CO₂ below 1000 ppm is good, up to 1500 fair, above that poor. Fine dust below 20 µg is good, up to 50 fair. Temperature 17–23 °C and humidity 30–60 % are good. The same limits apply in every room.')
     h3 = @('Der Rat: lüften oder nicht', 'The advice: ventilate or not')
-    b3 = @('Das große Feld sagt, was zu tun ist: Fenster öffnen, offen lassen, schließen oder noch warten (z. B. bei Unwetter). Ist das Fenster offen, zeigt ein Balken, wie lange noch gelüftet werden soll. In Räumen ohne Fensterkontakt tippst du auf das Feld: Dann startet ein Lüftungs-Timer, und am Ende kommt ein Ton. Nach dem Lüften steht kurz da, wie sich der CO₂-Wert verbessert hat. Nachts (22–7 Uhr) ist das Fenster abgedunkelt, und es gibt keinen Hinweiston.', 'The large panel tells you what to do: open the window, keep it open, close it, or wait a bit (for example during a storm). When the window is open, a bar shows how much longer to ventilate. In rooms without a window contact, tap the panel: a ventilation timer starts and a sound plays at the end. After ventilating, the panel briefly shows how the CO₂ value improved. At night (22:00–07:00) the window is dimmed and there is no alert sound.')
+    b3 = @('Oben links wechselt der Knopf „Details“ / „Einfach“ zwischen der ruhigen Ansicht (nur Gesicht, Satz und Räume) und allen Werten. Das große Feld sagt, was zu tun ist: Fenster öffnen, offen lassen, schließen oder noch warten (z. B. bei Unwetter). Ist das Fenster offen, zeigt ein Balken, wie lange noch gelüftet werden soll. In Räumen ohne Fensterkontakt tippst du auf das Feld: Dann startet ein Lüftungs-Timer, und am Ende kommt ein Ton. Nach dem Lüften steht kurz da, wie sich der CO₂-Wert verbessert hat. Nachts (22–7 Uhr) ist das Fenster abgedunkelt, und es gibt keinen Hinweiston.', 'The button at the top left ("Details" / "Simple") switches between the calm view (just the face, one sentence and the rooms) and all values. The large panel tells you what to do: open the window, keep it open, close it, or wait a bit (for example during a storm). When the window is open, a bar shows how much longer to ventilate. In rooms without a window contact, tap the panel: a ventilation timer starts and a sound plays at the end. After ventilating, the panel briefly shows how the CO₂ value improved. At night (22:00–07:00) the window is dimmed and there is no alert sound.')
     h4 = @('Kurve, Trend und Tagesbilanz', 'Curve, trend and daily summary')
     b4 = @('Die Kurve zeigt den CO₂-Verlauf der letzten 3 Stunden; die Linie markiert 1000 ppm. Ein Tipp auf die Kurve wechselt zu 24 Stunden, ein weiterer zu 7 Tagen und dann wieder zurück. Links daneben steht der Trend (steigt, sinkt, stabil) und, wenn möglich, eine Prognose, z. B. wann die Luft wieder gut ist. Die Tagesbilanz nennt Höchstwert, Durchschnitt und den Anteil der Zeit unter 1000 ppm. Die Werte werden auf deinem PC gesammelt und bleiben beim Neustart erhalten. Tippe auf einen der vier Werte (CO₂, Feinstaub, Temperatur, Luftfeuchte), dann zeigt die Kurve diesen Wert.', 'The curve shows the CO₂ history of the last 3 hours; the line marks 1000 ppm. Tap the curve to switch to 24 hours, again for 7 days, and once more to go back. The trend (rising, falling, steady) and, when possible, a forecast such as when the air will be good again, appear under the ring. The daily summary gives the peak, the average and the share of time below 1000 ppm. The data is collected on your PC and kept across restarts. Tap one of the four values (CO₂, fine dust, temperature, humidity) and the curve shows that value instead.')
     h5 = @('Die vier Messwerte', 'The four readings')
@@ -576,7 +581,7 @@ $xaml = @"
           </StackPanel>
         </Border>
         <DockPanel Margin="2,8,0,0">
-          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+          <StackPanel x:Name="SzBox" DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
             <TextBlock x:Name="SzS" Text="S" Foreground="#FFA9B4C4" FontSize="12" Cursor="Hand"/><TextBlock Text=" · " Foreground="#FFA9B4C4" FontSize="12"/>
             <TextBlock x:Name="SzM" Text="M" Foreground="#FFA9B4C4" FontSize="12" Cursor="Hand"/><TextBlock Text=" · " Foreground="#FFA9B4C4" FontSize="12"/>
             <TextBlock x:Name="SzL" Text="L" Foreground="#FFA9B4C4" FontSize="12" Cursor="Hand"/><TextBlock Text=" · " Foreground="#FFA9B4C4" FontSize="12"/>
@@ -587,6 +592,7 @@ $xaml = @"
           <Border x:Name="BtnLang" DockPanel.Dock="Left" Height="22" CornerRadius="11" Background="#33FFFFFF" Padding="8,0" Margin="6,0,0,0" Cursor="Hand">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center"><TextBlock x:Name="LangDe" Text="DE" FontSize="12" Foreground="#FFA9B4C4"/><TextBlock Text=" | " FontSize="12" Foreground="#FFA9B4C4"/><TextBlock x:Name="LangEn" Text="EN" FontSize="12" Foreground="#FFA9B4C4"/></StackPanel>
           </Border>
+          <Border x:Name="BtnMode" DockPanel.Dock="Left" Height="22" CornerRadius="11" Background="#44FFFFFF" Padding="10,0" Margin="6,0,0,0" Cursor="Hand"><TextBlock x:Name="BtnModeT" Foreground="White" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/></Border>
           <TextBlock x:Name="Time" Foreground="#FFB4BFCE" FontSize="12" Margin="10,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
         </DockPanel>
       </StackPanel>
@@ -625,7 +631,7 @@ $xaml = @"
         </Border>
       </Grid>
       <StackPanel x:Name="Details">
-        <Grid Margin="0,10,0,0">
+        <Grid x:Name="GrpTiles" Margin="0,10,0,0">
           <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
           <Border x:Name="SparkBox" Grid.Column="0" CornerRadius="12" Background="#26000000" Padding="8,6" Margin="0,3,6,3" Cursor="Hand" ToolTip="Tippen: 3 Std / 24 Std">
             <StackPanel>
@@ -665,8 +671,8 @@ $xaml = @"
             <Border CornerRadius="10" Background="#33000000" Padding="10,6" Margin="3,6,3,0"><TextBlock x:Name="WTip" Foreground="White" FontSize="13" TextWrapping="Wrap"/></Border>
           </StackPanel>
         </Border>
-        <DockPanel Margin="2,8,0,0"><TextBlock x:Name="Ver" Cursor="Hand" DockPanel.Dock="Right" Foreground="#FFB4BFCE" FontSize="11" FontWeight="SemiBold" Margin="8,0,0,0"/><TextBlock x:Name="Footer" Foreground="#FFA9B4C4" FontSize="11" TextTrimming="CharacterEllipsis"/></DockPanel>
-        <DockPanel Margin="2,5,0,0">
+        <DockPanel x:Name="GrpFoot" Margin="2,8,0,0"><TextBlock x:Name="Ver" Cursor="Hand" DockPanel.Dock="Right" Foreground="#FFB4BFCE" FontSize="11" FontWeight="SemiBold" Margin="8,0,0,0"/><TextBlock x:Name="Footer" Foreground="#FFA9B4C4" FontSize="11" TextTrimming="CharacterEllipsis"/></DockPanel>
+        <DockPanel x:Name="GrpUpd" Margin="2,5,0,0">
           <Border x:Name="BtnUpd" DockPanel.Dock="Right" CornerRadius="9" Background="#33FFFFFF" Padding="9,2" Margin="8,0,0,0" Cursor="Hand"><TextBlock x:Name="BtnUpdT" Text="⟳ Update" Foreground="White" FontSize="11" FontWeight="SemiBold"/></Border>
           <TextBlock x:Name="Copy" Foreground="#FFA9B4C4" FontSize="11" Cursor="Hand" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
         </DockPanel>
@@ -682,7 +688,7 @@ $xaml = @"
     </StackPanel>
   </Border>
   <Border x:Name="Tab" Width="28" Height="120" CornerRadius="0,16,16,0" Background="#FF2A3342" BorderThickness="0,2,2,2" BorderBrush="#FF7A8594" Margin="-2,0,0,0" VerticalAlignment="Center" Cursor="Hand">
-    <TextBlock Text="›" Foreground="White" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+    <Grid><TextBlock x:Name="TabArr" Text="›" Foreground="White" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/><TextBlock x:Name="TabLbl" Foreground="White" FontSize="13" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"><TextBlock.LayoutTransform><RotateTransform Angle="90"/></TextBlock.LayoutTransform></TextBlock></Grid>
   </Border>
   <Border x:Name="Drawer" Width="340" CornerRadius="0,24,24,0" Background="#FF1B222D" BorderThickness="0,2,2,2" BorderBrush="#FF7A8594" Margin="-2,0,0,0" Visibility="Collapsed">
     <StackPanel Margin="16,14,16,12">
@@ -699,7 +705,7 @@ $xaml = @"
 $win = [Windows.Markup.XamlReader]::Load((New-Object System.Xml.XmlNodeReader ([xml]$xaml)))
 $conv = New-Object Windows.Media.BrushConverter
 function Brush([string]$hex) { return $conv.ConvertFromString($hex) }
-$names = @('Scaler', 'Card', 'Ver', 'RoomStrip', 'SparkBox', 'SparkLabel', 'Glow', 'WOut', 'WOutB', 'TitleBox', 'RoomName', 'RoomSub', 'TitleTag', 'Time', 'SzS', 'SzM', 'SzL', 'SzC', 'SzP', 'BtnHelp', 'BtnLang', 'LangDe', 'LangEn', 'WMoreT', 'WLessT', 'WTitleT', 'Help', 'HelpClose', 'HelpTitle', 'HelpScroll', 'HelpBody', 'HelpVer', 'BtnUpd', 'BtnUpdT', 'Copy', 'Pill', 'PillDot', 'PillText', 'Arc', 'Face', 'Level', 'Trend', 'Panel', 'IcClosed', 'IcOpen', 'Headline', 'Detail', 'BarTrack', 'BarFill', 'Details', 'Spark', 'SparkR', 'Peak', 'WLine', 'WMore', 'WLineText', 'WFull', 'WLess', 'WIcon', 'WTemp', 'WCond', 'WTip', 'Footer', 'Tab', 'Drawer', 'DrawerClose', 'DrawerTitle', 'DevPanel')
+$names = @('GrpTiles', 'GrpFoot', 'GrpUpd', 'SzBox', 'BtnMode', 'BtnModeT', 'TabArr', 'TabLbl', 'Scaler', 'Card', 'Ver', 'RoomStrip', 'SparkBox', 'SparkLabel', 'Glow', 'WOut', 'WOutB', 'TitleBox', 'RoomName', 'RoomSub', 'TitleTag', 'Time', 'SzS', 'SzM', 'SzL', 'SzC', 'SzP', 'BtnHelp', 'BtnLang', 'LangDe', 'LangEn', 'WMoreT', 'WLessT', 'WTitleT', 'Help', 'HelpClose', 'HelpTitle', 'HelpScroll', 'HelpBody', 'HelpVer', 'BtnUpd', 'BtnUpdT', 'Copy', 'Pill', 'PillDot', 'PillText', 'Arc', 'Face', 'Level', 'Trend', 'Panel', 'IcClosed', 'IcOpen', 'Headline', 'Detail', 'BarTrack', 'BarFill', 'Details', 'Spark', 'SparkR', 'Peak', 'WLine', 'WMore', 'WLineText', 'WFull', 'WLess', 'WIcon', 'WTemp', 'WCond', 'WTip', 'Footer', 'Tab', 'Drawer', 'DrawerClose', 'DrawerTitle', 'DevPanel')
 for ($i = 1; $i -le 4; $i++) { $names += @("C$i", "D$i", "V$i", "K$i", "WK$i", "WV$i") }
 $ui = @{}
 foreach ($n in $names) { $ui[$n] = $win.FindName($n) }
@@ -807,7 +813,7 @@ $script:helpOpen = $false
 
 function Save-State {
     try {
-        $o = @{ left = $win.Left; top = $win.Top; topmost = $state.topmost; topmostSet = $state.topmostSet; popup = $state.popup; tray = $state.tray; room = $state.room; size = $state.size; weatherOpen = $state.weatherOpen; drawerOpen = $state.drawerOpen; sound = $state.sound; sparkHours = $state.sparkHours; metric = $state.metric; hidden = @($state.hidden); lang = $state.lang; hist = $state.hist; hist7 = $state.hist7; sensors = $state.sensors }
+        $o = @{ left = $win.Left; top = $win.Top; topmost = $state.topmost; topmostSet = $state.topmostSet; popup = $state.popup; tray = $state.tray; room = $state.room; size = $state.size; weatherOpen = $state.weatherOpen; drawerOpen = $state.drawerOpen; sound = $state.sound; sparkHours = $state.sparkHours; metric = $state.metric; hidden = @($state.hidden); lang = $state.lang; hist = $state.hist; hist7 = $state.hist7; sensors = $state.sensors; simple = $state.simple }
         ($o | ConvertTo-Json -Depth 4) | Set-Content -Path $stateFile -Encoding UTF8
     } catch { Write-Log ('Speichern: ' + $_.Exception.Message) }
 }
@@ -1192,6 +1198,27 @@ function Build-Strip {
 }
 
 # ---------- Ansicht ----------
+function Apply-Simple {
+    $sm = [bool]$state.simple
+    $ui.BtnModeT.Text = $(if ($sm) { T 'mode_more' } else { T 'mode_simple' })
+    $ui.BtnMode.ToolTip = (T 'mode_tip')
+    $ui.TabLbl.Text = (T 'tab_lbl')
+    if ($script:compact) { return }
+    $hide = $(if ($sm) { 'Collapsed' } else { 'Visible' })
+    foreach ($n in 'GrpTiles', 'Peak', 'GrpFoot', 'SzBox', 'Time') { $ui.$n.Visibility = $hide }
+    if ($sm) { $ui.WLine.Visibility = 'Collapsed'; $ui.WFull.Visibility = 'Collapsed' }
+    elseif ($state.weatherOpen) { $ui.WLine.Visibility = 'Collapsed'; $ui.WFull.Visibility = 'Visible' } else { $ui.WLine.Visibility = 'Visible'; $ui.WFull.Visibility = 'Collapsed' }
+    if ($sm) {
+        $ui.Copy.Visibility = 'Collapsed'
+        if ($script:newVer) { $ui.GrpUpd.Visibility = 'Visible' } else { $ui.GrpUpd.Visibility = 'Collapsed' }
+        $ui.Headline.FontSize = 26; $ui.Detail.FontSize = 16; $ui.Level.FontSize = 28; $ui.Trend.FontSize = 14
+        $ui.TabArr.Visibility = 'Collapsed'; $ui.TabLbl.Visibility = 'Visible'; $ui.Tab.Height = 170; $ui.Tab.Width = 34
+    } else {
+        $ui.Copy.Visibility = 'Visible'; $ui.GrpUpd.Visibility = 'Visible'
+        $ui.Headline.FontSize = 22; $ui.Detail.FontSize = 13; $ui.Level.FontSize = 24; $ui.Trend.FontSize = 12
+        $ui.TabArr.Visibility = 'Visible'; $ui.TabLbl.Visibility = 'Collapsed'; $ui.Tab.Height = 120; $ui.Tab.Width = 28
+    }
+}
 function Apply-View {
     $scale = 1.0
     switch ($state.size) { 'S' { $scale = 0.82 } 'L' { $scale = 1.2 } default { $scale = 1.0 } }
@@ -1208,6 +1235,7 @@ function Apply-View {
         if ($state.weatherOpen) { $ui.WLine.Visibility = 'Collapsed'; $ui.WFull.Visibility = 'Visible' } else { $ui.WLine.Visibility = 'Visible'; $ui.WFull.Visibility = 'Collapsed' }
         if ($state.drawerOpen) { $ui.Drawer.Visibility = 'Visible'; $ui.Tab.Visibility = 'Collapsed' } else { $ui.Drawer.Visibility = 'Collapsed'; $ui.Tab.Visibility = 'Visible' }
     }
+    Apply-Simple
     if ($script:helpOpen) { $ui.Help.Visibility = 'Visible'; $ui.Card.Visibility = 'Collapsed'; $ui.Pill.Visibility = 'Collapsed'; $ui.Drawer.Visibility = 'Collapsed'; $ui.Tab.Visibility = 'Collapsed' } else { $ui.Help.Visibility = 'Collapsed' }
     if ($scale -eq 1.0) { [System.Windows.Media.TextOptions]::SetTextFormattingMode($win, [System.Windows.Media.TextFormattingMode]::Display) } else { [System.Windows.Media.TextOptions]::SetTextFormattingMode($win, [System.Windows.Media.TextFormattingMode]::Ideal) }
     $win.UpdateLayout()
@@ -1876,6 +1904,7 @@ for ($k = 0; $k -lt 4; $k++) {
     $cb.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; $state.metric = [int]$s.Tag; if ($script:last) { Show-Data $script:last }; Save-State })
 }
 $ui.SparkBox.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; if ($state.sparkHours -eq 3) { $state.sparkHours = 24 } elseif ($state.sparkHours -eq 24) { $state.sparkHours = 168 } else { $state.sparkHours = 3 }; if ($script:last) { Show-Data $script:last }; Save-State })
+$ui.BtnMode.Add_MouseLeftButtonUp({ $state.simple = -not [bool]$state.simple; Apply-View; Save-State })
 $ui.Tab.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; $state.drawerOpen = $true; Apply-View; Save-State })
 $ui.DrawerClose.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; $state.drawerOpen = $false; Apply-View; Save-State })
 
@@ -1958,6 +1987,7 @@ $script:newVer = $null
 function Set-UpdateButton {
     if ($script:newVer) { $ui.BtnUpdT.Text = (T 'upd_new' ('v' + $script:newVer)); $ui.BtnUpd.Background = Brush '#FF2E9E5B' }
     else { $ui.BtnUpdT.Text = (T 'upd_btn'); $ui.BtnUpd.Background = Brush '#33FFFFFF' }
+    Apply-Simple
 }
 function Get-LatestRelease {
     $api = 'https://api.github.com/repos/' + $repoOwner + '/' + $repoName + '/releases/latest'
