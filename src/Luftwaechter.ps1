@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall)
 
 $appName = 'Luftwaechter'
-$appVersion = '3.14.0'
+$appVersion = '3.14.1'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -413,6 +413,12 @@ $popTimer.Add_Tick({ $popTimer.Stop(); $win.Topmost = [bool]$state.topmost })
 $script:tray = $null
 $script:trayIcons = @{}
 $script:lastBalloon = (Get-Date).AddHours(-2)
+function Exit-App {
+    try { Save-State } catch {}
+    Close-Tray
+    try { $mutex.ReleaseMutex() } catch {}
+    [Environment]::Exit(0)
+}
 function Show-Window {
     try {
         $win.Show()
@@ -445,7 +451,7 @@ function Init-Tray {
         $script:trayMiOpen = $cm.Items.Add('Luftwächter')
         $script:trayMiExit = $cm.Items.Add('Exit')
         $script:trayMiOpen.Add_Click({ Show-Window })
-        $script:trayMiExit.Add_Click({ $win.Close() })
+        $script:trayMiExit.Add_Click({ Exit-App })
         $script:tray.ContextMenuStrip = $cm
         $script:tray.Add_MouseClick({ param($s, $e) if ($e.Button -eq [System.Windows.Forms.MouseButtons]::Left) { Show-Window } })
         $script:tray.Icon = (Get-TrayIcon '#9AA5B1').icon
@@ -1072,7 +1078,7 @@ $miPop.Add_Click({ $state.popup = [bool]$miPop.IsChecked; Save-State })
 $miLog.Add_Click({ try { if (-not (Test-Path $logFile)) { Set-Content -Path $logFile -Value (T 'no_errors') -Encoding UTF8 }; Start-Process notepad.exe -ArgumentList ('"' + $logFile + '"') } catch {} })
 $miReset.Add_Click({ $w0 = [System.Windows.SystemParameters]::WorkArea; $win.Left = [Math]::Max($w0.Left, $w0.Right - $win.ActualWidth - 20); $win.Top = $w0.Top + 20; Save-State })
 $miSound.Add_Click({ $state.sound = $miSound.IsChecked; Save-State })
-$miExit.Add_Click({ $win.Close() })
+$miExit.Add_Click({ Exit-App })
 $miHelp.Add_Click({ $script:helpOpen = $true; Apply-View })
 $miCfg.Add_Click({ try { if (-not (Test-Path $cfgFile)) { Copy-Item (Join-Path $dir 'config.example.json') $cfgFile }; Start-Process notepad.exe -ArgumentList ('"' + $cfgFile + '"') } catch { Write-Log ('Konfig: ' + $_.Exception.Message) } })
 $miUpd.Add_Click({ Invoke-UpdateFlow $true })
@@ -1273,4 +1279,4 @@ Write-Log ('Start ' + $version)
 Update-Widget
 $timer.Start(); $pulseTimer.Start(); $saveTimer.Start(); $firstCheck.Start(); $checkTimer.Start()
 [void]$win.ShowDialog()
-$mutex.ReleaseMutex()
+Exit-App

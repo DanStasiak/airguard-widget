@@ -2,6 +2,9 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [3.14.1] - 2026-11-22
+- Fix: quitting via the tray icon or the menu now ends the program completely (it could stay running invisibly and block a restart). Quit always releases the tray icon and the single-instance lock.
+
 ## [3.14.0] - 2026-11-22
 - New: tray icon next to the clock. A colored dot shows the air in the current room (green good, yellow fair, red poor); hover for room, CO2 and advice. Click it to bring the widget to the front, even when it is behind other windows or minimized. Right-click for Open / Exit.
 - New: a small Windows notification appears when ventilation is needed (07:00-22:00, at most every 30 minutes).
