@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall, [switch]$SmokeTest)
 
 $appName = 'Luftwaechter'
-$appVersion = '5.14.0'
+$appVersion = '5.15.0'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -357,6 +357,7 @@ if (Test-Path $stateFile) {
         if ($null -ne $s.sound) { $state.sound = [bool]$s.sound }
         if ($s.sparkHours -eq 24 -or $s.sparkHours -eq 168) { $state.sparkHours = [int]$s.sparkHours }
         if ($s.seenVer) { $state.seenVer = [string]$s.seenVer }
+        if ($s.snooze) { $state.snooze = [string]$s.snooze }
         if ($s.theme) { $state.theme = [string]$s.theme }
         if ($null -ne $s.demo) { $state.demo = [bool]$s.demo }
         if ($null -ne $s.tourDone) { $state.tourDone = [bool]$s.tourDone }
@@ -524,12 +525,14 @@ $script:Strings = @{
     m_theme_day = @('Design: Tag', 'Theme: Day')
     m_theme_night = @('Design: Nacht', 'Theme: Night')
     m_snooze = @('Ruhe für 1 Stunde', 'Quiet for 1 hour')
+    m_snooze_m = @('Ruhe bis morgen früh', 'Quiet until tomorrow morning')
     m_snooze_off = @('Ruhe beenden (bis {0})', 'End quiet time (until {0})')
     m_export = @('Verlauf als CSV speichern (7 Tage)', 'Save history as CSV (7 days)')
     stale2 = @('Letzte Werte von {0} (vor {1} Min). Es wird weiter versucht.', 'Last values from {0} ({1} min ago). Still trying.')
+    offline_tip = @('Luftwächter · offline', 'Luftwächter · offline')
     quiet_tag = @('🔕 Ruhe bis {0}', '🔕 Quiet until {0}')
     h18 = @('Tastatur', 'Keyboard')
-    b18 = @('Klicke einmal auf das Widget, dann: ← / → anderer Raum · D einfache Ansicht oder Details · + / − größer oder kleiner · F5 sofort aktualisieren · Esc schließt Hilfe und Geräte-Fenster. Beim Verschieben rastet das Widget an den Bildschirmrändern ein.', 'Click the widget once, then: ← / → other room · D simple view or details · + / − bigger or smaller · F5 refresh now · Esc closes help and the device panel. When you move the widget it snaps to the screen edges.')
+    b18 = @('Klicke einmal auf das Widget, dann: ← / → anderer Raum · D einfache Ansicht oder Details · + / − größer oder kleiner · F5 sofort aktualisieren · Strg+C Werte kopieren · Q Ruhe an/aus · T Design wechseln · F1 Hilfe · Esc schließt Hilfe und Geräte-Fenster. Beim Verschieben rastet das Widget an den Bildschirmrändern ein.', 'Click the widget once, then: ← / → other room · D simple view or details · + / − bigger or smaller · F5 refresh now · Ctrl+C copy readings · Q quiet on/off · T switch theme · F1 help · Esc closes help and the device panel. When you move the widget it snaps to the screen edges.')
     week_tag = @(' · Woche: {0} %', ' · week: {0} %')
     m_copy = @('Werte kopieren', 'Copy readings')
     news_h = @('Neu in Version {0}', 'New in version {0}')
@@ -822,9 +825,11 @@ function Init-Tray {
         $script:trayMiOpen = $cm.Items.Add('Luftwächter')
         $script:trayMiRefresh = $cm.Items.Add('Refresh now')
         $script:trayMiQuiet = $cm.Items.Add('Quiet for 1 hour')
-        $script:trayMiExit = $cm.Items.Add('Exit')
         $script:trayMiRefresh.Add_Click({ Update-Widget })
-        $script:trayMiQuiet.Add_Click({ if (Test-Snooze) { $script:snoozeUntil = $null } else { $script:snoozeUntil = (Get-Date).AddHours(1) }; Apply-Lang; if ($script:last) { Show-Data $script:last } })
+        $script:trayMiQuiet.Add_Click({ Toggle-Snooze })
+        $script:trayMiQuietM = $cm.Items.Add('Quiet until tomorrow morning')
+        $script:trayMiQuietM.Add_Click({ Set-Snooze 'morning' })
+        $script:trayMiExit = $cm.Items.Add('Exit')
         $script:trayMiOpen.Add_Click({ Show-Window })
         $script:trayMiExit.Add_Click({ Exit-App })
         $script:tray.ContextMenuStrip = $cm
@@ -865,7 +870,7 @@ $script:helpOpen = $false
 
 function Save-State {
     try {
-        $o = @{ left = $win.Left; top = $win.Top; topmost = $state.topmost; topmostSet = $state.topmostSet; popup = $state.popup; tray = $state.tray; room = $state.room; size = $state.size; weatherOpen = $state.weatherOpen; drawerOpen = $state.drawerOpen; sound = $state.sound; sparkHours = $state.sparkHours; metric = $state.metric; hidden = @($state.hidden); lang = $state.lang; hist = $state.hist; hist7 = $state.hist7; sensors = $state.sensors; simple = $state.simple; tourDone = $state.tourDone; demo = $state.demo; theme = $state.theme; seenVer = $state.seenVer }
+        $o = @{ left = $win.Left; top = $win.Top; topmost = $state.topmost; topmostSet = $state.topmostSet; popup = $state.popup; tray = $state.tray; room = $state.room; size = $state.size; weatherOpen = $state.weatherOpen; drawerOpen = $state.drawerOpen; sound = $state.sound; sparkHours = $state.sparkHours; metric = $state.metric; hidden = @($state.hidden); lang = $state.lang; hist = $state.hist; hist7 = $state.hist7; sensors = $state.sensors; simple = $state.simple; tourDone = $state.tourDone; demo = $state.demo; theme = $state.theme; seenVer = $state.seenVer; snooze = [string]$state.snooze }
         ($o | ConvertTo-Json -Depth 4) | Set-Content -Path $stateFile -Encoding UTF8
     } catch { Write-Log ('Speichern: ' + $_.Exception.Message) }
 }
@@ -1376,6 +1381,26 @@ function Export-History {
     } catch { Write-Log ('Export: ' + $_.Exception.Message) }
 }
 $script:snoozeUntil = $null
+try { if ($state.snooze) { $sn0 = [datetime]::Parse([string]$state.snooze, [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::RoundtripKind); if ($sn0 -gt (Get-Date)) { $script:snoozeUntil = $sn0 } } } catch {}
+function Set-Snooze([string]$mode) {
+    if ($mode -eq 'off') { $script:snoozeUntil = $null }
+    elseif ($mode -eq 'morning') { $t0 = (Get-Date).Date.AddHours(7); if ($t0 -le (Get-Date).AddMinutes(30)) { $t0 = $t0.AddDays(1) }; $script:snoozeUntil = $t0 }
+    else { $script:snoozeUntil = (Get-Date).AddHours(1) }
+    $state.snooze = $(if ($script:snoozeUntil) { $script:snoozeUntil.ToString('o') } else { '' })
+    Save-State; Apply-Lang; if ($script:last) { Show-Data $script:last }
+}
+function Toggle-Snooze { if (Test-Snooze) { Set-Snooze 'off' } else { Set-Snooze 'hour' } }
+function Clamp-ToScreen {
+    $vl = [System.Windows.SystemParameters]::VirtualScreenLeft; $vt = [System.Windows.SystemParameters]::VirtualScreenTop
+    $vr = $vl + [System.Windows.SystemParameters]::VirtualScreenWidth; $vb = $vt + [System.Windows.SystemParameters]::VirtualScreenHeight
+    $w1 = [Math]::Max($win.ActualWidth, 120); $h1 = [Math]::Max($win.ActualHeight, 60)
+    $moved = $false
+    if ($win.Left + $w1 -lt $vl + 60 -or $win.Left -gt $vr - 60 -or $win.Top + $h1 -lt $vt + 40 -or $win.Top -gt $vb - 40) {
+        $w0 = [System.Windows.SystemParameters]::WorkArea
+        $win.Left = [Math]::Max($w0.Left, $w0.Right - $w1 - 20); $win.Top = $w0.Top + 20; $moved = $true
+    }
+    return $moved
+}
 function Test-Snooze { return ($null -ne $script:snoozeUntil -and (Get-Date) -lt $script:snoozeUntil) }
 function Show-Data($d) {
     $ui.TitleTag.Text = $(if (Test-Snooze) { T 'quiet_tag' ($script:snoozeUntil.ToString('HH:mm')) } else { T 'tagline' })
@@ -2027,6 +2052,7 @@ function Apply-Theme {
     $script:nightOn = $night
 }
 function Update-Widget {
+    if (Clamp-ToScreen) { Write-Log 'Fenster zurück auf den Bildschirm geholt'; Save-State }
     if ($state.demo) { try { $d = Get-DemoData ([string]$state.room); $script:fails = 0; $script:last = $d; Show-Data $d } catch { Write-Log ('Demo: ' + $_.Exception.Message) }; return }
     if (-not $script:haMode -and $url -notmatch '^https?://') { Show-Setup; return }
     try {
@@ -2055,6 +2081,7 @@ function Update-Widget {
             $ui.Panel.Background = Brush '#FF494E57'
             $ui.Headline.Text = (T 'no_conn')
             $script:pulse = $false
+            if ($script:tray -and $state.tray) { try { $script:tray.Icon = (Get-TrayIcon '#7A8594').icon; $script:tray.Text = (T 'offline_tip') } catch {} }
             if ($script:last) {
                 if ($script:lastOkAt) { $ui.Detail.Text = (T 'stale2' $script:lastOkAt.ToString('HH:mm') ([int][Math]::Floor(((Get-Date) - $script:lastOkAt).TotalMinutes))) } else { $ui.Detail.Text = (T 'stale') }
                 $ui.Time.Text = (T 'asof') + [string]$script:last.updated
@@ -2116,6 +2143,10 @@ $win.Add_KeyDown({ param($s, $e)
         'Right' { Switch-Room 1; $e.Handled = $true }
         'D' { Toggle-Mode; $e.Handled = $true }
         'F5' { Update-Widget; $e.Handled = $true }
+        'F1' { $script:helpOpen = -not $script:helpOpen; if ($script:helpOpen) { Build-Help }; Apply-View; $e.Handled = $true }
+        'Q' { Toggle-Snooze; $e.Handled = $true }
+        'T' { $state.theme = $(switch ([string]$state.theme) { 'auto' { 'day' } 'day' { 'night' } default { 'auto' } }); Apply-Theme; Save-State; Apply-Lang; $e.Handled = $true }
+        'C' { if ([System.Windows.Input.Keyboard]::Modifiers -band [System.Windows.Input.ModifierKeys]::Control) { Copy-Readings; $e.Handled = $true } }
         'Escape' { $script:helpOpen = $false; $state.drawerOpen = $false; Apply-View; $e.Handled = $true }
         { $_ -eq 'OemPlus' -or $_ -eq 'Add' } { Step-Size 1; $e.Handled = $true }
         { $_ -eq 'OemMinus' -or $_ -eq 'Subtract' } { Step-Size -1; $e.Handled = $true }
@@ -2186,7 +2217,9 @@ $miHa.Add_Click({ Show-HaDialog })
 $miMode.Add_Click({ Toggle-Mode })
 $miCopy.Add_Click({ Copy-Readings })
 $miExport.Add_Click({ Export-History })
-$miSnooze.Add_Click({ if (Test-Snooze) { $script:snoozeUntil = $null } else { $script:snoozeUntil = (Get-Date).AddHours(1) }; Apply-Lang; if ($script:last) { Show-Data $script:last } })
+$miSnooze.Add_Click({ Toggle-Snooze })
+$miSnoozeM = New-Object System.Windows.Controls.MenuItem
+$miSnoozeM.Add_Click({ Set-Snooze 'morning' })
 $miTheme.Add_Click({ $state.theme = $(switch ([string]$state.theme) { 'auto' { 'day' } 'day' { 'night' } default { 'auto' } }); Apply-Theme; Save-State; Apply-Lang })
 $miDemo.Add_Click({ $state.demo = -not [bool]$state.demo; $state.room = ''; Save-State; Apply-Lang; Update-Widget })
 $miHaSup.Add_Click({ try { Start-Process 'https://www.home-assistant.io/' } catch {} })
@@ -2204,7 +2237,7 @@ $miSens.Add_Click({ Show-SensorDialog })
 $miHelp.Add_Click({ $script:helpOpen = $true; Apply-View })
 $miCfg.Add_Click({ try { if (-not (Test-Path $cfgFile)) { Copy-Item (Join-Path $dir 'config.example.json') $cfgFile }; Start-Process notepad.exe -ArgumentList ('"' + $cfgFile + '"') } catch { Write-Log ('Konfig: ' + $_.Exception.Message) } })
 $miUpd.Add_Click({ Invoke-UpdateFlow $true })
-[void]$menu.Items.Add($miMode); [void]$menu.Items.Add($miSnooze); [void]$menu.Items.Add($miBig); [void]$menu.Items.Add($miCopy); [void]$menu.Items.Add($miExport); [void]$menu.Items.Add($miTheme); [void]$menu.Items.Add($miDemo); [void]$menu.Items.Add($miHaSup); [void]$menu.Items.Add($miSmall); [void]$menu.Items.Add($miRefresh); [void]$menu.Items.Add($miTop); [void]$menu.Items.Add($miPop); [void]$menu.Items.Add($miTray); [void]$menu.Items.Add($miSound); [void]$menu.Items.Add($miReset); [void]$menu.Items.Add($miLog); [void]$menu.Items.Add($miHa); [void]$menu.Items.Add($miSens); [void]$menu.Items.Add($miHelp); [void]$menu.Items.Add($miCfg); [void]$menu.Items.Add($miUpd); [void]$menu.Items.Add((New-Object System.Windows.Controls.Separator)); [void]$menu.Items.Add($miExit)
+[void]$menu.Items.Add($miMode); [void]$menu.Items.Add($miSnooze); [void]$menu.Items.Add($miSnoozeM); [void]$menu.Items.Add($miBig); [void]$menu.Items.Add($miCopy); [void]$menu.Items.Add($miExport); [void]$menu.Items.Add($miTheme); [void]$menu.Items.Add($miDemo); [void]$menu.Items.Add($miHaSup); [void]$menu.Items.Add($miSmall); [void]$menu.Items.Add($miRefresh); [void]$menu.Items.Add($miTop); [void]$menu.Items.Add($miPop); [void]$menu.Items.Add($miTray); [void]$menu.Items.Add($miSound); [void]$menu.Items.Add($miReset); [void]$menu.Items.Add($miLog); [void]$menu.Items.Add($miHa); [void]$menu.Items.Add($miSens); [void]$menu.Items.Add($miHelp); [void]$menu.Items.Add($miCfg); [void]$menu.Items.Add($miUpd); [void]$menu.Items.Add((New-Object System.Windows.Controls.Separator)); [void]$menu.Items.Add($miExit)
 $win.ContextMenu = $menu
 
 
@@ -2230,8 +2263,8 @@ function Apply-Lang {
     foreach ($k in 'De', 'En') { $ui.('Lang' + $k).Foreground = Brush '#FFA9B4C4'; $ui.('Lang' + $k).FontWeight = 'Normal' }
     if ($state.lang -eq 'en') { $ui.LangEn.Foreground = Brush '#FFFFFFFF'; $ui.LangEn.FontWeight = 'Bold' } else { $ui.LangDe.Foreground = Brush '#FFFFFFFF'; $ui.LangDe.FontWeight = 'Bold' }
     $miCopy.Header = (T 'm_copy'); $miExport.Header = (T 'm_export');
-    if ($script:trayMiExit) { $script:trayMiExit.Text = (T 'm_exit'); $script:trayMiRefresh.Text = (T 'm_refresh'); $script:trayMiQuiet.Text = $(if (Test-Snooze) { T 'm_snooze_off' ($script:snoozeUntil.ToString('HH:mm')) } else { T 'm_snooze' }) }
- $miSnooze.Header = $(if (Test-Snooze) { T 'm_snooze_off' ($script:snoozeUntil.ToString('HH:mm')) } else { T 'm_snooze' }); $miTheme.Header = $(switch ([string]$state.theme) { 'day' { T 'm_theme_day' } 'night' { T 'm_theme_night' } default { T 'm_theme_auto' } }); $miDemo.Header = $(if ($state.demo) { T 'm_demo_off' } else { T 'm_demo' }); $miHaSup.Header = (T 'm_ha_support'); $miBig.Header = (T 'm_bigger'); $miSmall.Header = (T 'm_smaller'); $miRefresh.Header = (T 'm_refresh'); $miTop.Header = (T 'm_top'); $miPop.Header = (T 'm_pop'); $miTray.Header = (T 'm_tray'); if ($script:trayMiOpen) { $script:trayMiOpen.Text = (T 'tray_open'); $script:trayMiExit.Text = (T 'm_exit') }; $miSound.Header = (T 'm_sound'); $miReset.Header = (T 'm_reset'); $miLog.Header = (T 'm_log'); $miHelp.Header = (T 'm_help'); $miHa.Header = (T 'm_ha'); $miMode.Header = $(if ($state.simple) { T 'm_mode_full' } else { T 'm_mode_simple' }); $miSens.Header = (T 'm_sens'); $miCfg.Header = (T 'm_cfg'); $miUpd.Header = (T 'm_upd'); $miExit.Header = (T 'm_exit')
+    if ($script:trayMiExit) { $script:trayMiExit.Text = (T 'm_exit'); $script:trayMiRefresh.Text = (T 'm_refresh'); $script:trayMiQuietM.Text = (T 'm_snooze_m'); $script:trayMiQuiet.Text = $(if (Test-Snooze) { T 'm_snooze_off' ($script:snoozeUntil.ToString('HH:mm')) } else { T 'm_snooze' }) }
+ $miSnoozeM.Header = (T 'm_snooze_m'); $miSnooze.Header = $(if (Test-Snooze) { T 'm_snooze_off' ($script:snoozeUntil.ToString('HH:mm')) } else { T 'm_snooze' }); $miTheme.Header = $(switch ([string]$state.theme) { 'day' { T 'm_theme_day' } 'night' { T 'm_theme_night' } default { T 'm_theme_auto' } }); $miDemo.Header = $(if ($state.demo) { T 'm_demo_off' } else { T 'm_demo' }); $miHaSup.Header = (T 'm_ha_support'); $miBig.Header = (T 'm_bigger'); $miSmall.Header = (T 'm_smaller'); $miRefresh.Header = (T 'm_refresh'); $miTop.Header = (T 'm_top'); $miPop.Header = (T 'm_pop'); $miTray.Header = (T 'm_tray'); if ($script:trayMiOpen) { $script:trayMiOpen.Text = (T 'tray_open'); $script:trayMiExit.Text = (T 'm_exit') }; $miSound.Header = (T 'm_sound'); $miReset.Header = (T 'm_reset'); $miLog.Header = (T 'm_log'); $miHelp.Header = (T 'm_help'); $miHa.Header = (T 'm_ha'); $miMode.Header = $(if ($state.simple) { T 'm_mode_full' } else { T 'm_mode_simple' }); $miSens.Header = (T 'm_sens'); $miCfg.Header = (T 'm_cfg'); $miUpd.Header = (T 'm_upd'); $miExit.Header = (T 'm_exit')
     $ui.RoomName.Text = 'Luftwächter'; $ui.TitleTag.Text = (T 'tagline')
     $ui.Footer.Text = (Get-FooterText)
     $ui.Copy.Text = $copyright + ' · GitHub'; $ui.Copy.ToolTip = (T 'copy_tip'); $ui.Ver.ToolTip = (T 'ver_tip')
@@ -2510,6 +2543,11 @@ if ($SmokeTest) {
     Smoke 'snap multi-monitor' { $win.Left = [System.Windows.SystemParameters]::WorkArea.Left + 6; Snap-Edges; ([Math]::Abs($win.Left - [System.Windows.SystemParameters]::WorkArea.Left) -lt 1) }
     Smoke 'tray menu texts' { Apply-Lang; ((-not $script:tray) -or ($script:trayMiExit.Text -eq (T 'm_exit'))) }
     Smoke 'CSV export' { $state.hist7['smoke'] = $state.hist['smoke']; Export-History; ($script:lastExport -and (Test-Path $script:lastExport)) }
+    Smoke 'quiet until morning' { Set-Snooze 'morning'; $ok1 = ($script:snoozeUntil -gt (Get-Date).AddMinutes(25) -and $script:snoozeUntil.Hour -eq 7 -and [string]$state.snooze -ne ''); Set-Snooze 'off'; ($ok1 -and -not (Test-Snooze) -and [string]$state.snooze -eq '') }
+    Smoke 'quiet saved' { Set-Snooze 'hour'; $f1 = Get-Content $stateFile -Raw | ConvertFrom-Json; $ok2 = ([string]$f1.snooze -ne ''); Set-Snooze 'off'; $script:snoozeUntil = (Get-Date).AddDays(1); $ok2 }
+    Smoke 'window rescue' { $win.Left = 99999; $win.Top = -99999; $r1 = Clamp-ToScreen; $vr1 = [System.Windows.SystemParameters]::VirtualScreenLeft + [System.Windows.SystemParameters]::VirtualScreenWidth; ($r1 -and $win.Left -lt $vr1 -and $win.Top -ge [System.Windows.SystemParameters]::VirtualScreenTop) }
+    Smoke 'keyboard shortcuts' { $kw = Build-Help; $state.theme = 'auto'; $script:helpOpen = $true; Apply-View; $script:helpOpen = $false; Apply-View; $true }
+    Smoke 'offline tray icon' { $script:fails = 2; $u0 = $url; $state.demo = $false; $script:haMode = $false; $url = 'http://127.0.0.1:9/x'; Update-Widget; $ok3 = ($ui.Level.Text -eq (T 'offline')); $state.demo = $true; $url = $u0; $script:fails = 0; $ok3 }
     Smoke 'no errors logged' {
         $new = @(); if (Test-Path $logFile) { $new = @(Get-Content -Path $logFile -Encoding UTF8 | Select-Object -Skip $l0 | Where-Object { $_ -notmatch 'Start v' }) }
         foreach ($x in $new) { Write-Host ('      log: ' + $x) }

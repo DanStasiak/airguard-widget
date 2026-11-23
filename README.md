@@ -23,11 +23,11 @@ A small always-on-top **Windows desktop widget** that shows how good the air is 
 - **Welcome card** on first start explains the simple view in three sentences; after each update a "What's new" card shows the changes once
 - **Demo mode:** right-click → *Try the demo* shows simulated rooms, so you can try the widget without Home Assistant
 - **Day and night design:** solid, crisp colours; the background gets deeper at night, switchable by right-click → *Theme* (automatic, day, night)
-- **Quiet time:** right-click → *Quiet for 1 hour* mutes pop-up, tray notice and chime for a call or a nap
+- **Quiet time:** right-click → *Quiet for 1 hour* or *until tomorrow morning* mutes pop-up, tray notice and chime for a call or a nap
 - Double-click the title to switch between the simple and the details view
 - **Export:** right-click → *Save history as CSV* saves the last 7 days of all rooms to a file you can open in Excel
-- **Keyboard:** ← / → rooms, D simple/details, + / − size, F5 refresh, Esc close; the widget snaps to screen edges
-- **Copy readings** (right-click) for pasting into a message; tray menu with *Refresh now* and *Quiet for 1 hour*; mouse wheel over the room buttons switches rooms
+- **Keyboard:** ← / → rooms, D simple/details, + / − size, F5 refresh, Ctrl+C copy, Q quiet, T theme, F1 help, Esc close; the widget snaps to screen edges
+- **Copy readings** (right-click) for pasting into a message; tray menu with *Refresh now*, *Quiet for 1 hour* and *Quiet until tomorrow morning* (quiet time survives a restart); mouse wheel over the room buttons switches rooms
 - **Daily air score** in the simple view: "Today: good air 92 % of the time", counted from today's readings, plus a 7-day score
 
 Made by **Dan Stasiak** · MIT License · [github.com/DanStasiak/airguard-widget](https://github.com/DanStasiak/airguard-widget)

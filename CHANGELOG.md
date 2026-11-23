@@ -2,6 +2,18 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [5.15.0] - 2026-11-23
+- New: "Quiet until tomorrow morning" in the menu and the tray icon menu. Mutes alerts until 07:00.
+- New: quiet time is remembered. If you restart the widget or the PC, it stays quiet until the set time.
+- New: more shortcuts. Ctrl+C copies the readings, Q switches quiet time on/off, T switches the theme, F1 opens help.
+- Fixed: if a screen is unplugged or the resolution changes, the widget no longer ends up off-screen. It moves back by itself.
+- Fixed: the tray icon turns grey and says "offline" when the connection is lost, instead of showing the last colour.
+- DE: Neu: „Ruhe bis morgen früh“ im Menü und im Menü am Taskleisten-Symbol. Schaltet Hinweise bis 7:00 Uhr stumm.
+- DE: Neu: Die Ruhezeit wird gemerkt. Nach einem Neustart von Widget oder PC bleibt es bis zur eingestellten Zeit ruhig.
+- DE: Neu: Mehr Tastenkürzel. Strg+C kopiert die Werte, Q schaltet Ruhe an/aus, T wechselt das Design, F1 öffnet die Hilfe.
+- DE: Behoben: Wird ein Bildschirm abgesteckt oder die Auflösung geändert, landet das Widget nicht mehr außerhalb des Bildes. Es holt sich selbst zurück.
+- DE: Behoben: Das Symbol in der Taskleiste wird bei Verbindungsverlust grau und zeigt „offline“, statt die letzte Farbe zu behalten.
+
 ## [5.14.0] - 2026-11-23
 - New: weekly score. Next to today's score the simple view shows how good the air was over the last 7 days, e.g. "week: 85 %".
 - New: scroll the mouse wheel over the room buttons to switch rooms.
