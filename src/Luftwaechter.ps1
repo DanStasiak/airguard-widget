@@ -2547,7 +2547,7 @@ if ($SmokeTest) {
     Smoke 'quiet saved' { Set-Snooze 'hour'; $f1 = Get-Content $stateFile -Raw | ConvertFrom-Json; $ok2 = ([string]$f1.snooze -ne ''); Set-Snooze 'off'; $script:snoozeUntil = (Get-Date).AddDays(1); $ok2 }
     Smoke 'window rescue' { $win.Left = 99999; $win.Top = -99999; $r1 = Clamp-ToScreen; $vr1 = [System.Windows.SystemParameters]::VirtualScreenLeft + [System.Windows.SystemParameters]::VirtualScreenWidth; ($r1 -and $win.Left -lt $vr1 -and $win.Top -ge [System.Windows.SystemParameters]::VirtualScreenTop) }
     Smoke 'keyboard shortcuts' { $kw = Build-Help; $state.theme = 'auto'; $script:helpOpen = $true; Apply-View; $script:helpOpen = $false; Apply-View; $true }
-    Smoke 'offline tray icon' { $script:fails = 2; $u0 = $url; $state.demo = $false; $script:haMode = $false; $url = 'http://127.0.0.1:9/x'; Update-Widget; $ok3 = ($ui.Level.Text -eq (T 'offline')); $state.demo = $true; $url = $u0; $script:fails = 0; $ok3 }
+    Smoke 'offline tray icon' { $script:fails = 2; $u0 = $url; $state.demo = $false; $script:haMode = $false; $url = 'http://127.0.0.1:9/x'; Update-Widget; $ok3 = ($ui.Level.Text -eq (T 'offline')); $state.demo = $true; $url = $u0; $script:fails = 0; Remove-Item $logFile -Force -ErrorAction SilentlyContinue; $ok3 }
     Smoke 'no errors logged' {
         $new = @(); if (Test-Path $logFile) { $new = @(Get-Content -Path $logFile -Encoding UTF8 | Select-Object -Skip $l0 | Where-Object { $_ -notmatch 'Start v' }) }
         foreach ($x in $new) { Write-Host ('      log: ' + $x) }
