@@ -2,6 +2,18 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [5.14.0] - 2026-11-23
+- New: weekly score. Next to today's score the simple view shows how good the air was over the last 7 days, e.g. "week: 85 %".
+- New: scroll the mouse wheel over the room buttons to switch rooms.
+- New: right-click, "Copy readings" puts the current room's values and advice on the clipboard, ready to paste into a message.
+- New: the tray icon menu has "Refresh now" and "Quiet for 1 hour", and its texts follow the widget language.
+- Fixed: edge snapping now works on every monitor, also with display scaling, not only on the main screen.
+- DE: Neu: Wochennote. Neben der Tagesnote zeigt die einfache Ansicht, wie gut die Luft in den letzten 7 Tagen war, z. B. „Woche: 85 %“.
+- DE: Neu: Mit dem Mausrad über den Raum-Knöpfen wechselst du den Raum.
+- DE: Neu: Rechtsklick → „Werte kopieren“ legt die Werte und den Rat des Raums in die Zwischenablage, fertig zum Einfügen in eine Nachricht.
+- DE: Neu: Das Menü am Symbol in der Taskleiste hat „Jetzt aktualisieren“ und „Ruhe für 1 Stunde“ und folgt der Sprache des Widgets.
+- DE: Behoben: Das Einrasten an den Rändern klappt jetzt auf jedem Bildschirm, auch mit Skalierung, nicht nur auf dem Hauptbildschirm.
+
 ## [5.13.0] - 2026-11-22
 - New: keyboard. Click the widget once, then ← / → switches rooms, D switches simple/details, + / − resizes, F5 refreshes, Esc closes help and the device panel.
 - New: the widget snaps to the screen edges when you move it close to them.

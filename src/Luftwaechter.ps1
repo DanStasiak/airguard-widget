@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall, [switch]$SmokeTest)
 
 $appName = 'Luftwaechter'
-$appVersion = '5.13.0'
+$appVersion = '5.14.0'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -530,6 +530,10 @@ $script:Strings = @{
     quiet_tag = @('🔕 Ruhe bis {0}', '🔕 Quiet until {0}')
     h18 = @('Tastatur', 'Keyboard')
     b18 = @('Klicke einmal auf das Widget, dann: ← / → anderer Raum · D einfache Ansicht oder Details · + / − größer oder kleiner · F5 sofort aktualisieren · Esc schließt Hilfe und Geräte-Fenster. Beim Verschieben rastet das Widget an den Bildschirmrändern ein.', 'Click the widget once, then: ← / → other room · D simple view or details · + / − bigger or smaller · F5 refresh now · Esc closes help and the device panel. When you move the widget it snaps to the screen edges.')
+    week_tag = @(' · Woche: {0} %', ' · week: {0} %')
+    m_copy = @('Werte kopieren', 'Copy readings')
+    m_refresh_now = @('Jetzt aktualisieren', 'Refresh now')
+    m_exit = @('Beenden', 'Exit')
     news_h = @('Neu in Version {0}', 'New in version {0}')
     m_bigger = @('Größer anzeigen', 'Make bigger')
     m_smaller = @('Kleiner anzeigen', 'Make smaller')
@@ -818,7 +822,11 @@ function Init-Tray {
         $script:tray = New-Object System.Windows.Forms.NotifyIcon
         $cm = New-Object System.Windows.Forms.ContextMenuStrip
         $script:trayMiOpen = $cm.Items.Add('Luftwächter')
+        $script:trayMiRefresh = $cm.Items.Add('Refresh now')
+        $script:trayMiQuiet = $cm.Items.Add('Quiet for 1 hour')
         $script:trayMiExit = $cm.Items.Add('Exit')
+        $script:trayMiRefresh.Add_Click({ Update-Widget })
+        $script:trayMiQuiet.Add_Click({ if (Test-Snooze) { $script:snoozeUntil = $null } else { $script:snoozeUntil = (Get-Date).AddHours(1) }; Apply-Lang; if ($script:last) { Show-Data $script:last } })
         $script:trayMiOpen.Add_Click({ Show-Window })
         $script:trayMiExit.Add_Click({ Exit-App })
         $script:tray.ContextMenuStrip = $cm
@@ -1322,6 +1330,27 @@ function Get-DayScore([string]$room) {
     if ($n -lt 20) { return $null }
     return [int][Math]::Round(100.0 * $good / $n)
 }
+function Get-WeekScore([string]$room) {
+    if (-not $state.hist7.ContainsKey($room)) { return $null }
+    $n = 0; $good = 0
+    foreach ($e in @($state.hist7[$room])) {
+        $f = ([string]$e).Split(':')
+        if ($f.Count -lt 2) { continue }
+        $n++; if ([int]$f[1] -lt 1000) { $good++ }
+    }
+    if ($n -lt 72) { return $null }
+    return [int][Math]::Round(100.0 * $good / $n)
+}
+function Copy-Readings {
+    try {
+        $d = $script:last; if (-not $d) { return }
+        $parts = @('Luftwächter · ' + [string]$d.room.name + ' · ' + (Get-Date).ToString('dd.MM.yyyy HH:mm'))
+        foreach ($v in @($d.values)) { $parts += ([string]$v.key + ': ' + [string]$v.value + ' ' + [string]$v.unit) }
+        $parts += [string]$d.headline
+        [System.Windows.Clipboard]::SetText(($parts -join [Environment]::NewLine))
+        $script:lastCopy = ($parts -join [Environment]::NewLine)
+    } catch { Write-Log ('Kopieren: ' + $_.Exception.Message) }
+}
 function Export-History {
     try {
         $rn = @{}
@@ -1421,7 +1450,8 @@ function Show-Data($d) {
     if ($state.simple -and -not $script:compact) { $ds = Get-DayScore ([string]$d.room.key) }
     if ($null -ne $ds) {
         $k = $(if ($ds -ge 90) { 'day_good' } elseif ($ds -ge 70) { 'day_ok' } else { 'day_low' })
-        $ui.DayScore.Text = (T $k $ds); $ui.DayScore.Visibility = 'Visible'
+        $wk = Get-WeekScore ([string]$d.room.key)
+        $ui.DayScore.Text = (T $k $ds) + $(if ($null -ne $wk) { T 'week_tag' $wk } else { '' }); $ui.DayScore.Visibility = 'Visible'
     } else { $ui.DayScore.Visibility = 'Collapsed' }
     # Lüftungs-Timer (per Tippen auf die Rat-Fläche), vor allem für Räume ohne Fensterkontakt
     $actNow = [string]$d.action
@@ -2056,8 +2086,16 @@ $ui.Pill.Add_MouseLeftButtonDown({ param($s, $e)
 })
 $win.Add_MouseLeftButtonDown({ param($s, $e) if ($e.ClickCount -eq 2) { Update-Widget } else { try { $win.DragMove(); Snap-Edges; Save-State } catch {} } })
 function Snap-Edges {
-    # rastet an den Rändern des Hauptbildschirms ein (Abstand unter 18 px)
+    # rastet an den Rändern des Bildschirms ein, auf dem das Widget steht (Abstand unter 18 px)
     $wa0 = [System.Windows.SystemParameters]::WorkArea
+    try {
+        $src = [System.Windows.PresentationSource]::FromVisual($win)
+        $sx = 1.0; $sy = 1.0
+        if ($src -and $src.CompositionTarget) { $sx = $src.CompositionTarget.TransformToDevice.M11; $sy = $src.CompositionTarget.TransformToDevice.M22 }
+        $cx = [int](($win.Left + $win.ActualWidth / 2) * $sx); $cy = [int](($win.Top + 20) * $sy)
+        $wa = [System.Windows.Forms.Screen]::FromPoint((New-Object System.Drawing.Point($cx, $cy))).WorkingArea
+        $wa0 = New-Object System.Windows.Rect(($wa.Left / $sx), ($wa.Top / $sy), ($wa.Width / $sx), ($wa.Height / $sy))
+    } catch {}
     $w = $win.ActualWidth; $h = $win.ActualHeight; $m = 18
     if ($win.Left -gt ($wa0.Right + 5) -or ($win.Left + $w) -lt ($wa0.Left - 5) -or $win.Top -gt ($wa0.Bottom + 5)) { return }
     if ([Math]::Abs($win.Left - $wa0.Left) -lt $m) { $win.Left = $wa0.Left }
@@ -2065,6 +2103,7 @@ function Snap-Edges {
     if ([Math]::Abs($win.Top - $wa0.Top) -lt $m) { $win.Top = $wa0.Top }
     elseif ([Math]::Abs(($win.Top + $h) - $wa0.Bottom) -lt $m) { $win.Top = $wa0.Bottom - $h }
 }
+$ui.RoomStrip.Add_MouseWheel({ param($s, $e) if (-not ([System.Windows.Input.Keyboard]::Modifiers -band [System.Windows.Input.ModifierKeys]::Control)) { $e.Handled = $true; if ($e.Delta -gt 0) { Switch-Room -1 } else { Switch-Room 1 } } })
 function Switch-Room([int]$dir) {
     $keys = @($script:rooms | ForEach-Object { [string]$_.key })
     if ($keys.Count -lt 2) { return }
@@ -2126,6 +2165,7 @@ $miHa = New-Object System.Windows.Controls.MenuItem
 $miMode = New-Object System.Windows.Controls.MenuItem
 $miBig = New-Object System.Windows.Controls.MenuItem
 $miSmall = New-Object System.Windows.Controls.MenuItem
+$miCopy = New-Object System.Windows.Controls.MenuItem
 $miExport = New-Object System.Windows.Controls.MenuItem
 $miSnooze = New-Object System.Windows.Controls.MenuItem
 $miTheme = New-Object System.Windows.Controls.MenuItem
@@ -2146,6 +2186,7 @@ $miSound.Add_Click({ $state.sound = $miSound.IsChecked; Save-State })
 $miExit.Add_Click({ Exit-App })
 $miHa.Add_Click({ Show-HaDialog })
 $miMode.Add_Click({ Toggle-Mode })
+$miCopy.Add_Click({ Copy-Readings })
 $miExport.Add_Click({ Export-History })
 $miSnooze.Add_Click({ if (Test-Snooze) { $script:snoozeUntil = $null } else { $script:snoozeUntil = (Get-Date).AddHours(1) }; Apply-Lang; if ($script:last) { Show-Data $script:last } })
 $miTheme.Add_Click({ $state.theme = $(switch ([string]$state.theme) { 'auto' { 'day' } 'day' { 'night' } default { 'auto' } }); Apply-Theme; Save-State; Apply-Lang })
@@ -2165,7 +2206,7 @@ $miSens.Add_Click({ Show-SensorDialog })
 $miHelp.Add_Click({ $script:helpOpen = $true; Apply-View })
 $miCfg.Add_Click({ try { if (-not (Test-Path $cfgFile)) { Copy-Item (Join-Path $dir 'config.example.json') $cfgFile }; Start-Process notepad.exe -ArgumentList ('"' + $cfgFile + '"') } catch { Write-Log ('Konfig: ' + $_.Exception.Message) } })
 $miUpd.Add_Click({ Invoke-UpdateFlow $true })
-[void]$menu.Items.Add($miMode); [void]$menu.Items.Add($miSnooze); [void]$menu.Items.Add($miBig); [void]$menu.Items.Add($miExport); [void]$menu.Items.Add($miTheme); [void]$menu.Items.Add($miDemo); [void]$menu.Items.Add($miHaSup); [void]$menu.Items.Add($miSmall); [void]$menu.Items.Add($miRefresh); [void]$menu.Items.Add($miTop); [void]$menu.Items.Add($miPop); [void]$menu.Items.Add($miTray); [void]$menu.Items.Add($miSound); [void]$menu.Items.Add($miReset); [void]$menu.Items.Add($miLog); [void]$menu.Items.Add($miHa); [void]$menu.Items.Add($miSens); [void]$menu.Items.Add($miHelp); [void]$menu.Items.Add($miCfg); [void]$menu.Items.Add($miUpd); [void]$menu.Items.Add((New-Object System.Windows.Controls.Separator)); [void]$menu.Items.Add($miExit)
+[void]$menu.Items.Add($miMode); [void]$menu.Items.Add($miSnooze); [void]$menu.Items.Add($miBig); [void]$menu.Items.Add($miCopy); [void]$menu.Items.Add($miExport); [void]$menu.Items.Add($miTheme); [void]$menu.Items.Add($miDemo); [void]$menu.Items.Add($miHaSup); [void]$menu.Items.Add($miSmall); [void]$menu.Items.Add($miRefresh); [void]$menu.Items.Add($miTop); [void]$menu.Items.Add($miPop); [void]$menu.Items.Add($miTray); [void]$menu.Items.Add($miSound); [void]$menu.Items.Add($miReset); [void]$menu.Items.Add($miLog); [void]$menu.Items.Add($miHa); [void]$menu.Items.Add($miSens); [void]$menu.Items.Add($miHelp); [void]$menu.Items.Add($miCfg); [void]$menu.Items.Add($miUpd); [void]$menu.Items.Add((New-Object System.Windows.Controls.Separator)); [void]$menu.Items.Add($miExit)
 $win.ContextMenu = $menu
 
 
@@ -2190,7 +2231,9 @@ function Apply-Lang {
     $ui.BtnHelp.ToolTip = (T 'help_tip'); $ui.BtnLang.ToolTip = (T 'lang_tip')
     foreach ($k in 'De', 'En') { $ui.('Lang' + $k).Foreground = Brush '#FFA9B4C4'; $ui.('Lang' + $k).FontWeight = 'Normal' }
     if ($state.lang -eq 'en') { $ui.LangEn.Foreground = Brush '#FFFFFFFF'; $ui.LangEn.FontWeight = 'Bold' } else { $ui.LangDe.Foreground = Brush '#FFFFFFFF'; $ui.LangDe.FontWeight = 'Bold' }
-    $miExport.Header = (T 'm_export'); $miSnooze.Header = $(if (Test-Snooze) { T 'm_snooze_off' ($script:snoozeUntil.ToString('HH:mm')) } else { T 'm_snooze' }); $miTheme.Header = $(switch ([string]$state.theme) { 'day' { T 'm_theme_day' } 'night' { T 'm_theme_night' } default { T 'm_theme_auto' } }); $miDemo.Header = $(if ($state.demo) { T 'm_demo_off' } else { T 'm_demo' }); $miHaSup.Header = (T 'm_ha_support'); $miBig.Header = (T 'm_bigger'); $miSmall.Header = (T 'm_smaller'); $miRefresh.Header = (T 'm_refresh'); $miTop.Header = (T 'm_top'); $miPop.Header = (T 'm_pop'); $miTray.Header = (T 'm_tray'); if ($script:trayMiOpen) { $script:trayMiOpen.Text = (T 'tray_open'); $script:trayMiExit.Text = (T 'm_exit') }; $miSound.Header = (T 'm_sound'); $miReset.Header = (T 'm_reset'); $miLog.Header = (T 'm_log'); $miHelp.Header = (T 'm_help'); $miHa.Header = (T 'm_ha'); $miMode.Header = $(if ($state.simple) { T 'm_mode_full' } else { T 'm_mode_simple' }); $miSens.Header = (T 'm_sens'); $miCfg.Header = (T 'm_cfg'); $miUpd.Header = (T 'm_upd'); $miExit.Header = (T 'm_exit')
+    $miCopy.Header = (T 'm_copy'); $miExport.Header = (T 'm_export');
+    if ($script:trayMiExit) { $script:trayMiExit.Text = (T 'm_exit'); $script:trayMiRefresh.Text = (T 'm_refresh_now'); $script:trayMiQuiet.Text = $(if (Test-Snooze) { T 'm_snooze_off' ($script:snoozeUntil.ToString('HH:mm')) } else { T 'm_snooze' }) }
+ $miSnooze.Header = $(if (Test-Snooze) { T 'm_snooze_off' ($script:snoozeUntil.ToString('HH:mm')) } else { T 'm_snooze' }); $miTheme.Header = $(switch ([string]$state.theme) { 'day' { T 'm_theme_day' } 'night' { T 'm_theme_night' } default { T 'm_theme_auto' } }); $miDemo.Header = $(if ($state.demo) { T 'm_demo_off' } else { T 'm_demo' }); $miHaSup.Header = (T 'm_ha_support'); $miBig.Header = (T 'm_bigger'); $miSmall.Header = (T 'm_smaller'); $miRefresh.Header = (T 'm_refresh'); $miTop.Header = (T 'm_top'); $miPop.Header = (T 'm_pop'); $miTray.Header = (T 'm_tray'); if ($script:trayMiOpen) { $script:trayMiOpen.Text = (T 'tray_open'); $script:trayMiExit.Text = (T 'm_exit') }; $miSound.Header = (T 'm_sound'); $miReset.Header = (T 'm_reset'); $miLog.Header = (T 'm_log'); $miHelp.Header = (T 'm_help'); $miHa.Header = (T 'm_ha'); $miMode.Header = $(if ($state.simple) { T 'm_mode_full' } else { T 'm_mode_simple' }); $miSens.Header = (T 'm_sens'); $miCfg.Header = (T 'm_cfg'); $miUpd.Header = (T 'm_upd'); $miExit.Header = (T 'm_exit')
     $ui.RoomName.Text = 'Luftwächter'; $ui.TitleTag.Text = (T 'tagline')
     $ui.Footer.Text = (Get-FooterText)
     $ui.Copy.Text = $copyright + ' · GitHub'; $ui.Copy.ToolTip = (T 'copy_tip'); $ui.Ver.ToolTip = (T 'ver_tip')
@@ -2464,6 +2507,10 @@ if ($SmokeTest) {
     Smoke 'quiet tag' { Show-Data $script:last; ($ui.TitleTag.Text -match '🔕') }
     Smoke 'German changelog' { $state.lang = 'de'; $e1 = @(Read-Changelog) | Select-Object -First 1; $state.lang = 'en'; $e2 = @(Read-Changelog) | Select-Object -First 1; $state.lang = 'de'; ($e1 -and $e2 -and ((@($e1.lines) -join ' ') -ne (@($e2.lines) -join ' '))) }
     Smoke 'offline message' { $script:lastOkAt = (Get-Date).AddMinutes(-6); $t = (T 'stale2' $script:lastOkAt.ToString('HH:mm') 6); ($t -match '6') }
+    Smoke 'week score' { $now2 = [int][DateTimeOffset]::UtcNow.ToUnixTimeSeconds(); $state.hist7['wk'] = @(for ($i = 0; $i -lt 100; $i++) { '{0}:{1}:5:21.0:45' -f ($now2 - $i * 600), (600 + $i * 10) }); $w = Get-WeekScore 'wk'; ($w -ge 0 -and $w -le 100) }
+    Smoke 'copy readings' { Update-Widget; Copy-Readings; ($script:lastCopy -match 'CO') }
+    Smoke 'snap multi-monitor' { $win.Left = [System.Windows.SystemParameters]::WorkArea.Left + 6; Snap-Edges; ([Math]::Abs($win.Left - [System.Windows.SystemParameters]::WorkArea.Left) -lt 1) }
+    Smoke 'tray menu texts' { Apply-Lang; ((-not $script:tray) -or ($script:trayMiExit.Text -eq (T 'm_exit'))) }
     Smoke 'CSV export' { $state.hist7['smoke'] = $state.hist['smoke']; Export-History; ($script:lastExport -and (Test-Path $script:lastExport)) }
     Smoke 'no errors logged' {
         $new = @(); if (Test-Path $logFile) { $new = @(Get-Content -Path $logFile -Encoding UTF8 | Select-Object -Skip $l0 | Where-Object { $_ -notmatch 'Start v' }) }
