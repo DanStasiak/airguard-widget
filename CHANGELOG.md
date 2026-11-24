@@ -2,6 +2,18 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [5.19.0] - 2026-11-24
+- New: the help now explains each of the four readings (CO₂, fine dust, temperature, humidity): what it is, which limits the widget uses, common causes of poor values and what helps.
+- New: help sections fold open and closed with a click on the heading, plus "Expand all" and "Collapse all". The long list is now easy to scan.
+- New: each reading's heading in the help shows the current value and rating, e.g. "CO₂ (carbon dioxide) · now 820 ppm (good)".
+- New: right-click a value tile and the help opens directly at its explanation.
+- Fixed: chart lines, chart captions and tile tooltips now match the limits the widget really uses (fine dust line at 20 instead of 15, humidity 30 to 60 %, CO₂ fair up to 1500, temperature 17 to 23 °C). Some of these were wrong since 5.16.
+- DE: Neu: Die Hilfe erklärt jetzt jeden der vier Messwerte (CO₂, Feinstaub, Temperatur, Luftfeuchte): was er ist, welche Grenzen das Widget nutzt, häufige Ursachen für schlechte Werte und was hilft.
+- DE: Neu: Hilfe-Abschnitte klappen per Klick auf die Überschrift auf und zu, dazu „Alle aufklappen“ und „Alle zuklappen“. Die lange Liste ist jetzt übersichtlich.
+- DE: Neu: Die Überschrift jedes Messwerts in der Hilfe zeigt den aktuellen Wert und die Bewertung, z. B. „CO₂ (Kohlendioxid) · jetzt 820 ppm (Gut)“.
+- DE: Neu: Rechtsklick auf eine Wert-Kachel öffnet die Hilfe direkt bei ihrer Erklärung.
+- DE: Behoben: Kurven-Linien, Kurven-Beschriftungen und Kachel-Hinweise passen jetzt zu den Grenzen, die das Widget wirklich nutzt (Feinstaub-Linie bei 20 statt 15, Luftfeuchte 30 bis 60 %, CO₂ mittel bis 1500, Temperatur 17 bis 23 °C). Einige waren seit 5.16 falsch.
+
 ## [5.18.0] - 2026-11-24
 - New: the size picker is now a clear button row. The current size is highlighted and each choice is a bigger target to click.
 - New: buttons, value tiles and room buttons glow softly when the mouse is over them, so you see what you can click.

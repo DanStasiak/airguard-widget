@@ -27,6 +27,7 @@ A small always-on-top **Windows desktop widget** that shows how good the air is 
 - Double-click the title to switch between the simple and the details view
 - **Export:** right-click → *Save history as CSV* saves the last 7 days of all rooms to a file you can open in Excel
 - **Keyboard:** ← / → rooms, D simple/details, + / − size, F5 refresh, Ctrl+C copy, Q quiet, T theme, F1 help, Esc close; the widget snaps to screen edges
+- **Built-in explanations:** the help explains CO₂, fine dust, temperature and humidity (what they are, the limits, common causes of poor readings, what helps); sections fold, show the current reading, and right-clicking a value tile jumps to its explanation
 - **Look and feel:** highlighted size picker, soft glow on hover for everything clickable, smooth fade when switching rooms, right-click menu sorted into groups with a *More* submenu, tooltips on the header controls
 - **House at a glance:** window title shows e.g. "2 of 5 rooms poor"; hover a room button for its CO₂ and rating; keys 1–9 pick a room; *Copy all rooms* (Ctrl+Shift+C); screen-reader names
 - **Chart hover:** move the mouse over the curve to read the exact time and value; daily min/max show their times; tooltips on the tiles explain the ranges; tray tooltip names the worst room; slower polling while minimized

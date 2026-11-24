@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall, [switch]$SmokeTest)
 
 $appName = 'Luftwaechter'
-$appVersion = '5.18.0'
+$appVersion = '5.19.0'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -402,18 +402,18 @@ $script:Strings = @{
     outside = @('DRAUSSEN', 'OUTSIDE')
     now = @('jetzt', 'now')
     spark = @('{0} Std · Linie = 1000 ppm', '{0} h · line = 1000 ppm')
-    spark_dust = @('Feinstaub · {0} Std · Linie 15', 'Fine dust · {0} h · line 15')
+    spark_dust = @('Feinstaub · {0} Std · Linie 20', 'Fine dust · {0} h · line 20')
     spark_temp = @('Temperatur · {0} Std', 'Temperature · {0} h')
-    spark_hum = @('Feuchte · {0} Std · 40–60 %', 'Humidity · {0} h · 40–60 %')
+    spark_hum = @('Feuchte · {0} Std · 30–60 %', 'Humidity · {0} h · 30–60 %')
     spark_co2 = @('CO₂ · {0} Std · Linie 1000', 'CO₂ · {0} h · line 1000')
     spark_wait = @('Der Verlauf wird ab jetzt gesammelt …', 'History is being collected from now on …')
     dev_hide = @('Ausblenden', 'Hide')
     dev_unhide = @('{0} ausgeblendet · alle anzeigen', '{0} hidden · show all')
     mm = @('Heute: Min {0} · Max {1} {2}', 'Today: min {0} · max {1} {2}')
-    chip_tip_1 = @('CO₂: gut unter 1000 ppm, mittel bis 1400, darüber schlecht. Tippen zeigt die Kurve.', 'CO₂: good below 1000 ppm, fair up to 1400, bad above. Tap to see the curve.')
-    chip_tip_2 = @('Feinstaub: gut unter 15 µg/m³, darüber belastet. Tippen zeigt die Kurve.', 'Fine dust: good below 15 µg/m³, burdened above. Tap to see the curve.')
-    chip_tip_3 = @('Temperatur: angenehm sind etwa 20 bis 24 °C. Tippen zeigt die Kurve.', 'Temperature: about 20 to 24 °C feels comfortable. Tap to see the curve.')
-    chip_tip_4 = @('Luftfeuchte: angenehm sind 40 bis 60 %. Tippen zeigt die Kurve.', 'Humidity: 40 to 60 % feels comfortable. Tap to see the curve.')
+    chip_tip_1 = @('CO₂: gut unter 1000 ppm, mittel bis 1500, darüber schlecht. Tippen: Kurve. Rechtsklick: Erklärung.', 'CO₂: good below 1000 ppm, fair up to 1500, poor above. Tap: curve. Right-click: explanation.')
+    chip_tip_2 = @('Feinstaub: gut unter 20 µg/m³, mittel bis 50, darüber schlecht. Tippen: Kurve. Rechtsklick: Erklärung.', 'Fine dust: good below 20 µg/m³, fair up to 50, poor above. Tap: curve. Right-click: explanation.')
+    chip_tip_3 = @('Temperatur: gut 17 bis 23 °C, mittel 13 bis 25 °C, sonst schlecht. Tippen: Kurve. Rechtsklick: Erklärung.', 'Temperature: good 17 to 23 °C, fair 13 to 25 °C, otherwise poor. Tap: curve. Right-click: explanation.')
+    chip_tip_4 = @('Luftfeuchte: gut 30 bis 60 %, mittel 25 bis 70 %, sonst schlecht. Tippen: Kurve. Rechtsklick: Erklärung.', 'Humidity: good 30 to 60 %, fair 25 to 70 %, otherwise poor. Tap: curve. Right-click: explanation.')
     mm2 = @('Heute: Min {0} {2} um {3} · Max {1} {2} um {4}', 'Today: min {0} {2} at {3} · max {1} {2} at {4}')
     tray_worst = @('⚠ Schlechter: {0}', '⚠ Worse: {0}')
     chip_tip = @('Tippen: Verlauf dieses Werts anzeigen', 'Tap: show the history of this value')
@@ -596,9 +596,52 @@ $script:Strings = @{
     h3 = @('Der Rat: lüften oder nicht', 'The advice: ventilate or not')
     b3 = @('Oben links wechselt der Knopf „Details“ / „Einfach“ zwischen der ruhigen Ansicht (nur Gesicht, Satz und Räume) und allen Werten. Das große Feld sagt, was zu tun ist: Fenster öffnen, offen lassen, schließen oder noch warten (z. B. bei Unwetter). Ist das Fenster offen, zeigt ein Balken, wie lange noch gelüftet werden soll. In Räumen ohne Fensterkontakt tippst du auf das Feld: Dann startet ein Lüftungs-Timer, und am Ende kommt ein Ton. Nach dem Lüften steht kurz da, wie sich der CO₂-Wert verbessert hat. Nachts (22–7 Uhr) ist das Fenster abgedunkelt, und es gibt keinen Hinweiston.', 'The button at the top left ("Details" / "Simple") switches between the calm view (just the face, one sentence and the rooms) and all values. The large panel tells you what to do: open the window, keep it open, close it, or wait a bit (for example during a storm). When the window is open, a bar shows how much longer to ventilate. In rooms without a window contact, tap the panel: a ventilation timer starts and a sound plays at the end. After ventilating, the panel briefly shows how the CO₂ value improved. At night (22:00–07:00) the window is dimmed and there is no alert sound.')
     h4 = @('Kurve, Trend und Tagesbilanz', 'Curve, trend and daily summary')
-    b4 = @('Die Kurve zeigt den CO₂-Verlauf der letzten 3 Stunden; die Linie markiert 1000 ppm. Ein Tipp auf die Kurve wechselt zu 24 Stunden, ein weiterer zu 7 Tagen und dann wieder zurück. Links daneben steht der Trend (steigt, sinkt, stabil) und, wenn möglich, eine Prognose, z. B. wann die Luft wieder gut ist. Die Tagesbilanz nennt Höchstwert, Durchschnitt und den Anteil der Zeit unter 1000 ppm. Die Werte werden auf deinem PC gesammelt und bleiben beim Neustart erhalten. Tippe auf einen der vier Werte (CO₂, Feinstaub, Temperatur, Luftfeuchte), dann zeigt die Kurve diesen Wert.', 'The curve shows the CO₂ history of the last 3 hours; the line marks 1000 ppm. Tap the curve to switch to 24 hours, again for 7 days, and once more to go back. The trend (rising, falling, steady) and, when possible, a forecast such as when the air will be good again, appear under the ring. The daily summary gives the peak, the average and the share of time below 1000 ppm. The data is collected on your PC and kept across restarts. Tap one of the four values (CO₂, fine dust, temperature, humidity) and the curve shows that value instead.')
+    b4 = @('Die Kurve zeigt den CO₂-Verlauf der letzten 3 Stunden; die Linie markiert 1000 ppm. Ein Tipp auf die Kurve wechselt zu 24 Stunden, ein weiterer zu 7 Tagen und dann wieder zurück. Links daneben steht der Trend (steigt, sinkt, stabil) und, wenn möglich, eine Prognose, z. B. wann die Luft wieder gut ist. Die Tagesbilanz nennt Höchstwert, Durchschnitt und den Anteil der Zeit unter 1000 ppm. Die Werte werden auf deinem PC gesammelt und bleiben beim Neustart erhalten. Tippe auf einen der vier Werte (CO₂, Feinstaub, Temperatur, Luftfeuchte), dann zeigt die Kurve diesen Wert. Rechtsklick auf einen Wert öffnet seine Erklärung.', 'The curve shows the CO₂ history of the last 3 hours; the line marks 1000 ppm. Tap the curve to switch to 24 hours, again for 7 days, and once more to go back. The trend (rising, falling, steady) and, when possible, a forecast such as when the air will be good again, appear under the ring. The daily summary gives the peak, the average and the share of time below 1000 ppm. The data is collected on your PC and kept across restarts. Tap one of the four values (CO₂, fine dust, temperature, humidity) and the curve shows that value instead. Right-click a value to open its explanation.')
+    h19 = @('CO₂ (Kohlendioxid)', 'CO₂ (carbon dioxide)')
+    b19 = @('Was es ist: CO₂ entsteht beim Atmen. Draußen liegt es bei etwa 420 ppm. In Räumen steigt es, wenn Menschen atmen und frische Luft fehlt. In diesen Mengen ist es nicht giftig, aber ein guter Anzeiger für verbrauchte Luft: Ab etwa 1000 ppm werden viele müde und unkonzentriert, Kopfschmerzen sind möglich.
+Im Widget: unter 1000 ppm gut, bis 1500 mittel, darüber schlecht.
+Häufige Ursachen für schlechte Werte: mehrere Personen im Raum, geschlossene Fenster und Türen (besonders nachts im Schlafzimmer), ein kleiner Raum, Gasherd oder offene Flamme, Kerzen, Kamin oder Holzofen, zu seltenes Lüften.
+Was hilft: Stoßlüften, also Fenster ganz öffnen, 5 bis 10 Minuten, am besten gegenüberliegende Fenster für Durchzug. Im Schlafzimmer nachts ein Fenster gekippt oder die Tür einen Spalt offen lassen.', 'What it is: CO₂ is produced when we breathe. Outdoors it is about 420 ppm. Indoors it rises when people breathe and fresh air is missing. At these levels it is not toxic, but it is a good indicator of stale air: from about 1000 ppm many people feel tired and unfocused, and headaches are possible.
+In the widget: below 1000 ppm good, up to 1500 fair, above that poor.
+Common causes of poor readings: several people in the room, closed windows and doors (especially in a bedroom at night), a small room, a gas stove or open flame, candles, a fireplace or wood stove, ventilating too rarely.
+What helps: air out in bursts, meaning open the window fully for 5 to 10 minutes, ideally opposite windows for a draft. In a bedroom at night, leave a window tilted or the door slightly open.')
+    h20 = @('Feinstaub (PM2.5)', 'Fine dust (PM2.5)')
+    b20 = @('Was es ist: winzige Partikel in der Luft, kleiner als 2,5 Tausendstel Millimeter, gemessen in µg pro m³. Sie dringen tief in die Lunge ein und können die Atemwege reizen; bei Dauerbelastung steigt das Risiko für Herz und Lunge.
+Im Widget: unter 20 µg gut, bis 50 mittel, darüber schlecht. Zum Vergleich: Die WHO empfiehlt im Tagesmittel höchstens 15 µg.
+Häufige Ursachen für schlechte Werte: Kochen und Braten, Toasten, Backofen, Kerzen, Räucherstäbchen, Kamin oder Holzofen, Rauchen und Dampfen, Staubsaugen (vor allem ohne gutes Filter), Staubwischen und Bettenmachen, Reinigungs- und Haarsprays, 3D-Drucker und Laserdrucker. Auch von draußen kann Staub kommen: Verkehr, Holzfeuer in der Nachbarschaft, Silvesterfeuerwerk, Pollen oder Saharastaub.
+Hinweis: Optische Sensoren können Wasserdampf (Duschen, Kochen) manchmal als Staub messen. Kurze Spitzen sind dann nicht immer echter Staub.
+Was hilft: beim Kochen Dunstabzug an und Fenster auf, auf Kerzen und Räucherwerk verzichten, bei hoher Belastung draußen die Fenster zu lassen (genau das rät dir das Widget), einen Staubsauger mit HEPA-Filter nutzen, bei Bedarf ein Luftreiniger mit HEPA-Filter.', 'What it is: tiny particles in the air, smaller than 2.5 thousandths of a millimeter, measured in µg per m³. They reach deep into the lungs and can irritate the airways; with long exposure the risk to heart and lungs rises.
+In the widget: below 20 µg good, up to 50 fair, above that poor. For comparison, the WHO recommends a daily average of at most 15 µg.
+Common causes of poor readings: cooking and frying, toasting, the oven, candles, incense, a fireplace or wood stove, smoking and vaping, vacuuming (especially without a good filter), dusting and making beds, cleaning and hair sprays, 3D printers and laser printers. Dust can also come from outside: traffic, wood fires in the neighborhood, New Year''s fireworks, pollen or Saharan dust.
+Note: optical sensors can sometimes read water vapor (showering, cooking) as dust. Short spikes are then not always real dust.
+What helps: use the extractor hood and open a window when cooking, skip candles and incense, keep windows closed when the outdoor load is high (this is exactly what the widget advises), use a vacuum with a HEPA filter, and if needed an air purifier with a HEPA filter.')
+    h21 = @('Temperatur', 'Temperature')
+    b21 = @('Was es ist: die Lufttemperatur im Raum in °C. Sie bestimmt vor allem, wie wohl du dich fühlst, und sie beeinflusst die Luftfeuchte.
+Im Widget: 17 bis 23 °C gut, 13 bis 25 °C mittel, kälter oder wärmer schlecht. Gut zu wissen: Zum Schlafen sind 16 bis 18 °C üblich, im Wohnzimmer 20 bis 22 °C. Das Widget bewertet alle Räume gleich.
+Häufige Ursachen für zu warm: Sonne durch die Fenster (Südseite, Rollo offen), Computer und Elektrogeräte, viele Personen, Kochen, eine zu hoch gestellte Heizung, Dachgeschoss im Sommer.
+Häufige Ursachen für zu kalt: Heizung aus oder zu niedrig, im Winter lange gekippte Fenster, schlecht gedämmte Wände und Fenster, Zugluft.
+Hinweis: Steht der Sensor in der Sonne oder direkt neben einer Heizung oder einem Gerät, zeigt er zu viel an.
+Was hilft: tagsüber Rollos schließen und im Sommer nachts lüften. Im Winter lieber kurz stoßlüften als lange kippen, dann kühlen Wände und Möbel weniger aus.', 'What it is: the air temperature in the room in °C. It mostly decides how comfortable you feel, and it affects humidity.
+In the widget: 17 to 23 °C good, 13 to 25 °C fair, colder or warmer poor. Good to know: 16 to 18 °C is usual for sleeping, 20 to 22 °C for a living room. The widget rates all rooms the same.
+Common causes of too warm: sun through the windows (south side, blinds open), computers and electronics, many people, cooking, heating set too high, an attic room in summer.
+Common causes of too cold: heating off or too low, windows tilted for long in winter, poorly insulated walls and windows, drafts.
+Note: if the sensor sits in the sun or right next to a heater or a device, it reads too high.
+What helps: close blinds during the day and ventilate at night in summer. In winter, air out briefly in bursts instead of tilting for long, so walls and furniture cool down less.')
+    h22 = @('Luftfeuchte', 'Humidity')
+    b22 = @('Was es ist: die relative Luftfeuchte in %. Sie zeigt, wie viel Wasserdampf die Luft im Verhältnis zum Maximum bei der aktuellen Temperatur enthält.
+Im Widget: 30 bis 60 % gut, 25 bis 70 % mittel, darüber oder darunter schlecht.
+Zu trocken (unter etwa 30 %): trockene Schleimhäute, Reizhusten, gereizte Augen, statische Aufladung. Typische Ursachen: Heizen im Winter (kalte Außenluft wird beim Aufwärmen sehr trocken), Klimaanlage, langes Lüften bei Frost.
+Zu feucht (dauerhaft über 60 %): Kondenswasser an Fenstern, Hausstaubmilben und Schimmel, vor allem an kalten Wänden und hinter Möbeln. Ab etwa 70 % über längere Zeit wächst die Schimmelgefahr deutlich. Typische Ursachen: Duschen und Baden, Kochen, Wäsche in der Wohnung trocknen, viele Zimmerpflanzen, viele Personen, zu seltenes Lüften, schwüles Wetter, Kellerräume.
+Was hilft bei zu feucht: nach dem Duschen oder Kochen sofort stoßlüften (Tür zum Rest der Wohnung zu lassen), Möbel mit etwas Abstand zu kalten Außenwänden stellen, Wäsche wenn möglich anderswo trocknen. Bei zu trocken: regelmäßig stoßlüften, Zimmerpflanzen oder einen sauber gehaltenen Luftbefeuchter nutzen, Heizung nicht zu hoch stellen.', 'What it is: relative humidity in %. It shows how much water vapor the air holds compared to the maximum at the current temperature.
+In the widget: 30 to 60 % good, 25 to 70 % fair, above or below that poor.
+Too dry (below about 30 %): dry mucous membranes, irritating cough, irritated eyes, static electricity. Typical causes: heating in winter (cold outdoor air becomes very dry when warmed), air conditioning, ventilating for long in frost.
+Too humid (lastingly above 60 %): condensation on windows, dust mites and mold, especially on cold walls and behind furniture. From about 70 % over a longer time the mold risk rises clearly. Typical causes: showering and bathing, cooking, drying laundry indoors, many houseplants, many people, ventilating too rarely, muggy weather, basement rooms.
+What helps when too humid: air out in bursts right after showering or cooking (keep the door to the rest of the home closed), keep furniture a little away from cold outer walls, dry laundry elsewhere if possible. When too dry: air out regularly, use houseplants or a well-kept humidifier, do not set the heating too high.')
+    help_expand = @('Alle aufklappen', 'Expand all')
+    help_collapse = @('Alle zuklappen', 'Collapse all')
+    help_now = @('jetzt {0} {1} ({2})', 'now {0} {1} ({2})')
     h5 = @('Die vier Messwerte', 'The four readings')
-    b5 = @('CO₂ (ppm), Staub (Feinstaub PM2.5 in µg), Temperatur (°C) und Feuchte (%). Der Punkt vor jedem Wert zeigt seine Farbe.', 'CO₂ (ppm), dust (fine dust PM2.5 in µg), temperature (°C) and humidity (%). The dot in front of each value shows its color.')
+    b5 = @('CO₂ (ppm), Staub (Feinstaub PM2.5 in µg), Temperatur (°C) und Feuchte (%). Der Punkt vor jedem Wert zeigt seine Farbe. Was die Werte bedeuten und woher schlechte Werte kommen, steht in den vier Abschnitten direkt darunter.', 'CO₂ (ppm), dust (fine dust PM2.5 in µg), temperature (°C) and humidity (%). The dot in front of each value shows its color. What the values mean and where poor readings come from is explained in the four sections right below.')
     h6 = @('Räume wechseln', 'Switching rooms')
     b6 = @('Tippe oben auf den Raumnamen oder auf einen Raum in der Zeile darunter. Dann zeigt alles den gewählten Raum: Messwerte, Rat, Kurve und Geräte. Die Punkte in der Raumzeile zeigen auf einen Blick, wie es überall im Haus steht. Dein Raum wird beim Neustart wieder geladen.', 'Tap the room name at the top or a room in the row below. Everything then shows the chosen room: readings, advice, curve and devices. The dots in the room row show at a glance how every room in the house is doing. Your room is restored after a restart.')
     h7 = @('Wetter', 'Weather')
@@ -1023,9 +1066,9 @@ function Show-Spark([string]$room, [string]$col) {
     if ($pts.Count -gt 0) { $dmin = ($pts | ForEach-Object { $_[1] } | Measure-Object -Minimum).Minimum; $dmax = ($pts | ForEach-Object { $_[1] } | Measure-Object -Maximum).Maximum }
     switch ($m) {
         0 { $minv = 400.0; $maxv = [Math]::Max(1600.0, $dmax); $refs = @(1000.0) }
-        1 { $minv = 0.0; $maxv = [Math]::Max(25.0, $dmax * 1.1); $refs = @(15.0) }
+        1 { $minv = 0.0; $maxv = [Math]::Max(25.0, $dmax * 1.1); $refs = @(20.0) }
         2 { $minv = [Math]::Floor($dmin) - 1; $maxv = [Math]::Ceiling($dmax) + 1; $refs = @(); if ($pts.Count -eq 0) { $minv = 18.0; $maxv = 26.0 } }
-        3 { $minv = [Math]::Min(20.0, $dmin - 2); $maxv = [Math]::Max(80.0, $dmax + 2); $refs = @(40.0, 60.0) }
+        3 { $minv = [Math]::Min(20.0, $dmin - 2); $maxv = [Math]::Max(80.0, $dmax + 2); $refs = @(30.0, 60.0) }
     }
     if ($maxv - $minv -lt 6) { $c0 = ($maxv + $minv) / 2; $minv = $c0 - 3; $maxv = $c0 + 3 }
     $yOf = { param($v) $h - 4 - (($v - $minv) / ($maxv - $minv)) * ($h - 8) }
@@ -2302,6 +2345,7 @@ $ui.Panel.Add_MouseLeftButtonDown({
 for ($k = 0; $k -lt 4; $k++) {
     $cb = $ui.('C' + ($k + 1)); $cb.Tag = $k
     $cb.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; $state.metric = [int]$s.Tag; if ($script:last) { Show-Data $script:last }; Save-State })
+    $cb.Add_MouseRightButtonUp({ param($s, $e) $e.Handled = $true; Show-HelpSection (19 + [int]$s.Tag) })
 }
 $ui.SparkBox.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; if ($state.sparkHours -eq 3) { $state.sparkHours = 24 } elseif ($state.sparkHours -eq 24) { $state.sparkHours = 168 } else { $state.sparkHours = 3 }; if ($script:last) { Show-Data $script:last }; Save-State })
 $ui.TourOk.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; $state.tourDone = $true; $state.seenVer = $appVersion; $ui.Tour.Visibility = 'Collapsed'; Save-State; Apply-View })
@@ -2387,13 +2431,57 @@ $win.ContextMenu = $menu
 
 # ---------- Sprache / Hilfe ----------
 function Get-FooterText { if ($footerCfg) { return $footerCfg }; return (T 'footer') }
+$script:helpOrder = @(1, 2, 3, 4, 5, 19, 20, 21, 22, 6, 7, 8, 9, 10, 18, 11, 15, 16, 13, 14, 17, 12)
+$script:helpOpenSec = @{ 1 = $true }
+$script:helpBodies = @{}; $script:helpHeads = @{}; $script:helpTitles = @{}
+function Get-HelpLive([int]$id) {
+    if ($id -lt 19 -or $id -gt 22 -or -not $script:last) { return '' }
+    try {
+        $v = @($script:last.values)[$id - 19]
+        if ($null -eq $v -or [string]$v.value -eq '') { return '' }
+        $lv = @('gut', 'mittel', 'schlecht')[[int]$v.level]
+        return ' · ' + (T 'help_now' ([string]$v.value) ([string]$v.unit) (Get-LevelText $lv))
+    } catch { return '' }
+}
+function Set-HelpHead([int]$id) {
+    $open = [bool]$script:helpOpenSec[$id]
+    $script:helpHeads[$id].Text = $(if ($open) { '▾ ' } else { '▸ ' }) + $script:helpTitles[$id]
+    $script:helpBodies[$id].Visibility = $(if ($open) { 'Visible' } else { 'Collapsed' })
+}
+function Toggle-HelpSection([int]$id, $force = $null) {
+    $open = -not [bool]$script:helpOpenSec[$id]
+    if ($null -ne $force) { $open = [bool]$force }
+    $script:helpOpenSec[$id] = $open
+    Set-HelpHead $id
+}
+function Set-HelpAll([bool]$open) { foreach ($id in $script:helpOrder) { $script:helpOpenSec[$id] = $open; Set-HelpHead $id } }
+function Show-HelpSection([int]$id) {
+    $script:helpOpen = $true
+    Build-Help
+    Toggle-HelpSection $id $true
+    Apply-View
+    try { $ui.HelpBody.UpdateLayout(); $script:helpHeads[$id].BringIntoView() } catch {}
+}
 function Build-Help {
     $ui.HelpBody.Children.Clear()
-    for ($i = 1; $i -le 18; $i++) {
-        $h = New-Text (T ('h' + $i)) 15 '#FFFFFFFF' $true
-        $h.Margin = New-Object Windows.Thickness(0, 10, 0, 2)
+    $script:helpBodies = @{}; $script:helpHeads = @{}; $script:helpTitles = @{}
+    $bar = New-Object Windows.Controls.StackPanel; $bar.Orientation = 'Horizontal'; $bar.Margin = New-Object Windows.Thickness(0, 4, 0, 2)
+    $ex = New-Text (T 'help_expand') 12 '#FF9CC9FF' $false; $ex.Cursor = 'Hand'
+    $sep = New-Text '   ·   ' 12 '#FFA9B4C4' $false
+    $co = New-Text (T 'help_collapse') 12 '#FF9CC9FF' $false; $co.Cursor = 'Hand'
+    $ex.Add_MouseLeftButtonDown({ param($s1, $e1) $e1.Handled = $true; Set-HelpAll $true })
+    $co.Add_MouseLeftButtonDown({ param($s1, $e1) $e1.Handled = $true; Set-HelpAll $false })
+    [void]$bar.Children.Add($ex); [void]$bar.Children.Add($sep); [void]$bar.Children.Add($co)
+    [void]$ui.HelpBody.Children.Add($bar)
+    foreach ($i in $script:helpOrder) {
+        $script:helpTitles[$i] = (T ('h' + $i)) + (Get-HelpLive $i)
+        $h = New-Text '' 15 '#FFFFFFFF' $true
+        $h.Margin = New-Object Windows.Thickness(0, 10, 0, 2); $h.Cursor = 'Hand'; $h.Tag = $i; $h.TextWrapping = 'Wrap'
+        $h.Add_MouseLeftButtonDown({ param($s1, $e1) $e1.Handled = $true; Toggle-HelpSection ([int]$s1.Tag) })
         $bk = 'b' + $i; $bt = $(if ($i -eq 12) { T $bk $repoUrl } else { T $bk }); $b = New-Text $bt 13 '#FFDFE5EE' $false
-        $b.TextWrapping = 'Wrap'
+        $b.TextWrapping = 'Wrap'; $b.Margin = New-Object Windows.Thickness(16, 0, 0, 4)
+        $script:helpHeads[$i] = $h; $script:helpBodies[$i] = $b
+        Set-HelpHead $i
         [void]$ui.HelpBody.Children.Add($h); [void]$ui.HelpBody.Children.Add($b)
     }
     $ui.HelpTitle.Text = (T 'help_title') + ' · Luftwächter'
@@ -2420,7 +2508,7 @@ function Apply-Lang {
     if ($script:last) { Show-Data $script:last }
 }
 
-$ui.BtnHelp.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; $script:helpOpen = $true; Apply-View })
+$ui.BtnHelp.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; $script:helpOpen = $true; Build-Help; Apply-View })
 $ui.HelpClose.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; $script:helpOpen = $false; Apply-View })
 $ui.LangDe.Tag = 'de'; $ui.LangEn.Tag = 'en'
 foreach ($k in 'De', 'En') {
@@ -2704,7 +2792,7 @@ if ($SmokeTest) {
     Smoke 'offline tray icon' { $script:fails = 2; $u0 = $url; $state.demo = $false; $script:haMode = $false; $url = 'http://127.0.0.1:9/x'; Update-Widget; $ok3 = ($ui.Level.Text -eq (T 'offline')); $state.demo = $true; $url = $u0; $script:fails = 0; Remove-Item $logFile -Force -ErrorAction SilentlyContinue; $ok3 }
     Smoke 'chart hover' { $state.demo = $true; $nw = [int][DateTimeOffset]::UtcNow.ToUnixTimeSeconds(); $state.hist['living'] = @(for ($i = 60; $i -ge 0; $i--) { '{0}:{1}:9:21.5:44' -f ($nw - $i * 120), (700 + $i * 5) }); $state.metric = 0; $state.sparkHours = 3; Show-Spark 'living' '#4CAF50'; $r2 = Get-SparkPoint 100.0; ($r2 -and $r2.text -match 'ppm' -and $r2.px -ge 0 -and $r2.px -le 205) }
     Smoke 'min/max with times' { $state.metric = 1; Show-Spark 'living' '#4CAF50'; $ok4 = ($ui.Peak.Text -match '\d\d:\d\d.*\d\d:\d\d'); $state.metric = 0; Show-Spark 'living' '#4CAF50'; $ok4 }
-    Smoke 'tile tooltips' { Apply-Lang; ([string]$ui.C1.ToolTip -match '1000' -and [string]$ui.C4.ToolTip -match '40') }
+    Smoke 'tile tooltips' { Apply-Lang; ([string]$ui.C1.ToolTip -match '1000' -and [string]$ui.C4.ToolTip -match '30') }
     Smoke 'worst room in tray' { $w5 = Get-WorstRoom ([pscustomobject]@{ level = 'gut'; rooms = @([pscustomobject]@{ name = 'A'; level = 'gut' }, [pscustomobject]@{ name = 'B'; level = 'schlecht' }) }); $n5 = Get-WorstRoom ([pscustomobject]@{ level = 'schlecht'; rooms = @([pscustomobject]@{ name = 'A'; level = 'mittel' }) }); ($w5.name -eq 'B' -and $null -eq $n5) }
     Smoke 'slow polling when minimized' { $win.WindowState = 'Minimized'; $script:tickN = 0; $r6 = @((Step-Poll), (Step-Poll), (Step-Poll)); $win.WindowState = 'Normal'; ($r6[0] -eq $false -and $r6[1] -eq $false -and $r6[2] -eq $true) }
     Smoke 'room chip tooltips' { $state.demo = $true; $state.room = 'living'; Update-Widget; $tt = @($ui.RoomStrip.Children | ForEach-Object { [string]$_.ToolTip }); ($tt.Count -ge 1 -and ($tt -join ' ') -match 'CO') }
@@ -2718,6 +2806,11 @@ if ($SmokeTest) {
     Smoke 'fade on room change' { $state.demo = $true; $script:lastShownRoom = 'zzz'; Update-Widget; Fade-In $ui.Panel; Fade-In $win 50; ($ui.Panel.Opacity -le 1.0) }
     Smoke 'grouped menu' { $nsep = @($menu.Items | Where-Object { $_ -is [System.Windows.Controls.Separator] }).Count; ($nsep -ge 4 -and $miAdv.Items.Count -eq 5 -and $menu.Items.Count -ge 20) }
     Smoke 'header tooltips' { Apply-Lang; ([string]$ui.SzBC.ToolTip -ne '' -and [string]$ui.Time.ToolTip -ne '' -and [string]$miAdv.Header -ne '') }
+    Smoke 'help explains readings' { $okh = $true; foreach ($q in 19, 20, 21, 22) { $state.lang = 'de'; if ((T ('b' + $q)) -notmatch 'Ursachen' -or (T ('b' + $q)).Length -lt 400) { $okh = $false }; $state.lang = 'en'; if ((T ('b' + $q)) -notmatch 'Common causes' -or (T ('b' + $q)).Length -lt 400) { $okh = $false } }; $state.lang = 'de'; $okh }
+    Smoke 'help sections fold' { $state.demo = $true; Update-Widget; Build-Help; $okf = ($script:helpHeads.Count -eq 22); Set-HelpAll $false; $c1 = ($script:helpBodies[19].Visibility -eq 'Collapsed'); Toggle-HelpSection 19 $true; $o1 = ($script:helpBodies[19].Visibility -eq 'Visible'); Set-HelpAll $true; Set-HelpAll $false; ($okf -and $c1 -and $o1) }
+    Smoke 'help live reading' { $state.demo = $true; Update-Widget; Build-Help; ([string]$script:helpTitles[19] -match 'ppm') }
+    Smoke 'help jump from tile' { Show-HelpSection 20; $okj = ($script:helpOpen -and $script:helpBodies[20].Visibility -eq 'Visible'); $script:helpOpen = $false; Apply-View; $okj }
+    Smoke 'real limits shown' { $state.lang = 'de'; ((T 'chip_tip_1') -match '1500' -and (T 'chip_tip_2') -match '20 ' -and (T 'chip_tip_3') -match '17' -and (T 'chip_tip_4') -match '30' -and (T 'spark_dust' 3) -match '20' -and (T 'spark_hum' 3) -match '30') }
     Smoke 'no errors logged' {
         $new = @(); if (Test-Path $logFile) { $new = @(Get-Content -Path $logFile -Encoding UTF8 | Select-Object -Skip $l0 | Where-Object { $_ -notmatch 'Start v' }) }
         foreach ($x in $new) { Write-Host ('      log: ' + $x) }
