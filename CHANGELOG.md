@@ -2,6 +2,18 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [5.17.0] - 2026-11-24
+- New: hover a room button to see its CO₂ value and rating without switching to it.
+- New: the window title (taskbar, Alt+Tab) shows the state of the whole house, e.g. "2 of 5 rooms poor".
+- New: keys 1 to 9 jump straight to that room.
+- New: "Copy all rooms" in the menu, or Ctrl+Shift+C, copies a one-line-per-room overview for a message.
+- Improved: screen readers such as Narrator now read the room, rating and advice, and the room buttons by name.
+- DE: Neu: Fährst du über einen Raum-Knopf, siehst du CO₂-Wert und Bewertung, ohne den Raum zu wechseln.
+- DE: Neu: Der Fenstertitel (Taskleiste, Alt+Tab) zeigt den Zustand des ganzen Hauses, z. B. „2 von 5 Räumen schlecht“.
+- DE: Neu: Die Tasten 1 bis 9 springen direkt zum jeweiligen Raum.
+- DE: Neu: „Alle Räume kopieren“ im Menü oder Strg+Umschalt+C kopiert eine Übersicht mit einer Zeile pro Raum für eine Nachricht.
+- DE: Verbessert: Bildschirmleser wie der Sprachausgabe-Assistent lesen Raum, Bewertung und Rat vor, und die Raum-Knöpfe mit Namen.
+
 ## [5.16.0] - 2026-11-24
 - New: move the mouse over the curve and the line shows the time and value of that point, e.g. "07:40 · 169 µg".
 - New: the daily summary of dust, temperature and humidity now names the times of the lowest and highest value.

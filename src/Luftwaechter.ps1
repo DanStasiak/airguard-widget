@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall, [switch]$SmokeTest)
 
 $appName = 'Luftwaechter'
-$appVersion = '5.16.0'
+$appVersion = '5.17.0'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -538,8 +538,13 @@ $script:Strings = @{
     offline_tip = @('Luftwächter · offline', 'Luftwächter · offline')
     quiet_tag = @('🔕 Ruhe bis {0}', '🔕 Quiet until {0}')
     h18 = @('Tastatur', 'Keyboard')
-    b18 = @('Klicke einmal auf das Widget, dann: ← / → anderer Raum · D einfache Ansicht oder Details · + / − größer oder kleiner · F5 sofort aktualisieren · Strg+C Werte kopieren · Maus über die Kurve zeigt Uhrzeit und Wert · Q Ruhe an/aus · T Design wechseln · F1 Hilfe · Esc schließt Hilfe und Geräte-Fenster. Beim Verschieben rastet das Widget an den Bildschirmrändern ein.', 'Click the widget once, then: ← / → other room · D simple view or details · + / − bigger or smaller · F5 refresh now · Ctrl+C copy readings · hover the curve for time and value · Q quiet on/off · T switch theme · F1 help · Esc closes help and the device panel. When you move the widget it snaps to the screen edges.')
+    b18 = @('Klicke einmal auf das Widget, dann: ← / → anderer Raum · D einfache Ansicht oder Details · + / − größer oder kleiner · F5 sofort aktualisieren · Strg+C Werte kopieren · Strg+Umschalt+C alle Räume · 1–9 Raum wählen · Maus über die Kurve zeigt Uhrzeit und Wert · Q Ruhe an/aus · T Design wechseln · F1 Hilfe · Esc schließt Hilfe und Geräte-Fenster. Beim Verschieben rastet das Widget an den Bildschirmrändern ein.', 'Click the widget once, then: ← / → other room · D simple view or details · + / − bigger or smaller · F5 refresh now · Ctrl+C copy readings · Ctrl+Shift+C all rooms · 1–9 pick a room · hover the curve for time and value · Q quiet on/off · T switch theme · F1 help · Esc closes help and the device panel. When you move the widget it snaps to the screen edges.')
     week_tag = @(' · Woche: {0} %', ' · week: {0} %')
+    m_copy_all = @('Alle Räume kopieren', 'Copy all rooms')
+    house_bad = @('{0} von {1} Räumen schlecht', '{0} of {1} rooms poor')
+    house_mid = @('{0} von {1} Räumen mittel', '{0} of {1} rooms fair')
+    house_ok = @('alle {1} Räume gut', 'all {1} rooms good')
+    sr_card = @('Luftwächter, {0}: {1}. {2}', 'Luftwächter, {0}: {1}. {2}')
     m_copy = @('Werte kopieren', 'Copy readings')
     news_h = @('Neu in Version {0}', 'New in version {0}')
     m_bigger = @('Größer anzeigen', 'Make bigger')
@@ -1280,6 +1285,9 @@ function Build-Strip {
         [void]$sp.Children.Add($dot); [void]$sp.Children.Add($tb)
         $pill.Child = $sp
         $pill.Tag = $key
+        $chipTip = [string]$r.name; if ($r.co2) { $chipTip += ' · CO₂ ' + [string]$r.co2 + ' ppm' }; $lt0 = Get-LevelText ([string]$r.level); if ($lt0) { $chipTip += ' · ' + $lt0 }
+        $pill.ToolTip = $chipTip
+        [System.Windows.Automation.AutomationProperties]::SetName($pill, $chipTip)
         $pill.Add_MouseLeftButtonDown({ param($s2, $e2) $e2.Handled = $true; $state.room = [string]$s2.Tag; $script:ventEnd = $null; $script:prevOpen = $null; $script:sumText = ''; $script:lastAction = $null; $script:devSig = ''; $script:openSince = $null; Save-State; Update-Widget })
         [void]$ui.RoomStrip.Children.Add($pill)
     }
@@ -1375,6 +1383,44 @@ function Get-WeekScore([string]$room) {
     if ($n -lt 72) { return $null }
     return [int][Math]::Round(100.0 * $good / $n)
 }
+function Get-LevelText([string]$lv) {
+    switch ($lv) { 'gut' { return (T 'lv_good') } 'mittel' { return (T 'lv_mid') } 'schlecht' { return (T 'lv_bad') } default { return '' } }
+}
+function Get-HouseText($rooms) {
+    $rr = @($rooms); $n = $rr.Count
+    if ($n -eq 0) { return '' }
+    $b = @($rr | Where-Object { [string]$_.level -eq 'schlecht' }).Count
+    $m = @($rr | Where-Object { [string]$_.level -eq 'mittel' }).Count
+    if ($b -gt 0) { return (T 'house_bad' $b $n) }
+    if ($m -gt 0) { return (T 'house_mid' $m $n) }
+    return (T 'house_ok' 0 $n)
+}
+function Update-HouseTitle($d) {
+    try {
+        $h = Get-HouseText $d.rooms
+        $win.Title = $(if ($h) { 'Luftwächter · ' + $h } else { 'Luftwächter' })
+        [System.Windows.Automation.AutomationProperties]::SetName($ui.Card, (T 'sr_card' ([string]$d.room.name) (Get-LevelText ([string]$d.level)) ([string]$d.headline)))
+    } catch { Write-Log ('Titel: ' + $_.Exception.Message) }
+}
+function Copy-AllRooms {
+    try {
+        if (-not $script:rooms -or @($script:rooms).Count -eq 0) { return }
+        $parts = @('Luftwächter · ' + (Get-Date).ToString('dd.MM.yyyy HH:mm') + ' · ' + (Get-HouseText $script:rooms))
+        foreach ($r in @($script:rooms)) {
+            $co = ''; if ($r.co2) { $co = ' · ' + [string]$r.co2 + ' ppm' }
+            $parts += ([string]$r.name + $co + ' · ' + (Get-LevelText ([string]$r.level)))
+        }
+        $script:lastCopyAll = ($parts -join [Environment]::NewLine)
+        [System.Windows.Clipboard]::SetText($script:lastCopyAll)
+    } catch { Write-Log ('Alle kopieren: ' + $_.Exception.Message) }
+}
+function Select-RoomIndex([int]$i) {
+    $keys = @($script:rooms | ForEach-Object { [string]$_.key })
+    if ($i -lt 0 -or $i -ge $keys.Count -or $keys[$i] -eq [string]$state.room) { return }
+    $state.room = $keys[$i]
+    $script:ventEnd = $null; $script:prevOpen = $null; $script:sumText = ''; $script:lastAction = $null; $script:devSig = ''; $script:openSince = $null
+    Save-State; Update-Widget
+}
 function Copy-Readings {
     try {
         $d = $script:last; if (-not $d) { return }
@@ -1437,6 +1483,7 @@ function Show-Data($d) {
     $ui.TitleTag.Text = $(if (Test-Snooze) { T 'quiet_tag' ($script:snoozeUntil.ToString('HH:mm')) } else { T 'tagline' })
     $script:rooms = @($d.rooms)
     Build-Strip
+    Update-HouseTitle $d
     if (-not $state.room -and $d.room.key) { $state.room = [string]$d.room.key }
     $col = [string]$d.color
     $b = Brush $col
@@ -2177,7 +2224,8 @@ $win.Add_KeyDown({ param($s, $e)
         'F1' { $script:helpOpen = -not $script:helpOpen; if ($script:helpOpen) { Build-Help }; Apply-View; $e.Handled = $true }
         'Q' { Toggle-Snooze; $e.Handled = $true }
         'T' { $state.theme = $(switch ([string]$state.theme) { 'auto' { 'day' } 'day' { 'night' } default { 'auto' } }); Apply-Theme; Save-State; Apply-Lang; $e.Handled = $true }
-        'C' { if ([System.Windows.Input.Keyboard]::Modifiers -band [System.Windows.Input.ModifierKeys]::Control) { Copy-Readings; $e.Handled = $true } }
+        'C' { $mods = [System.Windows.Input.Keyboard]::Modifiers; if ($mods -band [System.Windows.Input.ModifierKeys]::Control) { if ($mods -band [System.Windows.Input.ModifierKeys]::Shift) { Copy-AllRooms } else { Copy-Readings }; $e.Handled = $true } }
+        { $_ -match '^(D|NumPad)[1-9]$' } { Select-RoomIndex ([int]([string]$_)[-1].ToString() - 1); $e.Handled = $true }
         'Escape' { $script:helpOpen = $false; $state.drawerOpen = $false; Apply-View; $e.Handled = $true }
         { $_ -eq 'OemPlus' -or $_ -eq 'Add' } { Step-Size 1; $e.Handled = $true }
         { $_ -eq 'OemMinus' -or $_ -eq 'Subtract' } { Step-Size -1; $e.Handled = $true }
@@ -2239,6 +2287,7 @@ $miMode = New-Object System.Windows.Controls.MenuItem
 $miBig = New-Object System.Windows.Controls.MenuItem
 $miSmall = New-Object System.Windows.Controls.MenuItem
 $miCopy = New-Object System.Windows.Controls.MenuItem
+$miCopyAll = New-Object System.Windows.Controls.MenuItem
 $miExport = New-Object System.Windows.Controls.MenuItem
 $miSnooze = New-Object System.Windows.Controls.MenuItem
 $miTheme = New-Object System.Windows.Controls.MenuItem
@@ -2260,6 +2309,7 @@ $miExit.Add_Click({ Exit-App })
 $miHa.Add_Click({ Show-HaDialog })
 $miMode.Add_Click({ Toggle-Mode })
 $miCopy.Add_Click({ Copy-Readings })
+$miCopyAll.Add_Click({ Copy-AllRooms })
 $miExport.Add_Click({ Export-History })
 $miSnooze.Add_Click({ Toggle-Snooze })
 $miSnoozeM = New-Object System.Windows.Controls.MenuItem
@@ -2281,7 +2331,7 @@ $miSens.Add_Click({ Show-SensorDialog })
 $miHelp.Add_Click({ $script:helpOpen = $true; Apply-View })
 $miCfg.Add_Click({ try { if (-not (Test-Path $cfgFile)) { Copy-Item (Join-Path $dir 'config.example.json') $cfgFile }; Start-Process notepad.exe -ArgumentList ('"' + $cfgFile + '"') } catch { Write-Log ('Konfig: ' + $_.Exception.Message) } })
 $miUpd.Add_Click({ Invoke-UpdateFlow $true })
-[void]$menu.Items.Add($miMode); [void]$menu.Items.Add($miSnooze); [void]$menu.Items.Add($miSnoozeM); [void]$menu.Items.Add($miBig); [void]$menu.Items.Add($miCopy); [void]$menu.Items.Add($miExport); [void]$menu.Items.Add($miTheme); [void]$menu.Items.Add($miDemo); [void]$menu.Items.Add($miHaSup); [void]$menu.Items.Add($miSmall); [void]$menu.Items.Add($miRefresh); [void]$menu.Items.Add($miTop); [void]$menu.Items.Add($miPop); [void]$menu.Items.Add($miTray); [void]$menu.Items.Add($miSound); [void]$menu.Items.Add($miReset); [void]$menu.Items.Add($miLog); [void]$menu.Items.Add($miHa); [void]$menu.Items.Add($miSens); [void]$menu.Items.Add($miHelp); [void]$menu.Items.Add($miCfg); [void]$menu.Items.Add($miUpd); [void]$menu.Items.Add((New-Object System.Windows.Controls.Separator)); [void]$menu.Items.Add($miExit)
+[void]$menu.Items.Add($miMode); [void]$menu.Items.Add($miSnooze); [void]$menu.Items.Add($miSnoozeM); [void]$menu.Items.Add($miBig); [void]$menu.Items.Add($miCopy); [void]$menu.Items.Add($miCopyAll); [void]$menu.Items.Add($miExport); [void]$menu.Items.Add($miTheme); [void]$menu.Items.Add($miDemo); [void]$menu.Items.Add($miHaSup); [void]$menu.Items.Add($miSmall); [void]$menu.Items.Add($miRefresh); [void]$menu.Items.Add($miTop); [void]$menu.Items.Add($miPop); [void]$menu.Items.Add($miTray); [void]$menu.Items.Add($miSound); [void]$menu.Items.Add($miReset); [void]$menu.Items.Add($miLog); [void]$menu.Items.Add($miHa); [void]$menu.Items.Add($miSens); [void]$menu.Items.Add($miHelp); [void]$menu.Items.Add($miCfg); [void]$menu.Items.Add($miUpd); [void]$menu.Items.Add((New-Object System.Windows.Controls.Separator)); [void]$menu.Items.Add($miExit)
 $win.ContextMenu = $menu
 
 
@@ -2306,7 +2356,7 @@ function Apply-Lang {
     $ui.BtnHelp.ToolTip = (T 'help_tip'); $ui.BtnLang.ToolTip = (T 'lang_tip')
     foreach ($k in 'De', 'En') { $ui.('Lang' + $k).Foreground = Brush '#FFA9B4C4'; $ui.('Lang' + $k).FontWeight = 'Normal' }
     if ($state.lang -eq 'en') { $ui.LangEn.Foreground = Brush '#FFFFFFFF'; $ui.LangEn.FontWeight = 'Bold' } else { $ui.LangDe.Foreground = Brush '#FFFFFFFF'; $ui.LangDe.FontWeight = 'Bold' }
-    $miCopy.Header = (T 'm_copy'); $miExport.Header = (T 'm_export');
+    $miCopy.Header = (T 'm_copy'); $miCopyAll.Header = (T 'm_copy_all'); $miExport.Header = (T 'm_export');
     if ($script:trayMiExit) { $script:trayMiExit.Text = (T 'm_exit'); $script:trayMiRefresh.Text = (T 'm_refresh'); $script:trayMiQuietM.Text = (T 'm_snooze_m'); $script:trayMiQuiet.Text = $(if (Test-Snooze) { T 'm_snooze_off' ($script:snoozeUntil.ToString('HH:mm')) } else { T 'm_snooze' }) }
  $miSnoozeM.Header = (T 'm_snooze_m'); $miSnooze.Header = $(if (Test-Snooze) { T 'm_snooze_off' ($script:snoozeUntil.ToString('HH:mm')) } else { T 'm_snooze' }); $miTheme.Header = $(switch ([string]$state.theme) { 'day' { T 'm_theme_day' } 'night' { T 'm_theme_night' } default { T 'm_theme_auto' } }); $miDemo.Header = $(if ($state.demo) { T 'm_demo_off' } else { T 'm_demo' }); $miHaSup.Header = (T 'm_ha_support'); $miBig.Header = (T 'm_bigger'); $miSmall.Header = (T 'm_smaller'); $miRefresh.Header = (T 'm_refresh'); $miTop.Header = (T 'm_top'); $miPop.Header = (T 'm_pop'); $miTray.Header = (T 'm_tray'); if ($script:trayMiOpen) { $script:trayMiOpen.Text = (T 'tray_open'); $script:trayMiExit.Text = (T 'm_exit') }; $miSound.Header = (T 'm_sound'); $miReset.Header = (T 'm_reset'); $miLog.Header = (T 'm_log'); $miHelp.Header = (T 'm_help'); $miHa.Header = (T 'm_ha'); $miMode.Header = $(if ($state.simple) { T 'm_mode_full' } else { T 'm_mode_simple' }); $miSens.Header = (T 'm_sens'); $miCfg.Header = (T 'm_cfg'); $miUpd.Header = (T 'm_upd'); $miExit.Header = (T 'm_exit')
     $ui.RoomName.Text = 'Luftwächter'; $ui.TitleTag.Text = (T 'tagline')
@@ -2605,6 +2655,11 @@ if ($SmokeTest) {
     Smoke 'tile tooltips' { Apply-Lang; ([string]$ui.C1.ToolTip -match '1000' -and [string]$ui.C4.ToolTip -match '40') }
     Smoke 'worst room in tray' { $w5 = Get-WorstRoom ([pscustomobject]@{ level = 'gut'; rooms = @([pscustomobject]@{ name = 'A'; level = 'gut' }, [pscustomobject]@{ name = 'B'; level = 'schlecht' }) }); $n5 = Get-WorstRoom ([pscustomobject]@{ level = 'schlecht'; rooms = @([pscustomobject]@{ name = 'A'; level = 'mittel' }) }); ($w5.name -eq 'B' -and $null -eq $n5) }
     Smoke 'slow polling when minimized' { $win.WindowState = 'Minimized'; $script:tickN = 0; $r6 = @((Step-Poll), (Step-Poll), (Step-Poll)); $win.WindowState = 'Normal'; ($r6[0] -eq $false -and $r6[1] -eq $false -and $r6[2] -eq $true) }
+    Smoke 'room chip tooltips' { $state.demo = $true; $state.room = 'living'; Update-Widget; $tt = @($ui.RoomStrip.Children | ForEach-Object { [string]$_.ToolTip }); ($tt.Count -ge 1 -and ($tt -join ' ') -match 'CO') }
+    Smoke 'house title' { Update-Widget; ($win.Title -match 'Luftwächter' -and (Get-HouseText @([pscustomobject]@{ level = 'gut' }, [pscustomobject]@{ level = 'schlecht' })) -match '1') }
+    Smoke 'screen reader name' { Update-Widget; ([System.Windows.Automation.AutomationProperties]::GetName($ui.Card) -match 'Luftwächter') }
+    Smoke 'copy all rooms' { Update-Widget; Copy-AllRooms; ($script:lastCopyAll -match 'Luftwächter' -and @($script:lastCopyAll -split "`n").Count -ge 2) }
+    Smoke 'number key room' { $state.room = 'living'; Update-Widget; $k0 = @($script:rooms).Count; Select-RoomIndex 1; $ok7 = ($k0 -lt 2 -or [string]$state.room -ne 'living'); Select-RoomIndex 0; $ok7 }
     Smoke 'no errors logged' {
         $new = @(); if (Test-Path $logFile) { $new = @(Get-Content -Path $logFile -Encoding UTF8 | Select-Object -Skip $l0 | Where-Object { $_ -notmatch 'Start v' }) }
         foreach ($x in $new) { Write-Host ('      log: ' + $x) }
