@@ -2,6 +2,18 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [5.16.0] - 2026-11-24
+- New: move the mouse over the curve and the line shows the time and value of that point, e.g. "07:40 · 169 µg".
+- New: the daily summary of dust, temperature and humidity now names the times of the lowest and highest value.
+- New: the tray icon tooltip also names the room with the worst air when it is worse than the one you are looking at.
+- Improved: the four value tiles explain on hover what counts as good, fair or bad.
+- Improved: the widget polls three times slower while it is minimized, which saves battery and network, and refreshes at once when you bring it back.
+- DE: Neu: Fährst du mit der Maus über die Kurve, zeigt eine Linie Uhrzeit und Wert dieses Punkts, z. B. „07:40 · 169 µg“.
+- DE: Neu: Die Tagesübersicht für Feinstaub, Temperatur und Luftfeuchte nennt jetzt auch die Uhrzeit des niedrigsten und des höchsten Werts.
+- DE: Neu: Der Hinweis am Symbol in der Taskleiste nennt auch den Raum mit der schlechtesten Luft, wenn er schlechter ist als der, den du gerade ansiehst.
+- DE: Verbessert: Die vier Wert-Kacheln erklären beim Darüberfahren, was gut, mittel oder schlecht ist.
+- DE: Verbessert: Solange das Widget minimiert ist, fragt es dreimal seltener ab. Das spart Akku und Netz. Beim Zurückholen aktualisiert es sofort.
+
 ## [5.15.0] - 2026-11-23
 - New: "Quiet until tomorrow morning" in the menu and the tray icon menu. Mutes alerts until 07:00.
 - New: quiet time is remembered. If you restart the widget or the PC, it stays quiet until the set time.

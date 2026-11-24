@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall, [switch]$SmokeTest)
 
 $appName = 'Luftwaechter'
-$appVersion = '5.15.0'
+$appVersion = '5.16.0'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -410,7 +410,13 @@ $script:Strings = @{
     dev_hide = @('Ausblenden', 'Hide')
     dev_unhide = @('{0} ausgeblendet · alle anzeigen', '{0} hidden · show all')
     mm = @('Heute: Min {0} · Max {1} {2}', 'Today: min {0} · max {1} {2}')
-    chip_tip = @('Tippen: Verlauf dieses Werts anzeigen', 'Tap: show the history of this value')
+    chip_tip_1 = @('CO₂: gut unter 1000 ppm, mittel bis 1400, darüber schlecht. Tippen zeigt die Kurve.', 'CO₂: good below 1000 ppm, fair up to 1400, bad above. Tap to see the curve.')
+    chip_tip_2 = @('Feinstaub: gut unter 15 µg/m³, darüber belastet. Tippen zeigt die Kurve.', 'Fine dust: good below 15 µg/m³, burdened above. Tap to see the curve.')
+    chip_tip_3 = @('Temperatur: angenehm sind etwa 20 bis 24 °C. Tippen zeigt die Kurve.', 'Temperature: about 20 to 24 °C feels comfortable. Tap to see the curve.')
+    chip_tip_4 = @('Luftfeuchte: angenehm sind 40 bis 60 %. Tippen zeigt die Kurve.', 'Humidity: 40 to 60 % feels comfortable. Tap to see the curve.')
+    mm2 = @('Heute: Min {0} {2} um {3} · Max {1} {2} um {4}', 'Today: min {0} {2} at {3} · max {1} {2} at {4}')
+    tray_worst = @('⚠ Schlechter: {0}', '⚠ Worse: {0}')
+    chip_tip = 'Tippen: Verlauf dieses Werts anzeigen', 'Tap: show the history of this value')
     spark_tip = @('Tippen: 3 Std / 24 Std / 7 Tage', 'Tap: 3 h / 24 h / 7 days')
     pill_tip = @('Doppelklick: wieder groß', 'Double-click: expand')
     help_tip = @('Hilfe', 'Help')
@@ -532,7 +538,7 @@ $script:Strings = @{
     offline_tip = @('Luftwächter · offline', 'Luftwächter · offline')
     quiet_tag = @('🔕 Ruhe bis {0}', '🔕 Quiet until {0}')
     h18 = @('Tastatur', 'Keyboard')
-    b18 = @('Klicke einmal auf das Widget, dann: ← / → anderer Raum · D einfache Ansicht oder Details · + / − größer oder kleiner · F5 sofort aktualisieren · Strg+C Werte kopieren · Q Ruhe an/aus · T Design wechseln · F1 Hilfe · Esc schließt Hilfe und Geräte-Fenster. Beim Verschieben rastet das Widget an den Bildschirmrändern ein.', 'Click the widget once, then: ← / → other room · D simple view or details · + / − bigger or smaller · F5 refresh now · Ctrl+C copy readings · Q quiet on/off · T switch theme · F1 help · Esc closes help and the device panel. When you move the widget it snaps to the screen edges.')
+    b18 = @('Klicke einmal auf das Widget, dann: ← / → anderer Raum · D einfache Ansicht oder Details · + / − größer oder kleiner · F5 sofort aktualisieren · Strg+C Werte kopieren · Maus über die Kurve zeigt Uhrzeit und Wert · Q Ruhe an/aus · T Design wechseln · F1 Hilfe · Esc schließt Hilfe und Geräte-Fenster. Beim Verschieben rastet das Widget an den Bildschirmrändern ein.', 'Click the widget once, then: ← / → other room · D simple view or details · + / − bigger or smaller · F5 refresh now · Ctrl+C copy readings · hover the curve for time and value · Q quiet on/off · T switch theme · F1 help · Esc closes help and the device panel. When you move the widget it snaps to the screen edges.')
     week_tag = @(' · Woche: {0} %', ' · week: {0} %')
     m_copy = @('Werte kopieren', 'Copy readings')
     news_h = @('Neu in Version {0}', 'New in version {0}')
@@ -839,6 +845,13 @@ function Init-Tray {
         $script:tray.Visible = [bool]$state.tray
     } catch { Write-Log ('Tray: ' + $_.Exception.Message); $script:tray = $null }
 }
+function Get-WorstRoom($d) {
+    $rank = @{ gut = 0; mittel = 1; schlecht = 2 }
+    $wk = $rank[[string]$d.level]; if ($null -eq $wk) { $wk = 0 }
+    $wr = $null
+    foreach ($r in @($d.rooms)) { $rk = $rank[[string]$r.level]; if ($null -ne $rk -and $rk -gt $wk) { $wk = $rk; $wr = $r } }
+    return $wr
+}
 function Update-Tray($d, [string]$act) {
     if (-not $script:tray) { return }
     try {
@@ -850,7 +863,9 @@ function Update-Tray($d, [string]$act) {
         $co2 = ''
         foreach ($v in @($d.values)) { if ([string]$v.key -like 'CO*') { $co2 = ' · ' + [string]$v.value + ' ' + [string]$v.unit; break } }
         $tip = [string]$d.room.name + $co2 + ' · ' + [string]$d.headline
-        if ($tip.Length -gt 62) { $tip = $tip.Substring(0, 61) + '…' }
+        $wr = Get-WorstRoom $d
+        if ($wr) { $tip += "`n" + (T 'tray_worst' ([string]$wr.name)) }
+        if ($tip.Length -gt 120) { $tip = $tip.Substring(0, 119) + '…' }
         $script:tray.Text = $tip
         $h = (Get-Date).Hour
         if ($null -ne $script:lastAction -and $act -ne $script:lastAction -and ($act -eq 'oeffnen' -or $act -eq 'schliessen') -and -not (Test-Snooze) -and $h -ge 7 -and $h -lt 22 -and (((Get-Date) - $script:lastBalloon).TotalMinutes -gt 30)) {
@@ -1007,6 +1022,7 @@ function Show-Spark([string]$room, [string]$col) {
         $span = $now - [double]$pts[0][0]
         if ($span -lt $winSec) { $winSec = [Math]::Max(900.0, $span * 1.05) }
     }
+    $script:sp = @{ pts = $pts; now = $now; win = $winSec; w = $w; unit = $unit }
     if ($pts.Count -ge 2) {
         $poly = New-Object Windows.Shapes.Polygon
         $pc = New-Object Windows.Media.PointCollection
@@ -1033,13 +1049,28 @@ function Show-Spark([string]$room, [string]$col) {
     }
     if ($m -gt 0) {
         $today = (Get-Date).Date; $tv = @()
-        foreach ($q in $pts) { if ([DateTimeOffset]::FromUnixTimeSeconds([long]$q[0]).LocalDateTime -ge $today) { $tv += $q[1] } }
+        foreach ($q in $pts) { $lt = [DateTimeOffset]::FromUnixTimeSeconds([long]$q[0]).LocalDateTime; if ($lt -ge $today) { $tv += , @([double]$q[1], $lt) } }
         if ($tv.Count -ge 2) {
-            $mn = ($tv | Measure-Object -Minimum).Minimum; $mx = ($tv | Measure-Object -Maximum).Maximum
-            $mnT = $mn.ToString('0.#', $inv); $mxT = $mx.ToString('0.#', $inv)
-            $ui.Peak.Text = (T 'mm' $mnT $mxT $unit)
+            $mnI = $tv[0]; $mxI = $tv[0]
+            foreach ($q in $tv) { if ($q[0] -lt $mnI[0]) { $mnI = $q }; if ($q[0] -gt $mxI[0]) { $mxI = $q } }
+            $ui.Peak.Text = (T 'mm2' ($mnI[0].ToString('0.#', $inv)) ($mxI[0].ToString('0.#', $inv)) $unit).Replace('{3}', $mnI[1].ToString('HH:mm')).Replace('{4}', $mxI[1].ToString('HH:mm'))
         } else { $ui.Peak.Text = '' }
     }
+}
+
+function Get-SparkPoint([double]$x) {
+    $sp = $script:sp
+    if (-not $sp -or @($sp.pts).Count -lt 2) { return $null }
+    $ts = $sp.now - (($sp.w - $x) / $sp.w) * $sp.win
+    $best = $null; $bd = [double]::MaxValue
+    foreach ($q in $sp.pts) { $dd = [Math]::Abs($q[0] - $ts); if ($dd -lt $bd) { $bd = $dd; $best = $q } }
+    if ($null -eq $best) { return $null }
+    $lt = [DateTimeOffset]::FromUnixTimeSeconds([long]$best[0]).LocalDateTime
+    $fmt = $(if ([int]$state.sparkHours -eq 168) { 'dd.MM. HH:mm' } else { 'HH:mm' })
+    return @{ text = ($lt.ToString($fmt) + ' · ' + ([double]$best[1]).ToString('0.#', $inv) + ' ' + $sp.unit); px = ($sp.w - (($sp.now - $best[0]) / $sp.win) * $sp.w) }
+}
+function Clear-SparkMark {
+    for ($i = $ui.Spark.Children.Count - 1; $i -ge 0; $i--) { if ([string]$ui.Spark.Children[$i].Tag -eq 'mark') { $ui.Spark.Children.RemoveAt($i) } }
 }
 
 function Get-Trend([string]$room) {
@@ -2153,6 +2184,19 @@ $win.Add_KeyDown({ param($s, $e)
     }
 })
 
+$ui.Spark.Background = [Windows.Media.Brushes]::Transparent
+$ui.Spark.Add_MouseMove({ param($s, $e)
+    $aw = [Math]::Max($s.ActualWidth, 1.0); $w2 = 205.0
+    $r = Get-SparkPoint ($e.GetPosition($s).X * ($w2 / $aw))
+    if (-not $r) { return }
+    $ui.SparkR.Text = [string]$r.text
+    Clear-SparkMark
+    $ln = New-Object Windows.Shapes.Line
+    $ln.X1 = $r.px; $ln.X2 = $r.px; $ln.Y1 = 0; $ln.Y2 = 62; $ln.Stroke = Brush '#FFE6EBF2'; $ln.StrokeThickness = 1; $ln.Tag = 'mark'; $ln.IsHitTestVisible = $false
+    [void]$ui.Spark.Children.Add($ln)
+})
+$ui.Spark.Add_MouseLeave({ Clear-SparkMark; $ui.SparkR.Text = (T 'now') })
+
 foreach ($k in 'S', 'M', 'L', 'C', 'P') {
     $ui.('Sz' + $k).Tag = $k
     $ui.('Sz' + $k).Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; if ([string]$s.Tag -eq 'P' -and $state.size -ne 'P') { $script:prevSize = $state.size }; $state.size = [string]$s.Tag; Apply-View; Save-State })
@@ -2258,7 +2302,7 @@ function Build-Help {
 function Apply-Lang {
     $ui.SzC.Text = (T 'sz_c'); $ui.SzP.Text = (T 'sz_p')
     $ui.WMoreT.Text = (T 'more'); $ui.WLessT.Text = (T 'less'); $ui.WTitleT.Text = (T 'outside') + $(if ($place) { ' · ' + $place.ToUpper() } else { '' })
-    $ui.SparkR.Text = (T 'now'); $ui.SparkBox.ToolTip = (T 'spark_tip'); for ($k = 1; $k -le 4; $k++) { $ui.('C' + $k).ToolTip = (T 'chip_tip') }; $ui.Pill.ToolTip = (T 'pill_tip')
+    $ui.SparkR.Text = (T 'now'); $ui.SparkBox.ToolTip = (T 'spark_tip'); for ($k = 1; $k -le 4; $k++) { $ui.('C' + $k).ToolTip = (T ('chip_tip_' + $k)) }; $ui.Pill.ToolTip = (T 'pill_tip')
     $ui.BtnHelp.ToolTip = (T 'help_tip'); $ui.BtnLang.ToolTip = (T 'lang_tip')
     foreach ($k in 'De', 'En') { $ui.('Lang' + $k).Foreground = Brush '#FFA9B4C4'; $ui.('Lang' + $k).FontWeight = 'Normal' }
     if ($state.lang -eq 'en') { $ui.LangEn.Foreground = Brush '#FFFFFFFF'; $ui.LangEn.FontWeight = 'Bold' } else { $ui.LangDe.Foreground = Brush '#FFFFFFFF'; $ui.LangDe.FontWeight = 'Bold' }
@@ -2470,7 +2514,15 @@ $ui.Ver.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; try { Start-
 $script:pulse = $false
 $timer = New-Object System.Windows.Threading.DispatcherTimer
 $timer.Interval = [TimeSpan]::FromSeconds($interval)
-$timer.Add_Tick({ Update-Widget })
+$script:tickN = 0
+function Test-Hidden { return ($win.WindowState -eq 'Minimized' -or -not $win.IsVisible) }
+function Step-Poll {
+    $script:tickN++
+    if ((Test-Hidden) -and ($script:tickN % 3) -ne 0) { return $false }
+    Update-Widget; return $true
+}
+$timer.Add_Tick({ [void](Step-Poll) })
+$win.Add_StateChanged({ if ($win.WindowState -ne 'Minimized') { Update-Widget } })
 
 $pulseTimer = New-Object System.Windows.Threading.DispatcherTimer
 $pulseTimer.Interval = [TimeSpan]::FromMilliseconds(1000)
@@ -2548,6 +2600,11 @@ if ($SmokeTest) {
     Smoke 'window rescue' { $win.Left = 99999; $win.Top = -99999; $r1 = Clamp-ToScreen; $vr1 = [System.Windows.SystemParameters]::VirtualScreenLeft + [System.Windows.SystemParameters]::VirtualScreenWidth; ($r1 -and $win.Left -lt $vr1 -and $win.Top -ge [System.Windows.SystemParameters]::VirtualScreenTop) }
     Smoke 'keyboard shortcuts' { $kw = Build-Help; $state.theme = 'auto'; $script:helpOpen = $true; Apply-View; $script:helpOpen = $false; Apply-View; $true }
     Smoke 'offline tray icon' { $script:fails = 2; $u0 = $url; $state.demo = $false; $script:haMode = $false; $url = 'http://127.0.0.1:9/x'; Update-Widget; $ok3 = ($ui.Level.Text -eq (T 'offline')); $state.demo = $true; $url = $u0; $script:fails = 0; Remove-Item $logFile -Force -ErrorAction SilentlyContinue; $ok3 }
+    Smoke 'chart hover' { $state.demo = $true; $nw = [int][DateTimeOffset]::UtcNow.ToUnixTimeSeconds(); $state.hist['living'] = @(for ($i = 60; $i -ge 0; $i--) { '{0}:{1}:9:21.5:44' -f ($nw - $i * 120), (700 + $i * 5) }); $state.metric = 0; $state.sparkHours = 3; Show-Spark 'living' '#4CAF50'; $r2 = Get-SparkPoint 100.0; ($r2 -and $r2.text -match 'ppm' -and $r2.px -ge 0 -and $r2.px -le 205) }
+    Smoke 'min/max with times' { $state.metric = 1; Show-Spark 'living' '#4CAF50'; $ok4 = ($ui.Peak.Text -match '\d\d:\d\d.*\d\d:\d\d'); $state.metric = 0; Show-Spark 'living' '#4CAF50'; $ok4 }
+    Smoke 'tile tooltips' { Apply-Lang; ([string]$ui.C1.ToolTip -match '1000' -and [string]$ui.C4.ToolTip -match '40') }
+    Smoke 'worst room in tray' { $w5 = Get-WorstRoom ([pscustomobject]@{ level = 'gut'; rooms = @([pscustomobject]@{ name = 'A'; level = 'gut' }, [pscustomobject]@{ name = 'B'; level = 'schlecht' }) }); $n5 = Get-WorstRoom ([pscustomobject]@{ level = 'schlecht'; rooms = @([pscustomobject]@{ name = 'A'; level = 'mittel' }) }); ($w5.name -eq 'B' -and $null -eq $n5) }
+    Smoke 'slow polling when minimized' { $win.WindowState = 'Minimized'; $script:tickN = 0; $r6 = @((Step-Poll), (Step-Poll), (Step-Poll)); $win.WindowState = 'Normal'; ($r6[0] -eq $false -and $r6[1] -eq $false -and $r6[2] -eq $true) }
     Smoke 'no errors logged' {
         $new = @(); if (Test-Path $logFile) { $new = @(Get-Content -Path $logFile -Encoding UTF8 | Select-Object -Skip $l0 | Where-Object { $_ -notmatch 'Start v' }) }
         foreach ($x in $new) { Write-Host ('      log: ' + $x) }

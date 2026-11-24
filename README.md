@@ -27,6 +27,7 @@ A small always-on-top **Windows desktop widget** that shows how good the air is 
 - Double-click the title to switch between the simple and the details view
 - **Export:** right-click → *Save history as CSV* saves the last 7 days of all rooms to a file you can open in Excel
 - **Keyboard:** ← / → rooms, D simple/details, + / − size, F5 refresh, Ctrl+C copy, Q quiet, T theme, F1 help, Esc close; the widget snaps to screen edges
+- **Chart hover:** move the mouse over the curve to read the exact time and value; daily min/max show their times; tooltips on the tiles explain the ranges; tray tooltip names the worst room; slower polling while minimized
 - **Copy readings** (right-click) for pasting into a message; tray menu with *Refresh now*, *Quiet for 1 hour* and *Quiet until tomorrow morning* (quiet time survives a restart); mouse wheel over the room buttons switches rooms
 - **Daily air score** in the simple view: "Today: good air 92 % of the time", counted from today's readings, plus a 7-day score
 
