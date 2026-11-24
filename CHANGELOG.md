@@ -2,6 +2,18 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [5.18.0] - 2026-11-24
+- New: the size picker is now a clear button row. The current size is highlighted and each choice is a bigger target to click.
+- New: buttons, value tiles and room buttons glow softly when the mouse is over them, so you see what you can click.
+- New: switching rooms and bringing the widget back fades in smoothly instead of jumping.
+- Improved: the right-click menu is sorted into groups (view, alerts, data, window, help). Rarely used items moved into "More".
+- Improved: tooltips for the size choices, the time, and the open/close buttons of the device panel and help.
+- DE: Neu: Die Größenwahl ist jetzt eine klare Knopfreihe. Die aktuelle Größe ist hervorgehoben und jede Auswahl ist ein größeres Ziel zum Anklicken.
+- DE: Neu: Knöpfe, Wert-Kacheln und Raum-Knöpfe leuchten sanft, wenn die Maus darüber ist. So siehst du, was du anklicken kannst.
+- DE: Neu: Beim Raumwechsel und beim Zurückholen des Widgets blendet es weich ein, statt zu springen.
+- DE: Verbessert: Das Rechtsklick-Menü ist in Gruppen sortiert (Ansicht, Hinweise, Daten, Fenster, Hilfe). Selten genutzte Punkte stehen unter „Erweitert“.
+- DE: Verbessert: Hinweistexte für die Größenwahl, die Uhrzeit und die Schließen-Knöpfe von Geräte-Fenster und Hilfe.
+
 ## [5.17.1] - 2026-11-24
 - Fixed: the tray icon tooltip could be too long for Windows when another room had worse air, so the tray icon stopped updating. The text is now shortened to fit. This also fixes the problem that came with 5.16.0.
 - DE: Behoben: Der Hinweis am Symbol in der Taskleiste konnte für Windows zu lang werden, wenn ein anderer Raum schlechtere Luft hatte, und das Symbol wurde nicht mehr aktualisiert. Der Text wird jetzt passend gekürzt. Das behebt auch das Problem, das mit 5.16.0 kam.

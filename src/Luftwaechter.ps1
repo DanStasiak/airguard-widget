@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall, [switch]$SmokeTest)
 
 $appName = 'Luftwaechter'
-$appVersion = '5.17.1'
+$appVersion = '5.18.0'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -540,6 +540,16 @@ $script:Strings = @{
     h18 = @('Tastatur', 'Keyboard')
     b18 = @('Klicke einmal auf das Widget, dann: ← / → anderer Raum · D einfache Ansicht oder Details · + / − größer oder kleiner · F5 sofort aktualisieren · Strg+C Werte kopieren · Strg+Umschalt+C alle Räume · 1–9 Raum wählen · Maus über die Kurve zeigt Uhrzeit und Wert · Q Ruhe an/aus · T Design wechseln · F1 Hilfe · Esc schließt Hilfe und Geräte-Fenster. Beim Verschieben rastet das Widget an den Bildschirmrändern ein.', 'Click the widget once, then: ← / → other room · D simple view or details · + / − bigger or smaller · F5 refresh now · Ctrl+C copy readings · Ctrl+Shift+C all rooms · 1–9 pick a room · hover the curve for time and value · Q quiet on/off · T switch theme · F1 help · Esc closes help and the device panel. When you move the widget it snaps to the screen edges.')
     week_tag = @(' · Woche: {0} %', ' · week: {0} %')
+    sz_tip_s = @('Klein', 'Small')
+    sz_tip_m = @('Normal', 'Normal')
+    sz_tip_l = @('Groß (Strg + Mausrad: noch größer)', 'Large (Ctrl + mouse wheel: even larger)')
+    sz_tip_c = @('Kompakt: nur Ring und Rat', 'Compact: ring and advice only')
+    sz_tip_p = @('Pille: ganz klein, bleibt sichtbar', 'Pill: tiny, stays visible')
+    time_tip = @('Zeit der letzten Aktualisierung · F5 aktualisiert sofort', 'Time of the last refresh · F5 refreshes now')
+    drawer_close_tip = @('Geräte-Fenster schließen (Esc)', 'Close the device panel (Esc)')
+    tab_tip = @('Geräte öffnen', 'Open devices')
+    help_close_tip = @('Hilfe schließen (Esc)', 'Close help (Esc)')
+    m_adv = @('Erweitert', 'More')
     m_copy_all = @('Alle Räume kopieren', 'Copy all rooms')
     house_bad = @('{0} von {1} Räumen schlecht', '{0} of {1} rooms poor')
     house_mid = @('{0} von {1} Räumen mittel', '{0} of {1} rooms fair')
@@ -636,11 +646,11 @@ $xaml = @"
         </Border>
         <DockPanel Margin="2,8,0,0">
           <StackPanel x:Name="SzBox" DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-            <TextBlock x:Name="SzS" Text="S" Foreground="#FFA9B4C4" FontSize="12" Cursor="Hand"/><TextBlock Text=" · " Foreground="#FFA9B4C4" FontSize="12"/>
-            <TextBlock x:Name="SzM" Text="M" Foreground="#FFA9B4C4" FontSize="12" Cursor="Hand"/><TextBlock Text=" · " Foreground="#FFA9B4C4" FontSize="12"/>
-            <TextBlock x:Name="SzL" Text="L" Foreground="#FFA9B4C4" FontSize="12" Cursor="Hand"/><TextBlock Text=" · " Foreground="#FFA9B4C4" FontSize="12"/>
-            <TextBlock x:Name="SzC" Text="kompakt" Foreground="#FFA9B4C4" FontSize="12" Cursor="Hand"/><TextBlock Text=" · " Foreground="#FFA9B4C4" FontSize="12"/>
-            <TextBlock x:Name="SzP" Text="Pille" Foreground="#FFA9B4C4" FontSize="12" Cursor="Hand"/>
+            <Border x:Name="SzBS" CornerRadius="9" Padding="6,2" Cursor="Hand" Background="#00000000"><TextBlock x:Name="SzS" Text="S" Foreground="#FFA9B4C4" FontSize="12"/></Border>
+            <Border x:Name="SzBM" CornerRadius="9" Padding="6,2" Cursor="Hand" Background="#00000000"><TextBlock x:Name="SzM" Text="M" Foreground="#FFA9B4C4" FontSize="12"/></Border>
+            <Border x:Name="SzBL" CornerRadius="9" Padding="6,2" Cursor="Hand" Background="#00000000"><TextBlock x:Name="SzL" Text="L" Foreground="#FFA9B4C4" FontSize="12"/></Border>
+            <Border x:Name="SzBC" CornerRadius="9" Padding="6,2" Cursor="Hand" Background="#00000000"><TextBlock x:Name="SzC" Text="kompakt" Foreground="#FFA9B4C4" FontSize="12"/></Border>
+            <Border x:Name="SzBP" CornerRadius="9" Padding="6,2" Cursor="Hand" Background="#00000000"><TextBlock x:Name="SzP" Text="Pille" Foreground="#FFA9B4C4" FontSize="12"/></Border>
           </StackPanel>
           <Border x:Name="BtnHelp" DockPanel.Dock="Left" Width="22" Height="22" CornerRadius="11" Background="#FF585C64" Cursor="Hand"><TextBlock Text="?" Foreground="White" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
           <Border x:Name="BtnLang" DockPanel.Dock="Left" Height="22" CornerRadius="11" Background="#FF494E57" Padding="8,0" Margin="6,0,0,0" Cursor="Hand">
@@ -767,7 +777,7 @@ $xaml = @"
 $win = [Windows.Markup.XamlReader]::Load((New-Object System.Xml.XmlNodeReader ([xml]$xaml)))
 $conv = New-Object Windows.Media.BrushConverter
 function Brush([string]$hex) { return $conv.ConvertFromString($hex) }
-$names = @('DayScore', 'Tour', 'TourH', 'TourT', 'TourOk', 'TourOkT', 'GrpTiles', 'GrpFoot', 'GrpUpd', 'SzBox', 'BtnMode', 'BtnModeT', 'TabArr', 'TabLbl', 'Scaler', 'Card', 'Ver', 'RoomStrip', 'SparkBox', 'SparkLabel', 'Glow', 'WOut', 'WOutB', 'TitleBox', 'RoomName', 'RoomSub', 'TitleTag', 'Time', 'SzS', 'SzM', 'SzL', 'SzC', 'SzP', 'BtnHelp', 'BtnLang', 'LangDe', 'LangEn', 'WMoreT', 'WLessT', 'WTitleT', 'Help', 'HelpClose', 'HelpTitle', 'HelpScroll', 'HelpBody', 'HelpVer', 'BtnUpd', 'BtnUpdT', 'Copy', 'Pill', 'PillDot', 'PillText', 'Arc', 'Face', 'Level', 'Trend', 'Panel', 'IcClosed', 'IcOpen', 'Headline', 'Detail', 'BarTrack', 'BarFill', 'Details', 'Spark', 'SparkR', 'Peak', 'WLine', 'WMore', 'WLineText', 'WFull', 'WLess', 'WIcon', 'WTemp', 'WCond', 'WTip', 'Footer', 'Tab', 'Drawer', 'DrawerClose', 'DrawerTitle', 'DevPanel')
+$names = @('SzBS', 'SzBM', 'SzBL', 'SzBC', 'SzBP', 'DayScore', 'Tour', 'TourH', 'TourT', 'TourOk', 'TourOkT', 'GrpTiles', 'GrpFoot', 'GrpUpd', 'SzBox', 'BtnMode', 'BtnModeT', 'TabArr', 'TabLbl', 'Scaler', 'Card', 'Ver', 'RoomStrip', 'SparkBox', 'SparkLabel', 'Glow', 'WOut', 'WOutB', 'TitleBox', 'RoomName', 'RoomSub', 'TitleTag', 'Time', 'SzS', 'SzM', 'SzL', 'SzC', 'SzP', 'BtnHelp', 'BtnLang', 'LangDe', 'LangEn', 'WMoreT', 'WLessT', 'WTitleT', 'Help', 'HelpClose', 'HelpTitle', 'HelpScroll', 'HelpBody', 'HelpVer', 'BtnUpd', 'BtnUpdT', 'Copy', 'Pill', 'PillDot', 'PillText', 'Arc', 'Face', 'Level', 'Trend', 'Panel', 'IcClosed', 'IcOpen', 'Headline', 'Detail', 'BarTrack', 'BarFill', 'Details', 'Spark', 'SparkR', 'Peak', 'WLine', 'WMore', 'WLineText', 'WFull', 'WLess', 'WIcon', 'WTemp', 'WCond', 'WTip', 'Footer', 'Tab', 'Drawer', 'DrawerClose', 'DrawerTitle', 'DevPanel')
 for ($i = 1; $i -le 4; $i++) { $names += @("C$i", "D$i", "V$i", "K$i", "WK$i", "WV$i") }
 $ui = @{}
 foreach ($n in $names) { $ui[$n] = $win.FindName($n) }
@@ -808,7 +818,7 @@ function Show-Window {
     try {
         $win.Show()
         if ($win.WindowState -eq 'Minimized') { $win.WindowState = 'Normal' }
-        $win.Topmost = $true; $win.Activate() | Out-Null
+        $win.Topmost = $true; $win.Activate() | Out-Null; Fade-In $win 200
         $popTimer.Stop(); $popTimer.Start()
     } catch { Write-Log ('Show-Window: ' + $_.Exception.Message) }
 }
@@ -1293,6 +1303,7 @@ function Build-Strip {
         $pill.ToolTip = $chipTip
         [System.Windows.Automation.AutomationProperties]::SetName($pill, $chipTip)
         $pill.Add_MouseLeftButtonDown({ param($s2, $e2) $e2.Handled = $true; $state.room = [string]$s2.Tag; $script:ventEnd = $null; $script:prevOpen = $null; $script:sumText = ''; $script:lastAction = $null; $script:devSig = ''; $script:openSince = $null; Save-State; Update-Widget })
+        Add-Hover $pill
         [void]$ui.RoomStrip.Children.Add($pill)
     }
 }
@@ -1343,8 +1354,8 @@ function Apply-View {
     $ui.Scaler.LayoutTransform = New-Object Windows.Media.ScaleTransform($scale, $scale)
     $ui.Ver.Text = $version
     if ($state.drawerOpen -and -not ($state.size -eq 'C')) { $ui.Card.CornerRadius = New-Object Windows.CornerRadius(24, 0, 0, 24) } else { $ui.Card.CornerRadius = New-Object Windows.CornerRadius(24) }
-    foreach ($k in 'S', 'M', 'L', 'C', 'P') { $ui.('Sz' + $k).Foreground = Brush '#FFA9B4C4'; $ui.('Sz' + $k).FontWeight = 'Normal' }
-    if ($state.size -ne 'XL') { $ui.('Sz' + $state.size).Foreground = Brush '#FFFFFFFF'; $ui.('Sz' + $state.size).FontWeight = 'Bold' }
+    foreach ($k in 'S', 'M', 'L', 'C', 'P') { $ui.('Sz' + $k).Foreground = Brush '#FFA9B4C4'; $ui.('Sz' + $k).FontWeight = 'Normal'; $ui.('SzB' + $k).Background = Brush '#00000000' }
+    if ($state.size -ne 'XL') { $ui.('Sz' + $state.size).Foreground = Brush '#FFFFFFFF'; $ui.('Sz' + $state.size).FontWeight = 'Bold'; $ui.('SzB' + $state.size).Background = Brush '#FF585C64' }
     $script:compact = ($state.size -eq 'C' -or $state.size -eq 'P')
     if ($state.size -eq 'P') { $ui.Card.Visibility = 'Collapsed'; $ui.Pill.Visibility = 'Visible' } else { $ui.Card.Visibility = 'Visible'; $ui.Pill.Visibility = 'Collapsed' }
     if ($script:compact) { $ui.Details.Visibility = 'Collapsed'; $ui.Detail.Visibility = 'Collapsed'; $ui.Drawer.Visibility = 'Collapsed'; $ui.Tab.Visibility = 'Collapsed' }
@@ -1486,6 +1497,7 @@ function Test-Snooze { return ($null -ne $script:snoozeUntil -and (Get-Date) -lt
 function Show-Data($d) {
     $ui.TitleTag.Text = $(if (Test-Snooze) { T 'quiet_tag' ($script:snoozeUntil.ToString('HH:mm')) } else { T 'tagline' })
     $script:rooms = @($d.rooms)
+    if ([string]$script:lastShownRoom -ne [string]$d.room.key) { if ($script:lastShownRoom) { Fade-In $ui.Panel; Fade-In $ui.Arc }; $script:lastShownRoom = [string]$d.room.key }
     Build-Strip
     Update-HouseTitle $d
     if (-not $state.room -and $d.room.key) { $state.room = [string]$d.room.key }
@@ -2211,6 +2223,27 @@ function Snap-Edges {
     elseif ([Math]::Abs(($win.Top + $h) - $wa0.Bottom) -lt $m) { $win.Top = $wa0.Bottom - $h }
 }
 $ui.RoomStrip.Add_MouseWheel({ param($s, $e) if (-not ([System.Windows.Input.Keyboard]::Modifiers -band [System.Windows.Input.ModifierKeys]::Control)) { $e.Handled = $true; if ($e.Delta -gt 0) { Switch-Room -1 } else { Switch-Room 1 } } })
+function Set-Glow($el, [bool]$on) {
+    if ($null -eq $el) { return }
+    if ($on) {
+        $fx = New-Object Windows.Media.Effects.DropShadowEffect
+        $fx.Color = [Windows.Media.Colors]::White; $fx.BlurRadius = 10; $fx.ShadowDepth = 0; $fx.Opacity = 0.45
+        $el.Effect = $fx
+    } else { $el.Effect = $null }
+}
+function Add-Hover($el) {
+    if ($null -eq $el) { return }
+    $el.Add_MouseEnter({ param($s1, $e1) Set-Glow $s1 $true })
+    $el.Add_MouseLeave({ param($s1, $e1) Set-Glow $s1 $false })
+}
+function Fade-In($el, [int]$ms = 170) {
+    try {
+        $an = New-Object Windows.Media.Animation.DoubleAnimation(0.5, 1.0, [TimeSpan]::FromMilliseconds($ms))
+        $an.FillBehavior = [Windows.Media.Animation.FillBehavior]::Stop
+        $el.BeginAnimation([Windows.UIElement]::OpacityProperty, $an)
+    } catch { Write-Log ('Fade: ' + $_.Exception.Message) }
+}
+foreach ($hn in 'BtnHelp', 'BtnLang', 'BtnMode', 'BtnUpd', 'TourOk', 'WMore', 'WLess', 'C1', 'C2', 'C3', 'C4', 'SzBS', 'SzBM', 'SzBL', 'SzBC', 'SzBP', 'DrawerClose', 'HelpClose', 'Tab') { Add-Hover $ui.$hn }
 function Switch-Room([int]$dir) {
     $keys = @($script:rooms | ForEach-Object { [string]$_.key })
     if ($keys.Count -lt 2) { return }
@@ -2250,8 +2283,8 @@ $ui.Spark.Add_MouseMove({ param($s, $e)
 $ui.Spark.Add_MouseLeave({ Clear-SparkMark; $ui.SparkR.Text = (T 'now') })
 
 foreach ($k in 'S', 'M', 'L', 'C', 'P') {
-    $ui.('Sz' + $k).Tag = $k
-    $ui.('Sz' + $k).Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; if ([string]$s.Tag -eq 'P' -and $state.size -ne 'P') { $script:prevSize = $state.size }; $state.size = [string]$s.Tag; Apply-View; Save-State })
+    $ui.('SzB' + $k).Tag = $k
+    $ui.('SzB' + $k).Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; if ([string]$s.Tag -eq 'P' -and $state.size -ne 'P') { $script:prevSize = $state.size }; $state.size = [string]$s.Tag; Apply-View; Save-State })
 }
 $ui.WLine.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; $state.weatherOpen = $true; Apply-View; Save-State })
 $ui.WLess.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; $state.weatherOpen = $false; Apply-View; Save-State })
@@ -2335,7 +2368,20 @@ $miSens.Add_Click({ Show-SensorDialog })
 $miHelp.Add_Click({ $script:helpOpen = $true; Apply-View })
 $miCfg.Add_Click({ try { if (-not (Test-Path $cfgFile)) { Copy-Item (Join-Path $dir 'config.example.json') $cfgFile }; Start-Process notepad.exe -ArgumentList ('"' + $cfgFile + '"') } catch { Write-Log ('Konfig: ' + $_.Exception.Message) } })
 $miUpd.Add_Click({ Invoke-UpdateFlow $true })
-[void]$menu.Items.Add($miMode); [void]$menu.Items.Add($miSnooze); [void]$menu.Items.Add($miSnoozeM); [void]$menu.Items.Add($miBig); [void]$menu.Items.Add($miCopy); [void]$menu.Items.Add($miCopyAll); [void]$menu.Items.Add($miExport); [void]$menu.Items.Add($miTheme); [void]$menu.Items.Add($miDemo); [void]$menu.Items.Add($miHaSup); [void]$menu.Items.Add($miSmall); [void]$menu.Items.Add($miRefresh); [void]$menu.Items.Add($miTop); [void]$menu.Items.Add($miPop); [void]$menu.Items.Add($miTray); [void]$menu.Items.Add($miSound); [void]$menu.Items.Add($miReset); [void]$menu.Items.Add($miLog); [void]$menu.Items.Add($miHa); [void]$menu.Items.Add($miSens); [void]$menu.Items.Add($miHelp); [void]$menu.Items.Add($miCfg); [void]$menu.Items.Add($miUpd); [void]$menu.Items.Add((New-Object System.Windows.Controls.Separator)); [void]$menu.Items.Add($miExit)
+$miAdv = New-Object System.Windows.Controls.MenuItem
+foreach ($mx in @($miHa, $miSens, $miCfg, $miLog, $miDemo)) { [void]$miAdv.Items.Add($mx) }
+$menuGroups = @(
+    @($miMode, $miTheme, $miBig, $miSmall),
+    @($miSnooze, $miSnoozeM, $miPop, $miTray, $miSound, $miTop),
+    @($miRefresh, $miCopy, $miCopyAll, $miExport),
+    @($miReset, $miAdv),
+    @($miHelp, $miHaSup, $miUpd),
+    @($miExit)
+)
+for ($gi = 0; $gi -lt $menuGroups.Count; $gi++) {
+    if ($gi -gt 0) { [void]$menu.Items.Add((New-Object System.Windows.Controls.Separator)) }
+    foreach ($mx in $menuGroups[$gi]) { [void]$menu.Items.Add($mx) }
+}
 $win.ContextMenu = $menu
 
 
@@ -2358,6 +2404,8 @@ function Apply-Lang {
     $ui.WMoreT.Text = (T 'more'); $ui.WLessT.Text = (T 'less'); $ui.WTitleT.Text = (T 'outside') + $(if ($place) { ' · ' + $place.ToUpper() } else { '' })
     $ui.SparkR.Text = (T 'now'); $ui.SparkBox.ToolTip = (T 'spark_tip'); for ($k = 1; $k -le 4; $k++) { $ui.('C' + $k).ToolTip = (T ('chip_tip_' + $k)) }; $ui.Pill.ToolTip = (T 'pill_tip')
     $ui.BtnHelp.ToolTip = (T 'help_tip'); $ui.BtnLang.ToolTip = (T 'lang_tip')
+    $ui.SzBS.ToolTip = (T 'sz_tip_s'); $ui.SzBM.ToolTip = (T 'sz_tip_m'); $ui.SzBL.ToolTip = (T 'sz_tip_l'); $ui.SzBC.ToolTip = (T 'sz_tip_c'); $ui.SzBP.ToolTip = (T 'sz_tip_p')
+    $ui.Time.ToolTip = (T 'time_tip'); $ui.DrawerClose.ToolTip = (T 'drawer_close_tip'); $ui.Tab.ToolTip = (T 'tab_tip'); $ui.HelpClose.ToolTip = (T 'help_close_tip'); $miAdv.Header = (T 'm_adv')
     foreach ($k in 'De', 'En') { $ui.('Lang' + $k).Foreground = Brush '#FFA9B4C4'; $ui.('Lang' + $k).FontWeight = 'Normal' }
     if ($state.lang -eq 'en') { $ui.LangEn.Foreground = Brush '#FFFFFFFF'; $ui.LangEn.FontWeight = 'Bold' } else { $ui.LangDe.Foreground = Brush '#FFFFFFFF'; $ui.LangDe.FontWeight = 'Bold' }
     $miCopy.Header = (T 'm_copy'); $miCopyAll.Header = (T 'm_copy_all'); $miExport.Header = (T 'm_export');
@@ -2665,6 +2713,11 @@ if ($SmokeTest) {
     Smoke 'copy all rooms' { Update-Widget; Copy-AllRooms; ($script:lastCopyAll -match 'Luftwächter' -and @($script:lastCopyAll -split "`n").Count -ge 2) }
     Smoke 'number key room' { $state.room = 'living'; Update-Widget; $k0 = @($script:rooms).Count; Select-RoomIndex 1; $ok7 = ($k0 -lt 2 -or [string]$state.room -ne 'living'); Select-RoomIndex 0; $ok7 }
     Smoke 'tray tooltip length' { $dd1 = [pscustomobject]@{ color = '#FFD9432E'; level = 'gut'; headline = 'Fenster offen lassen bitte jetzt'; room = [pscustomobject]@{ name = 'Büro Demo mit sehr langem Namen' }; values = @([pscustomobject]@{ key = 'CO₂'; value = '918'; unit = 'ppm' }); rooms = @([pscustomobject]@{ name = 'Wohnzimmer mit sehr langem Namen'; level = 'schlecht' }) }; Update-Tray $dd1 ''; ((-not $script:tray) -or $script:tray.Text.Length -le 63) }
+    Smoke 'hover glow' { Set-Glow $ui.BtnHelp $true; $g1 = ($null -ne $ui.BtnHelp.Effect); Set-Glow $ui.BtnHelp $false; ($g1 -and $null -eq $ui.BtnHelp.Effect) }
+    Smoke 'size picker highlight' { $state.size = 'L'; Apply-View; $okL = ($ui.SzBL.Background.Color.A -gt 0 -and $ui.SzBM.Background.Color.A -eq 0); $state.size = 'M'; Apply-View; ($okL -and $ui.SzBM.Background.Color.A -gt 0 -and $ui.SzBL.Background.Color.A -eq 0) }
+    Smoke 'fade on room change' { $state.demo = $true; $script:lastShownRoom = 'zzz'; Update-Widget; Fade-In $ui.Panel; Fade-In $win 50; ($ui.Panel.Opacity -le 1.0) }
+    Smoke 'grouped menu' { $nsep = @($menu.Items | Where-Object { $_ -is [System.Windows.Controls.Separator] }).Count; ($nsep -ge 4 -and $miAdv.Items.Count -eq 5 -and $menu.Items.Count -ge 20) }
+    Smoke 'header tooltips' { Apply-Lang; ([string]$ui.SzBC.ToolTip -ne '' -and [string]$ui.Time.ToolTip -ne '' -and [string]$miAdv.Header -ne '') }
     Smoke 'no errors logged' {
         $new = @(); if (Test-Path $logFile) { $new = @(Get-Content -Path $logFile -Encoding UTF8 | Select-Object -Skip $l0 | Where-Object { $_ -notmatch 'Start v' }) }
         foreach ($x in $new) { Write-Host ('      log: ' + $x) }
