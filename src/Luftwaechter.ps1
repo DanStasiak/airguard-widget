@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall, [switch]$SmokeTest)
 
 $appName = 'Luftwaechter'
-$appVersion = '5.17.0'
+$appVersion = '5.17.1'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -869,8 +869,12 @@ function Update-Tray($d, [string]$act) {
         foreach ($v in @($d.values)) { if ([string]$v.key -like 'CO*') { $co2 = ' · ' + [string]$v.value + ' ' + [string]$v.unit; break } }
         $tip = [string]$d.room.name + $co2 + ' · ' + [string]$d.headline
         $wr = Get-WorstRoom $d
-        if ($wr) { $tip += "`n" + (T 'tray_worst' ([string]$wr.name)) }
-        if ($tip.Length -gt 120) { $tip = $tip.Substring(0, 119) + '…' }
+        $l2 = ''
+        if ($wr) { $l2 = (T 'tray_worst' ([string]$wr.name)); if ($l2.Length -gt 30) { $l2 = $l2.Substring(0, 29) + '…' } }
+        $max1 = 63 - $(if ($l2) { $l2.Length + 1 } else { 0 })
+        if ($tip.Length -gt $max1) { $tip = $tip.Substring(0, [Math]::Max($max1 - 1, 1)) + '…' }
+        if ($l2) { $tip += "`n" + $l2 }
+        if ($tip.Length -gt 63) { $tip = $tip.Substring(0, 62) + '…' }
         $script:tray.Text = $tip
         $h = (Get-Date).Hour
         if ($null -ne $script:lastAction -and $act -ne $script:lastAction -and ($act -eq 'oeffnen' -or $act -eq 'schliessen') -and -not (Test-Snooze) -and $h -ge 7 -and $h -lt 22 -and (((Get-Date) - $script:lastBalloon).TotalMinutes -gt 30)) {
@@ -2660,6 +2664,7 @@ if ($SmokeTest) {
     Smoke 'screen reader name' { Update-Widget; ([System.Windows.Automation.AutomationProperties]::GetName($ui.Card) -match 'Luftwächter') }
     Smoke 'copy all rooms' { Update-Widget; Copy-AllRooms; ($script:lastCopyAll -match 'Luftwächter' -and @($script:lastCopyAll -split "`n").Count -ge 2) }
     Smoke 'number key room' { $state.room = 'living'; Update-Widget; $k0 = @($script:rooms).Count; Select-RoomIndex 1; $ok7 = ($k0 -lt 2 -or [string]$state.room -ne 'living'); Select-RoomIndex 0; $ok7 }
+    Smoke 'tray tooltip length' { $dd1 = [pscustomobject]@{ color = '#FFD9432E'; level = 'gut'; headline = 'Fenster offen lassen bitte jetzt'; room = [pscustomobject]@{ name = 'Büro Demo mit sehr langem Namen' }; values = @([pscustomobject]@{ key = 'CO₂'; value = '918'; unit = 'ppm' }); rooms = @([pscustomobject]@{ name = 'Wohnzimmer mit sehr langem Namen'; level = 'schlecht' }) }; Update-Tray $dd1 ''; ((-not $script:tray) -or $script:tray.Text.Length -le 63) }
     Smoke 'no errors logged' {
         $new = @(); if (Test-Path $logFile) { $new = @(Get-Content -Path $logFile -Encoding UTF8 | Select-Object -Skip $l0 | Where-Object { $_ -notmatch 'Start v' }) }
         foreach ($x in $new) { Write-Host ('      log: ' + $x) }

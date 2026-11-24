@@ -2,6 +2,12 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [5.17.1] - 2026-11-24
+- Fixed: the tray icon tooltip could be too long for Windows when another room had worse air, so the tray icon stopped updating. The text is now shortened to fit. This also fixes the problem that came with 5.16.0.
+- DE: Behoben: Der Hinweis am Symbol in der Taskleiste konnte für Windows zu lang werden, wenn ein anderer Raum schlechtere Luft hatte, und das Symbol wurde nicht mehr aktualisiert. Der Text wird jetzt passend gekürzt. Das behebt auch das Problem, das mit 5.16.0 kam.
+- Everything from 5.17.0 below is included in this release.
+- DE: Alles aus 5.17.0 weiter unten ist in diesem Release enthalten.
+
 ## [5.17.0] - 2026-11-24
 - New: hover a room button to see its CO₂ value and rating without switching to it.
 - New: the window title (taskbar, Alt+Tab) shows the state of the whole house, e.g. "2 of 5 rooms poor".
