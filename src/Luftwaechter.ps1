@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall, [switch]$SmokeTest)
 
 $appName = 'Luftwaechter'
-$appVersion = '5.22.2'
+$appVersion = '5.23.0'
 $appDate = '25.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -536,6 +536,7 @@ $script:Strings = @{
     m_about = @('Über Luftwächter…', 'About Luftwächter…')
     about_t = @('Luftwächter {0}\nEin kleines Widget, das zeigt, wie gut die Luft in deinen Räumen ist.\n\nKostenlos und quelloffen (MIT-Lizenz) · © 2026 Dan Stasiak\nhttps://github.com/DanStasiak/airguard-widget\n\nLuftwächter ist ein unabhängiges Community-Projekt und nicht mit Home Assistant, Nabu Casa oder der Open Home Foundation verbunden.\n\nDatenschutz: Das Widget spricht nur mit deinem Home Assistant und prüft bei GitHub auf neue Versionen. Es gibt keine Telemetrie.', 'Luftwächter {0}\nA small widget that shows how good the air is in your rooms.\n\nFree and open source (MIT licence) · © 2026 Dan Stasiak\nhttps://github.com/DanStasiak/airguard-widget\n\nLuftwächter is an independent community project and is not affiliated with Home Assistant, Nabu Casa or the Open Home Foundation.\n\nPrivacy: the widget only talks to your Home Assistant and checks GitHub for new versions. There is no telemetry.')
     pic_saved = @('Bild gespeichert: {0}', 'Picture saved: {0}')
+    offline_hint = @('Keine Verbindung. Prüfe, ob Home Assistant läuft und der PC im Heimnetz ist. Bleibt es so: Rechtsklick → Erweitert → „Diagnose kopieren“.', 'No connection. Check that Home Assistant is running and this PC is on your home network. If it stays like this: right-click → More → “Copy diagnostics”.')
     m_diag = @('Diagnose kopieren (für Support)', 'Copy diagnostics (for support)')
     m_demo_off = @('Demo beenden', 'Stop the demo')
     demo_tag = @('Demo', 'Demo')
@@ -550,7 +551,7 @@ $script:Strings = @{
     offline_tip = @('Luftwächter · offline', 'Luftwächter · offline')
     quiet_tag = @('🔕 Ruhe bis {0}', '🔕 Quiet until {0}')
     h18 = @('Tastatur', 'Keyboard')
-    b18 = @('Klicke einmal auf das Widget, dann: ← / → anderer Raum · D einfache Ansicht oder Details · + / − größer oder kleiner · F5 sofort aktualisieren · Strg+C Werte kopieren · Strg+Umschalt+C alle Räume · G Home Assistant öffnen · Strg+Umschalt+S Bild speichern · Strg+Umschalt+D Diagnose kopieren · 1–9 Raum wählen · Maus über die Kurve zeigt Uhrzeit und Wert · Q Ruhe an/aus · T Design wechseln · F1 Hilfe · Esc schließt Hilfe und Geräte-Fenster. Beim Verschieben rastet das Widget an den Bildschirmrändern ein.', 'Click the widget once, then: ← / → other room · D simple view or details · + / − bigger or smaller · F5 refresh now · Ctrl+C copy readings · Ctrl+Shift+C all rooms · G open Home Assistant · Ctrl+Shift+S save picture · Ctrl+Shift+D copy diagnostics · 1–9 pick a room · hover the curve for time and value · Q quiet on/off · T switch theme · F1 help · Esc closes help and the device panel. When you move the widget it snaps to the screen edges.')
+    b18 = @('Klicke einmal auf das Widget, dann: ← / → anderer Raum · D einfache Ansicht oder Details · + / − größer oder kleiner · F5 sofort aktualisieren · Strg+C Werte kopieren · Strg+Umschalt+C alle Räume · G Home Assistant öffnen · L Sprache · U Updates suchen · Pos1 / Ende erster / letzter Raum · Strg+Umschalt+S Bild speichern · Strg+Umschalt+D Diagnose kopieren · 1–9 Raum wählen · Maus über die Kurve zeigt Uhrzeit und Wert · Q Ruhe an/aus · T Design wechseln · F1 Hilfe · Esc schließt Hilfe und Geräte-Fenster. Beim Verschieben rastet das Widget an den Bildschirmrändern ein.', 'Click the widget once, then: ← / → other room · D simple view or details · + / − bigger or smaller · F5 refresh now · Ctrl+C copy readings · Ctrl+Shift+C all rooms · G open Home Assistant · L language · U check for updates · Home / End first / last room · Ctrl+Shift+S save picture · Ctrl+Shift+D copy diagnostics · 1–9 pick a room · hover the curve for time and value · Q quiet on/off · T switch theme · F1 help · Esc closes help and the device panel. When you move the widget it snaps to the screen edges.')
     week_tag = @(' · Woche: {0} %', ' · week: {0} %')
     sz_tip_s = @('Klein', 'Small')
     sz_tip_m = @('Normal', 'Normal')
@@ -1522,6 +1523,16 @@ function Copy-WidgetPicture {
     return $false
 }
 function Get-AboutText { return ((T 'about_t' $appVersion) -replace '\\n', [Environment]::NewLine) }
+function Get-ConfigWarnings {
+    $w = @()
+    try {
+        if ($cfg.refreshSeconds -and (([int]$cfg.refreshSeconds -lt 2) -or ([int]$cfg.refreshSeconds -gt 10))) { $w += 'refreshSeconds is outside 2-10 and is limited' }
+        if ($cfg.updateCheckMinutes -and (([int]$cfg.updateCheckMinutes -lt 15) -or ([int]$cfg.updateCheckMinutes -gt 1440))) { $w += 'updateCheckMinutes is outside 15-1440 and is limited' }
+        if ($cfg.haUrl -and ([string]$cfg.haUrl -notmatch '^https?://')) { $w += 'haUrl does not start with http:// or https://' }
+        if ($cfg.url -and ([string]$cfg.url -notmatch '^https?://')) { $w += 'url does not start with http:// or https://' }
+    } catch { $w += 'config.json has a value of the wrong type' }
+    return $w
+}
 function Get-Diagnostics {
     $mode = $(if ($state.demo) { 'demo' } elseif ($script:haMode) { 'home-assistant' } else { 'url' })
     $lines = @(
@@ -1531,6 +1542,8 @@ function Get-Diagnostics {
         ('Rooms: ' + @($script:rooms).Count + ' · failed updates in a row: ' + [string]$script:fails),
         ('Time: ' + (Get-Date).ToString('yyyy-MM-dd HH:mm') + ' · time zone: ' + [TimeZoneInfo]::Local.Id),
         ('Autostart: ' + (Test-Path $startupLnk) + ' · Home Assistant set up: ' + [bool]$script:haMode + ' · tray: ' + [string]$state.tray + ' · quiet: ' + (Test-Snooze)),
+        ('Config warnings: ' + $(if (@(Get-ConfigWarnings).Count) { (@(Get-ConfigWarnings) -join '; ') } else { 'none' })),
+        ('Last error: ' + $(if ($script:lastErr) { ([string]$script:lastErr -replace 'https?://\S+', '<address>') } else { 'none' })),
         '--- log (last 20 lines) ---'
     )
     try { if (Test-Path $logFile) { $lines += @(Get-Content $logFile -Tail 20 -Encoding UTF8) } } catch {}
@@ -2287,6 +2300,7 @@ function Update-Widget {
         Show-Data $d
     } catch {
         Write-Log ('Aktualisieren: ' + $_.Exception.Message + ' @' + $_.InvocationInfo.ScriptLineNumber)
+        $script:lastErr = [string]$_.Exception.Message
         $script:fails++
         if ($script:fails -ge 3) {
             $g = Brush $grey
@@ -2295,7 +2309,7 @@ function Update-Widget {
             $ui.Face.Text = [char]::ConvertFromUtf32(0x1F50C)
             Set-Ring 0.06 $g
             $ui.Panel.Background = Brush '#FF494E57'
-            $ui.Headline.Text = (T 'no_conn')
+            $ui.Headline.Text = (T 'no_conn'); $ui.Headline.ToolTip = (T 'offline_hint'); $ui.Detail.ToolTip = (T 'offline_hint')
             $script:pulse = $false
             if ($script:tray -and $state.tray) { try { $script:tray.Icon = (Get-TrayIcon '#7A8594').icon; $script:tray.Text = (T 'offline_tip') } catch {} }
             if ($script:last) {
@@ -2380,6 +2394,10 @@ $win.Add_KeyDown({ param($s, $e)
         'Right' { Switch-Room 1; $e.Handled = $true }
         'D' { $mods = [System.Windows.Input.Keyboard]::Modifiers; if (($mods -band [System.Windows.Input.ModifierKeys]::Control) -and ($mods -band [System.Windows.Input.ModifierKeys]::Shift)) { Copy-Diagnostics } else { Toggle-Mode }; $e.Handled = $true }
         'S' { $mods = [System.Windows.Input.Keyboard]::Modifiers; if (($mods -band [System.Windows.Input.ModifierKeys]::Control) -and ($mods -band [System.Windows.Input.ModifierKeys]::Shift)) { [void](Save-WidgetPicture ''); $e.Handled = $true } }
+        'L' { $state.lang = $(if ($state.lang -eq 'de') { 'en' } else { 'de' }); Apply-Lang; Save-State; Update-Widget; $e.Handled = $true }
+        'U' { Invoke-UpdateFlow $true; $e.Handled = $true }
+        'Home' { Select-RoomIndex 0; $e.Handled = $true }
+        'End' { $nr = @($script:rooms).Count; if ($nr -gt 0) { Select-RoomIndex ($nr - 1) }; $e.Handled = $true }
         'G' { if ($script:haMode -and $script:haUrl) { try { Start-Process $script:haUrl } catch {} ; $e.Handled = $true } }
         'F5' { Update-Widget; $e.Handled = $true }
         'F1' { $script:helpOpen = -not $script:helpOpen; if ($script:helpOpen) { Build-Help }; Apply-View; $e.Handled = $true }
@@ -2906,9 +2924,12 @@ if ($SmokeTest) {
     Smoke 'size picker highlight' { $state.size = 'L'; Apply-View; $okL = ($ui.SzBL.Background.Color.A -gt 0 -and $ui.SzBM.Background.Color.A -eq 0); $state.size = 'M'; Apply-View; ($okL -and $ui.SzBM.Background.Color.A -gt 0 -and $ui.SzBL.Background.Color.A -eq 0) }
     Smoke 'fade on room change' { $state.demo = $true; $script:lastShownRoom = 'zzz'; Update-Widget; Fade-In $ui.Panel; Fade-In $win 50; ($ui.Panel.Opacity -le 1.0) }
     Smoke 'grouped menu' { $nsep = @($menu.Items | Where-Object { $_ -is [System.Windows.Controls.Separator] }).Count; ($nsep -ge 4 -and $miAdv.Items.Count -eq 9 -and $menu.Items.Count -ge 20) }
-    Smoke 'diagnostics copy' { Copy-Diagnostics; ($script:lastDiag -match 'Luftwächter 5\.22\.2' -and $script:lastDiag -match 'PowerShell' -and $script:lastDiag -notmatch 'Bearer|token') }
+    Smoke 'diagnostics copy' { Copy-Diagnostics; ($script:lastDiag -match 'Luftwächter 5\.23\.0' -and $script:lastDiag -match 'PowerShell' -and $script:lastDiag -notmatch 'Bearer|token') }
     Smoke 'support menu items' { Apply-Lang; $okS = ([string]$miNews.Header -ne '' -and [string]$miBug.Header -ne '' -and [string]$miData.Header -ne ''); $state.lang = 'en'; Apply-Lang; $okE = ([string]$miBug.Header -match 'GitHub'); $state.lang = 'de'; Apply-Lang; ($okS -and $okE -and (Get-Diagnostics) -match 'Autostart') }
-    Smoke 'about text' { $state.lang = 'de'; $a1 = Get-AboutText; $state.lang = 'en'; $a2 = Get-AboutText; $state.lang = 'de'; ($a1 -match '5\.22\.2' -and $a1 -match 'Datenschutz' -and $a2 -match 'Privacy' -and $a2 -match 'github\.com/DanStasiak') }
+    Smoke 'config warnings' { $c0 = $cfg; $cfg = [pscustomobject]@{ refreshSeconds = 99; updateCheckMinutes = 5; haUrl = 'ftp://x'; url = '' }; $ww = @(Get-ConfigWarnings); $cfg = $c0; ($ww.Count -ge 3 -and (Get-Diagnostics) -match 'Config warnings') }
+    Smoke 'last error is scrubbed' { $script:lastErr = 'The remote name could not be resolved: http://192.168.1.50:8123/api/states'; $dg = Get-Diagnostics; $script:lastErr = $null; ($dg -match '<address>' -and $dg -notmatch '192\.168') }
+    Smoke 'offline hint text' { $state.lang = 'de'; $h1 = (T 'offline_hint'); $state.lang = 'en'; $h2 = (T 'offline_hint'); $state.lang = 'de'; ($h1 -match 'Diagnose' -and $h2 -match 'diagnostics') }
+    Smoke 'about text' { $state.lang = 'de'; $a1 = Get-AboutText; $state.lang = 'en'; $a2 = Get-AboutText; $state.lang = 'de'; ($a1 -match '5\.23\.0' -and $a1 -match 'Datenschutz' -and $a2 -match 'Privacy' -and $a2 -match 'github\.com/DanStasiak') }
     Smoke 'picture export' { Update-Widget; $pp = Save-WidgetPicture $stateDir; $okP = ($pp -and (Test-Path $pp) -and ((Get-Item $pp).Length -gt 2000)); if ($okP) { $bb = [System.IO.File]::ReadAllBytes($pp); $okP = ($bb[0] -eq 0x89 -and $bb[1] -eq 0x50 -and $bb[2] -eq 0x4E -and $bb[3] -eq 0x47) }; $okP }
     Smoke 'picture to clipboard' { Update-Widget; (Copy-WidgetPicture) }
     Smoke 'ha menu items' { $script:haMode = $true; Update-HaMenu; $a = ($miHaOpen.Visibility -eq 'Visible'); $script:haMode = $false; Update-HaMenu; $b = ($miHaOpen.Visibility -eq 'Collapsed'); $script:haMode = [bool]($script:haUrl -and $script:haTok); ($a -and $b) }

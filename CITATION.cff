@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+message: "If you use Luftwächter, please cite it like this."
+title: "Luftwächter (airguard-widget)"
+type: software
+authors:
+  - family-names: Stasiak
+    given-names: Dan
+repository-code: "https://github.com/DanStasiak/airguard-widget"
+url: "https://github.com/DanStasiak/airguard-widget"
+license: MIT
+version: "5.23.0"
+date-released: "2026-11-25"
+keywords: [windows, widget, home-assistant, air-quality, co2, powershell]

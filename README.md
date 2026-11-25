@@ -12,7 +12,7 @@ A small always-on-top **Windows desktop widget** that shows how good the air is 
 
 **Quick start:** (1) download the ZIP from the [latest release](https://github.com/DanStasiak/airguard-widget/releases/latest) and unzip it, (2) double-click `Installieren.bat`, (3) right-click the widget → **Try the demo**, or connect Home Assistant with **Search network**. Help: [SUPPORT.md](SUPPORT.md).
 
-**Contents:** [Install](#install-windows-1011) · [How it works](#how-it-works) · [Choosing sensors](#choosing-sensors) · [Troubleshooting](#troubleshooting) · [Updating](#updating) · [FAQ](#faq) · [Privacy](#privacy) · [Uninstall](#uninstall) · [Deutsch](#deutsch)
+**Contents:** [Install](#install-windows-1011) · [How it works](#how-it-works) · [Choosing sensors](#choosing-sensors) · [Keyboard](#keyboard-shortcuts) · [Troubleshooting](#troubleshooting) · [Updating](#updating) · [FAQ](#faq) · [Privacy](#privacy) · [Uninstall](#uninstall) · [Deutsch](#deutsch)
 
 **Which one do I need?**
 
@@ -84,6 +84,26 @@ Made by **Dan Stasiak** · MIT License · [github.com/DanStasiak/airguard-widget
 ## Choosing sensors
 
 If a room has several sensors of one kind, the widget shows their **average** and ignores dew-point, device (chip) temperature, absolute humidity and sensors that stopped reporting. To use exactly one sensor per reading: right-click → **Choose sensors for this room…**. Give the label `airguard` to the sensors you prefer to make them win automatically. If a sensor goes silent for 20 minutes or more, the footer turns amber and names it.
+
+## Keyboard shortcuts
+
+Click the widget once, then:
+
+| Key | Action | Key | Action |
+| --- | --- | --- | --- |
+| ← / → | other room | D | simple view / details |
+| 1–9 | pick a room | Home / End | first / last room |
+| + / − | bigger / smaller | F5 | refresh now |
+| Ctrl+C | copy readings | Ctrl+Shift+C | copy all rooms |
+| Q | quiet time on/off | T | change theme |
+| L | language | U | check for updates |
+| G | open Home Assistant | Ctrl+Shift+S | save a picture |
+| Ctrl+Shift+D | copy diagnostics | F1 / Esc | help / close |
+
+## System requirements and contents
+
+- Windows 10 or 11 with the built-in Windows PowerShell 5.1 (nothing to install). Home Assistant reachable on your network (optional: the demo works without it).
+- The download contains `Luftwaechter.ps1` (the app), `Installieren.bat` / `Deinstallieren.bat` (install and remove), `Start.vbs` (start without a console window), `config.example.json`, the licence, this README and the changelog.
 
 ## Troubleshooting
 

@@ -67,6 +67,11 @@ foreach ($md in @(Get-ChildItem -Path $root -Filter *.md -File)) {
 if ($brokenLinks.Count -gt 0) { Bad ('broken document links: ' + ($brokenLinks -join ', ')) } else { Ok 'document links resolve' }
 if (Test-Path (Join-Path $root '.gitattributes')) { Ok '.gitattributes present' } else { Bad '.gitattributes missing (line endings are not protected)' }
 
+# 5d2. Every menu text (m_*) in the translation table is used somewhere (no dead menu entries)
+$mKeys = @($haveKeys | Where-Object { $_ -like 'm_*' })
+$deadM = @($mKeys | Where-Object { $text -notmatch ("T '" + $_ + "'") })
+if ($deadM.Count -gt 0) { Bad ('menu texts never used: ' + ($deadM -join ', ')) } else { Ok ($mKeys.Count.ToString() + ' menu texts all used') }
+
 # 5e. Self-test names are unique (a copy-paste duplicate would hide a missing test)
 $smokeNames = @([regex]::Matches($text, "(?m)^\s*Smoke '([^']+)'") | ForEach-Object { $_.Groups[1].Value })
 $dupes = @($smokeNames | Group-Object | Where-Object { $_.Count -gt 1 } | ForEach-Object { $_.Name })

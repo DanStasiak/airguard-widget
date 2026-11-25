@@ -2,6 +2,22 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [5.23.0] - 2026-11-25
+- New: keys L (switch language), U (check for updates) and Home / End (first / last room). The help lists them.
+- New: when the widget shows "Offline", hover the text for what to check first (Home Assistant running? PC on the home network?) and how to get help.
+- New: "Copy diagnostics" also lists config warnings (for example a refresh time outside the allowed range or an address without http://) and the last error, with web addresses replaced by "<address>".
+- Improved: GitHub page with a keyboard shortcut table, system requirements and a list of what is in the download.
+- Improved: "Cite this repository" on GitHub (`CITATION.cff`).
+- Improved: the build checks fail when a menu text is defined but never used, so dead menu entries cannot pile up.
+- Improved: three more self-tests (config warnings, scrubbed last error, offline hint).
+- DE: Neu: Tasten L (Sprache wechseln), U (nach Updates suchen) und Pos1 / Ende (erster / letzter Raum). Die Hilfe nennt sie.
+- DE: Neu: Zeigt das Widget „Offline“, steht beim Darüberfahren, was zuerst zu prüfen ist (läuft Home Assistant? ist der PC im Heimnetz?) und wie man Hilfe bekommt.
+- DE: Neu: „Diagnose kopieren“ nennt auch Konfigurations-Warnungen (z. B. eine Aktualisierungszeit außerhalb des erlaubten Bereichs oder eine Adresse ohne http://) und den letzten Fehler; Webadressen werden durch „<address>“ ersetzt.
+- DE: Verbessert: GitHub-Seite mit Tastenkürzel-Tabelle, Systemanforderungen und einer Liste, was im Download steckt.
+- DE: Verbessert: „Diese Software zitieren“ auf GitHub (`CITATION.cff`).
+- DE: Verbessert: Die Prüfungen schlagen fehl, wenn ein Menütext definiert, aber nie benutzt wird. Tote Menüeinträge sammeln sich so nicht an.
+- DE: Verbessert: Drei weitere Selbsttests (Konfigurations-Warnungen, bereinigter letzter Fehler, Offline-Hinweis).
+
 ## [5.22.2] - 2026-11-25
 - Fixed: the version line at the bottom of the widget showed an old date (22.11.2026). It now shows the date of the release, and the build checks make sure it can never be out of date again.
 - DE: Behoben: Die Versionszeile unten im Widget zeigte ein altes Datum (22.11.2026). Sie zeigt jetzt das Datum der Version, und die Prüfungen stellen sicher, dass es nie wieder veraltet ist.
