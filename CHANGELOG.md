@@ -2,6 +2,10 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [5.22.2] - 2026-11-25
+- Fixed: the version line at the bottom of the widget showed an old date (22.11.2026). It now shows the date of the release, and the build checks make sure it can never be out of date again.
+- DE: Behoben: Die Versionszeile unten im Widget zeigte ein altes Datum (22.11.2026). Sie zeigt jetzt das Datum der Version, und die Prüfungen stellen sicher, dass es nie wieder veraltet ist.
+
 ## [5.22.1] - 2026-11-25
 - Fixed: "Save a picture of the widget" and "Copy a picture of the widget" cut off the right and bottom part when the widget was shown larger than the smallest size. The picture now always shows the whole widget, sharp at twice the size.
 - DE: Behoben: „Bild vom Widget speichern“ und „Bild vom Widget kopieren“ schnitten rechts und unten ab, wenn das Widget größer als die kleinste Größe war. Das Bild zeigt jetzt immer das ganze Widget, scharf in doppelter Größe.

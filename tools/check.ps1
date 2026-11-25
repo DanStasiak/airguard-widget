@@ -25,6 +25,11 @@ $cl = [System.IO.File]::ReadAllText((Join-Path $root 'CHANGELOG.md'), [System.Te
 $c = [regex]::Match($cl, '(?m)^## \[([^\]]+)\]')
 if (-not $c.Success -or $c.Groups[1].Value -ne $ver) { Bad ('newest CHANGELOG section is not ' + $ver) } else { Ok 'CHANGELOG has a section for this version' }
 
+# 3b. The date shown next to the version matches the date of the newest CHANGELOG section
+$dm = [regex]::Match($cl, '(?m)^## \[[^\]]+\] - (\d{4})-(\d{2})-(\d{2})')
+$ad = [regex]::Match($text, "(?m)^\`$appDate = '([^']+)'")
+if ($dm.Success -and $ad.Success) { $want = $dm.Groups[3].Value + '.' + $dm.Groups[2].Value + '.' + $dm.Groups[1].Value; if ($ad.Groups[1].Value -eq $want) { Ok ('release date ' + $want + ' matches') } else { Bad ('appDate ' + $ad.Groups[1].Value + ' differs from the newest CHANGELOG date ' + $want) } } else { Bad 'could not read appDate or the CHANGELOG date' }
+
 # 4. Every control the code looks up by name exists in the window (catches FindName returning nothing)
 $nm = [regex]::Match($text, '(?s)\$names = @\((.*?)\)')
 if ($nm.Success) {
