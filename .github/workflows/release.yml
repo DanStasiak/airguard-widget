@@ -1,6 +1,7 @@
 name: Release
 # A release is created when VERSION changes on main (or a v* tag is pushed).
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths: ['VERSION', '.github/workflows/release.yml']
