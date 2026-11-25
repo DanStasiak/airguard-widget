@@ -2,6 +2,24 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [5.24.0] - 2026-11-25
+- New: **Transparency** (right-click or key O): 100, 85 or 70 %. Your choice is remembered.
+- New: **Lock position** so the widget cannot be dragged by accident.
+- New: **Show in the taskbar** can be switched off (the tray icon stays).
+- New: **Start with Windows** in Advanced adds or removes the autostart shortcut.
+- Improved: the picture and fade animations respect your transparency.
+- Improved: GitHub page with a "Window options" section, a table of where settings are stored and a diagram of how the pieces connect.
+- Improved: the help lists the new key O.
+- Improved: three more self-tests (transparency steps, taskbar and lock, autostart toggle).
+- DE: Neu: **Durchsichtigkeit** (Rechtsklick oder Taste O): 100, 85 oder 70 %. Die Wahl wird gemerkt.
+- DE: Neu: **Position sperren**, damit das Widget nicht versehentlich verschoben wird.
+- DE: Neu: **In der Taskleiste anzeigen** lässt sich ausschalten (das Symbol im Infobereich bleibt).
+- DE: Neu: **Mit Windows starten** unter Erweitert legt die Autostart-Verknüpfung an oder entfernt sie.
+- DE: Verbessert: Bild und Einblend-Animation beachten deine Durchsichtigkeit.
+- DE: Verbessert: GitHub-Seite mit Abschnitt „Fenster-Optionen“, Tabelle, wo Einstellungen liegen, und einem Schaubild der Bestandteile.
+- DE: Verbessert: Die Hilfe nennt die neue Taste O.
+- DE: Verbessert: Drei weitere Selbsttests (Durchsichtigkeit, Taskleiste und Sperre, Autostart).
+
 ## [5.23.0] - 2026-11-25
 - New: keys L (switch language), U (check for updates) and Home / End (first / last room). The help lists them.
 - New: when the widget shows "Offline", hover the text for what to check first (Home Assistant running? PC on the home network?) and how to get help.

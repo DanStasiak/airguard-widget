@@ -56,6 +56,13 @@ Made by **Dan Stasiak** · MIT License · [github.com/DanStasiak/airguard-widget
 
 **Server mode (optional):** instead of Home Assistant directly, the widget can talk to your own small server (for example an [n8n](https://n8n.io) workflow) that speaks a simple JSON contract.
 
+```mermaid
+flowchart LR
+    S[Air sensors in Home Assistant] -->|REST, every 60 s| W[Luftwächter widget]
+    W --> D[Desktop widget, tray, pop-up alerts]
+    W -.->|optional| N[Your own server / n8n]
+```
+
 - [`docs/HOME-ASSISTANT.md`](docs/HOME-ASSISTANT.md): how the direct mode finds rooms, sensors and devices
 - [`docs/API.md`](docs/API.md): the JSON contract for server mode
 - [`backend/n8n/`](backend/n8n): reference backend for server mode (with example entity IDs you replace by your own)
@@ -97,8 +104,24 @@ Click the widget once, then:
 | Ctrl+C | copy readings | Ctrl+Shift+C | copy all rooms |
 | Q | quiet time on/off | T | change theme |
 | L | language | U | check for updates |
+| O | transparency (100 / 85 / 70 %) | | |
 | G | open Home Assistant | Ctrl+Shift+S | save a picture |
 | Ctrl+Shift+D | copy diagnostics | F1 / Esc | help / close |
+
+## Window options
+
+Right-click the widget: **Lock position** (no accidental dragging), **Transparency** (also key **O**), **Show in the taskbar**. Under **Advanced** you find **Start with Windows**, which adds or removes the autostart shortcut for you.
+
+## Where settings are stored
+
+| What | Where |
+| --- | --- |
+| Position, size, theme, language, window options | `%APPDATA%\Luftwaechter\state.json` |
+| Your connection (address, refresh time) | `config.json` next to the app |
+| Home Assistant token | `%APPDATA%\Luftwaechter\ha-token.bin` (encrypted for your Windows account) |
+| Log for troubleshooting | `%APPDATA%\Luftwaechter\protokoll.txt` |
+
+Uninstalling removes the app; delete the `%APPDATA%\Luftwaechter` folder to remove everything.
 
 ## System requirements and contents
 
