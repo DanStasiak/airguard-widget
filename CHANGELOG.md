@@ -2,6 +2,24 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [5.22.0] - 2026-11-25
+- New: right-click → "Save a picture of the widget (PNG)" saves a sharp, double-size picture to your Pictures folder and shows it in Explorer. Handy for showing the air to family or in a bug report.
+- New: right-click → "Copy a picture of the widget" puts the same picture on the clipboard, ready to paste into a chat or mail.
+- New: right-click → "About Luftwächter…" shows the version, licence, project page and what data the widget uses (only your Home Assistant and the GitHub update check, no telemetry).
+- New: keys G (open Home Assistant), Ctrl+Shift+S (save picture) and Ctrl+Shift+D (copy diagnostics). The help lists them.
+- Improved: the GitHub page has a Privacy section and a FAQ (second PC, offline use, what leaves your PC, uninstall), in English and German.
+- Improved: SECURITY.md explains how downloads are verified and what the widget sends where.
+- Improved: the GitHub checks run with read-only permissions and cancel older runs when you push again, and they verify that no self-test name is used twice.
+- Improved: three more self-tests (About text, picture file is a real PNG, picture on the clipboard).
+- DE: Neu: Rechtsklick → „Bild vom Widget speichern (PNG)“ legt ein scharfes Bild in doppelter Größe in „Bilder“ ab und zeigt es im Explorer. Praktisch, um die Luft der Familie oder in einem Fehlerbericht zu zeigen.
+- DE: Neu: Rechtsklick → „Bild vom Widget kopieren“ legt dasselbe Bild in die Zwischenablage, bereit zum Einfügen in Chat oder Mail.
+- DE: Neu: Rechtsklick → „Über Luftwächter…“ zeigt Version, Lizenz, Projektseite und welche Daten das Widget nutzt (nur dein Home Assistant und die GitHub-Update-Prüfung, keine Telemetrie).
+- DE: Neu: Tasten G (Home Assistant öffnen), Strg+Umschalt+S (Bild speichern) und Strg+Umschalt+D (Diagnose kopieren). Die Hilfe nennt sie.
+- DE: Verbessert: Die GitHub-Seite hat einen Datenschutz-Abschnitt und eine FAQ (zweiter PC, Betrieb ohne Netz, was den PC verlässt, Deinstallation), auf Deutsch und Englisch.
+- DE: Verbessert: SECURITY.md erklärt, wie Downloads geprüft werden und was das Widget wohin sendet.
+- DE: Verbessert: Die GitHub-Prüfungen laufen mit reinen Leserechten, brechen ältere Läufe bei neuem Push ab und prüfen, dass kein Selbsttest-Name doppelt vorkommt.
+- DE: Verbessert: Drei weitere Selbsttests (Über-Text, Bilddatei ist ein echtes PNG, Bild in der Zwischenablage).
+
 ## [5.21.0] - 2026-11-25
 - New: right-click → "What's new? (release notes)" opens the notes of your version on GitHub.
 - New: right-click → "Report a problem or suggest an idea (GitHub)" opens the issue form.

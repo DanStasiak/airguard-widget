@@ -62,6 +62,11 @@ foreach ($md in @(Get-ChildItem -Path $root -Filter *.md -File)) {
 if ($brokenLinks.Count -gt 0) { Bad ('broken document links: ' + ($brokenLinks -join ', ')) } else { Ok 'document links resolve' }
 if (Test-Path (Join-Path $root '.gitattributes')) { Ok '.gitattributes present' } else { Bad '.gitattributes missing (line endings are not protected)' }
 
+# 5e. Self-test names are unique (a copy-paste duplicate would hide a missing test)
+$smokeNames = @([regex]::Matches($text, "(?m)^\s*Smoke '([^']+)'") | ForEach-Object { $_.Groups[1].Value })
+$dupes = @($smokeNames | Group-Object | Where-Object { $_.Count -gt 1 } | ForEach-Object { $_.Name })
+if ($dupes.Count -gt 0) { Bad ('duplicate self-test names: ' + ($dupes -join ', ')) } else { Ok ($smokeNames.Count.ToString() + ' self-tests, names unique') }
+
 # 6. Smoke test: start the widget with demo data, walk through every view, fail on any error (Windows only)
 if ($env:OS -eq 'Windows_NT' -and -not $env:LUFT_SKIP_SMOKE) {
     $tmp = Join-Path $env:TEMP ('luft-check-' + [guid]::NewGuid().ToString('N'))

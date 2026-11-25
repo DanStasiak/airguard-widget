@@ -12,7 +12,7 @@ A small always-on-top **Windows desktop widget** that shows how good the air is 
 
 **Quick start:** (1) download the ZIP from the [latest release](https://github.com/DanStasiak/airguard-widget/releases/latest) and unzip it, (2) double-click `Installieren.bat`, (3) right-click the widget → **Try the demo**, or connect Home Assistant with **Search network**. Help: [SUPPORT.md](SUPPORT.md).
 
-**Contents:** [Install](#install-windows-1011) · [How it works](#how-it-works) · [Choosing sensors](#choosing-sensors) · [Troubleshooting](#troubleshooting) · [Updating](#updating) · [Uninstall](#uninstall) · [Deutsch](#deutsch)
+**Contents:** [Install](#install-windows-1011) · [How it works](#how-it-works) · [Choosing sensors](#choosing-sensors) · [Troubleshooting](#troubleshooting) · [Updating](#updating) · [FAQ](#faq) · [Privacy](#privacy) · [Uninstall](#uninstall) · [Deutsch](#deutsch)
 
 **Which one do I need?**
 
@@ -98,6 +98,24 @@ If a room has several sensors of one kind, the widget shows their **average** an
 | Bug report needs details | Right-click → **More → Copy diagnostics (for support)** and paste it into the issue (or use right-click → *Report a problem*). It never contains your token or Home Assistant address. |
 | Anything else | Right-click → **Open log**, then open an [issue](https://github.com/DanStasiak/airguard-widget/issues/new/choose) (remove personal data from the log). |
 
+## FAQ
+
+**Can I use it on a second PC?** Yes. Install it on each PC (the ZIP is the same). Each copy has its own token and settings.
+
+**Does it work without internet?** The widget only needs your local network and Home Assistant. Without internet it simply cannot check for updates.
+
+**What does the widget send, and where?** It talks to your Home Assistant (your address, your token) and asks GitHub once an hour for the newest version number. Nothing else leaves your PC. There is no telemetry and no account. See [Privacy](#privacy).
+
+**Can I show it to someone?** Right-click → *Save a picture of the widget* or *Copy a picture of the widget*.
+
+**How do I remove it?** Run `Deinstallieren.bat` (see [Uninstall](#uninstall)).
+
+## Privacy
+
+- Your Home Assistant token is stored encrypted for your Windows account (`ha-token.bin`); it is never written to `config.json`, the log or the diagnostics.
+- The update check calls the public GitHub API for this repository. The download is verified against `SHA256SUMS.txt` before it replaces the program.
+- Diagnostics and pictures are created only when you ask for them and are never sent anywhere by the widget.
+
 ## Updating
 
 Press **⟳ Update** at the bottom right (or right-click → *Check for updates*). The widget compares its version with the latest GitHub release, shows the changes and asks whether to proceed. It then downloads the release, verifies the SHA-256 checksum and the script syntax, keeps a backup of the old version and restarts itself. Your `config.json` and state are untouched. The widget also checks silently on its own (default every 60 minutes, `updateCheckMinutes` in `config.json`): when a new version exists, the button turns green, pulses gently and shows the version number, and a tray notice appears once. Hover the button to see when it last checked.
@@ -129,5 +147,9 @@ MIT License, Copyright (c) 2026 Dan Stasiak. You may use, change and share it fr
 **Sensoren wählen:** Hat ein Raum mehrere Sensoren derselben Art, zeigt das Widget den Mittelwert (Taupunkt, Geräte-Temperatur und veraltete Sensoren werden ignoriert). Rechtsklick → „Sensoren für diesen Raum wählen…“ legt je Messwert genau einen Sensor fest. Meldet ein Sensor 20 Minuten nichts, warnt die Fußzeile in Gelb.
 
 **Aktualisieren:** Knopf **⟳ Update** unten rechts. Das Widget vergleicht seine Version mit GitHub, zeigt die Änderungen, fragt nach deiner Bestätigung, prüft den Download und tauscht sich selbst aus. Einstellungen bleiben erhalten. Das Widget prüft auch von selbst (standardmäßig alle 60 Minuten, `updateCheckMinutes` in `config.json`): Gibt es eine neue Version, wird der Knopf grün und zeigt die Versionsnummer; zusätzlich erscheint einmal eine Hinweis-Meldung im Infobereich. Luftwächter gibt es dank [Home Assistant](https://www.home-assistant.io): Wenn es dir gefällt, unterstütze das Projekt (Open Home Foundation, Home Assistant Cloud). Luftwächter ist unabhängig und steht in keiner Verbindung zu Home Assistant oder der Open Home Foundation. **In 30 Sekunden ausprobieren, ohne Home Assistant:** Widget installieren, Rechtsklick → *Demo ausprobieren* zeigt drei simulierte Räume. Rechtsklick → *Ruhe für 1 Stunde* schaltet Pop-up, Hinweis und Ton für eine Stunde stumm. Rechtsklick → *Verlauf als CSV speichern* legt die letzten 7 Tage als Excel-Datei in „Dokumente“ ab. Tastatur: ← / → Raum, D Ansicht, + / − Größe, F5 aktualisieren, Esc schließen. Rechtsklick → *Werte kopieren* legt die aktuellen Werte in die Zwischenablage; das Mausrad über den Raum-Knöpfen wechselt den Raum. Beim ersten Start erklärt eine kurze Willkommenskarte die einfache Ansicht. Rechtsklick → *Größer anzeigen* (oder Strg + Mausrad) vergrößert das Widget bis „extra groß“, auch in der einfachen Ansicht. In der einfachen Ansicht zeigt eine Tagesnote, wie oft die Luft heute gut war (CO₂ unter 1000 ppm).
+
+**Datenschutz:** Das Widget spricht nur mit deinem Home Assistant und fragt bei GitHub nach der neuesten Versionsnummer. Es gibt keine Telemetrie und kein Konto. Der Token liegt verschlüsselt für dein Windows-Konto (`ha-token.bin`).
+
+**FAQ:** Zweiter PC: einfach dort ebenfalls installieren. Ohne Internet läuft das Widget im Heimnetz, nur die Update-Prüfung entfällt. Bild zum Zeigen: Rechtsklick → „Bild vom Widget speichern“.
 
 **Lizenz:** MIT, © 2026 Dan Stasiak. Frei nutzbar, änderbar und weitergebbar; der Urheberhinweis muss erhalten bleiben.

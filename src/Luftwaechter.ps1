@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall, [switch]$SmokeTest)
 
 $appName = 'Luftwaechter'
-$appVersion = '5.21.0'
+$appVersion = '5.22.0'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -531,6 +531,11 @@ $script:Strings = @{
     m_bug = @('Problem melden oder Idee vorschlagen (GitHub)', 'Report a problem or suggest an idea (GitHub)')
     m_data = @('Datenordner öffnen', 'Open the data folder')
     tray_ha = @('Home Assistant öffnen', 'Open Home Assistant')
+    m_pic_save = @('Bild vom Widget speichern (PNG)', 'Save a picture of the widget (PNG)')
+    m_pic_copy = @('Bild vom Widget kopieren', 'Copy a picture of the widget')
+    m_about = @('Über Luftwächter…', 'About Luftwächter…')
+    about_t = @('Luftwächter {0}\nEin kleines Widget, das zeigt, wie gut die Luft in deinen Räumen ist.\n\nKostenlos und quelloffen (MIT-Lizenz) · © 2026 Dan Stasiak\nhttps://github.com/DanStasiak/airguard-widget\n\nLuftwächter ist ein unabhängiges Community-Projekt und nicht mit Home Assistant, Nabu Casa oder der Open Home Foundation verbunden.\n\nDatenschutz: Das Widget spricht nur mit deinem Home Assistant und prüft bei GitHub auf neue Versionen. Es gibt keine Telemetrie.', 'Luftwächter {0}\nA small widget that shows how good the air is in your rooms.\n\nFree and open source (MIT licence) · © 2026 Dan Stasiak\nhttps://github.com/DanStasiak/airguard-widget\n\nLuftwächter is an independent community project and is not affiliated with Home Assistant, Nabu Casa or the Open Home Foundation.\n\nPrivacy: the widget only talks to your Home Assistant and checks GitHub for new versions. There is no telemetry.')
+    pic_saved = @('Bild gespeichert: {0}', 'Picture saved: {0}')
     m_diag = @('Diagnose kopieren (für Support)', 'Copy diagnostics (for support)')
     m_demo_off = @('Demo beenden', 'Stop the demo')
     demo_tag = @('Demo', 'Demo')
@@ -545,7 +550,7 @@ $script:Strings = @{
     offline_tip = @('Luftwächter · offline', 'Luftwächter · offline')
     quiet_tag = @('🔕 Ruhe bis {0}', '🔕 Quiet until {0}')
     h18 = @('Tastatur', 'Keyboard')
-    b18 = @('Klicke einmal auf das Widget, dann: ← / → anderer Raum · D einfache Ansicht oder Details · + / − größer oder kleiner · F5 sofort aktualisieren · Strg+C Werte kopieren · Strg+Umschalt+C alle Räume · 1–9 Raum wählen · Maus über die Kurve zeigt Uhrzeit und Wert · Q Ruhe an/aus · T Design wechseln · F1 Hilfe · Esc schließt Hilfe und Geräte-Fenster. Beim Verschieben rastet das Widget an den Bildschirmrändern ein.', 'Click the widget once, then: ← / → other room · D simple view or details · + / − bigger or smaller · F5 refresh now · Ctrl+C copy readings · Ctrl+Shift+C all rooms · 1–9 pick a room · hover the curve for time and value · Q quiet on/off · T switch theme · F1 help · Esc closes help and the device panel. When you move the widget it snaps to the screen edges.')
+    b18 = @('Klicke einmal auf das Widget, dann: ← / → anderer Raum · D einfache Ansicht oder Details · + / − größer oder kleiner · F5 sofort aktualisieren · Strg+C Werte kopieren · Strg+Umschalt+C alle Räume · G Home Assistant öffnen · Strg+Umschalt+S Bild speichern · Strg+Umschalt+D Diagnose kopieren · 1–9 Raum wählen · Maus über die Kurve zeigt Uhrzeit und Wert · Q Ruhe an/aus · T Design wechseln · F1 Hilfe · Esc schließt Hilfe und Geräte-Fenster. Beim Verschieben rastet das Widget an den Bildschirmrändern ein.', 'Click the widget once, then: ← / → other room · D simple view or details · + / − bigger or smaller · F5 refresh now · Ctrl+C copy readings · Ctrl+Shift+C all rooms · G open Home Assistant · Ctrl+Shift+S save picture · Ctrl+Shift+D copy diagnostics · 1–9 pick a room · hover the curve for time and value · Q quiet on/off · T switch theme · F1 help · Esc closes help and the device panel. When you move the widget it snaps to the screen edges.')
     week_tag = @(' · Woche: {0} %', ' · week: {0} %')
     sz_tip_s = @('Klein', 'Small')
     sz_tip_m = @('Normal', 'Normal')
@@ -1470,6 +1475,45 @@ function Update-HouseTitle($d) {
         [System.Windows.Automation.AutomationProperties]::SetName($ui.Card, (T 'sr_card' ([string]$d.room.name) (Get-LevelText ([string]$d.level)) ([string]$d.headline)))
     } catch { Write-Log ('Titel: ' + $_.Exception.Message) }
 }
+function Get-WidgetBitmap {
+    try {
+        $el = $ui.Scaler
+        $w = [double]$el.ActualWidth; $h = [double]$el.ActualHeight
+        if ($w -lt 10 -or $h -lt 10) {
+            $el.Measure((New-Object System.Windows.Size 700, 2000)); $w = [double]$el.DesiredSize.Width; $h = [double]$el.DesiredSize.Height
+            $el.Arrange((New-Object System.Windows.Rect 0, 0, $w, $h)); $el.UpdateLayout()
+        }
+        if ($w -lt 10 -or $h -lt 10) { return $null }
+        $rtb = New-Object System.Windows.Media.Imaging.RenderTargetBitmap ([int][Math]::Ceiling($w * 2)), ([int][Math]::Ceiling($h * 2)), 192, 192, ([System.Windows.Media.PixelFormats]::Pbgra32)
+        $dv = New-Object System.Windows.Media.DrawingVisual
+        $dc = $dv.RenderOpen()
+        $dc.PushTransform((New-Object System.Windows.Media.ScaleTransform 2, 2))
+        $dc.DrawRectangle((New-Object System.Windows.Media.VisualBrush $el), $null, (New-Object System.Windows.Rect 0, 0, $w, $h))
+        $dc.Pop(); $dc.Close()
+        $rtb.Render($dv)
+        return $rtb
+    } catch { Write-Log ('Bild: ' + $_.Exception.Message); return $null }
+}
+function Save-WidgetPicture([string]$folder) {
+    $bmp = Get-WidgetBitmap
+    if (-not $bmp) { return $null }
+    try {
+        if (-not $folder) { $folder = [Environment]::GetFolderPath('MyPictures') }
+        if (-not (Test-Path $folder)) { New-Item -ItemType Directory -Force -Path $folder | Out-Null }
+        $path = Join-Path $folder ('Luftwaechter-' + (Get-Date).ToString('yyyyMMdd-HHmmss') + '.png')
+        $enc = New-Object System.Windows.Media.Imaging.PngBitmapEncoder
+        $enc.Frames.Add([System.Windows.Media.Imaging.BitmapFrame]::Create($bmp))
+        $fs = [System.IO.File]::Create($path)
+        try { $enc.Save($fs) } finally { $fs.Dispose() }
+        return $path
+    } catch { Write-Log ('Bild speichern: ' + $_.Exception.Message); return $null }
+}
+function Copy-WidgetPicture {
+    $bmp = Get-WidgetBitmap
+    if ($bmp) { try { [System.Windows.Clipboard]::SetImage($bmp); return $true } catch { Write-Log ('Bild kopieren: ' + $_.Exception.Message) } }
+    return $false
+}
+function Get-AboutText { return ((T 'about_t' $appVersion) -replace '\\n', [Environment]::NewLine) }
 function Get-Diagnostics {
     $mode = $(if ($state.demo) { 'demo' } elseif ($script:haMode) { 'home-assistant' } else { 'url' })
     $lines = @(
@@ -2326,7 +2370,9 @@ $win.Add_KeyDown({ param($s, $e)
     switch ($e.Key) {
         'Left' { Switch-Room -1; $e.Handled = $true }
         'Right' { Switch-Room 1; $e.Handled = $true }
-        'D' { Toggle-Mode; $e.Handled = $true }
+        'D' { $mods = [System.Windows.Input.Keyboard]::Modifiers; if (($mods -band [System.Windows.Input.ModifierKeys]::Control) -and ($mods -band [System.Windows.Input.ModifierKeys]::Shift)) { Copy-Diagnostics } else { Toggle-Mode }; $e.Handled = $true }
+        'S' { $mods = [System.Windows.Input.Keyboard]::Modifiers; if (($mods -band [System.Windows.Input.ModifierKeys]::Control) -and ($mods -band [System.Windows.Input.ModifierKeys]::Shift)) { [void](Save-WidgetPicture ''); $e.Handled = $true } }
+        'G' { if ($script:haMode -and $script:haUrl) { try { Start-Process $script:haUrl } catch {} ; $e.Handled = $true } }
         'F5' { Update-Widget; $e.Handled = $true }
         'F1' { $script:helpOpen = -not $script:helpOpen; if ($script:helpOpen) { Build-Help }; Apply-View; $e.Handled = $true }
         'Q' { Toggle-Snooze; $e.Handled = $true }
@@ -2408,6 +2454,9 @@ $miCfg = New-Object System.Windows.Controls.MenuItem
 $miHaOpen = New-Object System.Windows.Controls.MenuItem
 $miHaPanel = New-Object System.Windows.Controls.MenuItem
 $miDiag = New-Object System.Windows.Controls.MenuItem
+$miPicSave = New-Object System.Windows.Controls.MenuItem
+$miPicCopy = New-Object System.Windows.Controls.MenuItem
+$miAbout = New-Object System.Windows.Controls.MenuItem
 $miNews = New-Object System.Windows.Controls.MenuItem
 $miBug = New-Object System.Windows.Controls.MenuItem
 $miData = New-Object System.Windows.Controls.MenuItem
@@ -2424,6 +2473,9 @@ $miHa.Add_Click({ Show-HaDialog })
 $miHaOpen.Add_Click({ try { if ($script:haUrl) { Start-Process $script:haUrl } } catch { Write-Log ('HA öffnen: ' + $_.Exception.Message) } })
 $miHaPanel.Add_Click({ try { if ($script:haUrl) { Start-Process ($script:haUrl.TrimEnd('/') + '/luftwaechter') } } catch { Write-Log ('HA-Ansicht: ' + $_.Exception.Message) } })
 $miDiag.Add_Click({ Copy-Diagnostics })
+$miPicSave.Add_Click({ $pp = Save-WidgetPicture ''; if ($pp) { try { Start-Process explorer.exe -ArgumentList ('/select,"' + $pp + '"') } catch {} } })
+$miPicCopy.Add_Click({ [void](Copy-WidgetPicture) })
+$miAbout.Add_Click({ try { [void][System.Windows.MessageBox]::Show((Get-AboutText), (T 'm_about'), 'OK', 'Information') } catch { Write-Log ('Über: ' + $_.Exception.Message) } })
 $miNews.Add_Click({ try { Start-Process ('https://github.com/DanStasiak/airguard-widget/releases/tag/v' + $appVersion) } catch { Write-Log ('Versionshinweise: ' + $_.Exception.Message) } })
 $miBug.Add_Click({ try { Start-Process 'https://github.com/DanStasiak/airguard-widget/issues/new/choose' } catch { Write-Log ('Problem melden: ' + $_.Exception.Message) } })
 $miData.Add_Click({ try { if (Test-Path $stateDir) { Start-Process explorer.exe -ArgumentList ('"' + $stateDir + '"') } } catch { Write-Log ('Datenordner: ' + $_.Exception.Message) } })
@@ -2459,8 +2511,8 @@ $menuGroups = @(
     @($miMode, $miTheme, $miBig, $miSmall),
     @($miSnooze, $miSnoozeM, $miPop, $miTray, $miSound, $miTop),
     @($miRefresh, $miCopy, $miCopyAll, $miExport),
-    @($miReset, $miAdv),
-    @($miHelp, $miNews, $miBug, $miHaSup, $miUpd),
+    @($miReset, $miPicSave, $miPicCopy, $miAdv),
+    @($miHelp, $miNews, $miBug, $miAbout, $miHaSup, $miUpd),
     @($miExit)
 )
 for ($gi = 0; $gi -lt $menuGroups.Count; $gi++) {
@@ -2539,7 +2591,7 @@ function Apply-Lang {
     if ($state.lang -eq 'en') { $ui.LangEn.Foreground = Brush '#FFFFFFFF'; $ui.LangEn.FontWeight = 'Bold' } else { $ui.LangDe.Foreground = Brush '#FFFFFFFF'; $ui.LangDe.FontWeight = 'Bold' }
     $miCopy.Header = (T 'm_copy'); $miCopyAll.Header = (T 'm_copy_all'); $miExport.Header = (T 'm_export');
     if ($script:trayMiExit) { $script:trayMiExit.Text = (T 'm_exit'); $script:trayMiRefresh.Text = (T 'm_refresh'); $script:trayMiQuietM.Text = (T 'm_snooze_m'); $script:trayMiQuiet.Text = $(if (Test-Snooze) { T 'm_snooze_off' ($script:snoozeUntil.ToString('HH:mm')) } else { T 'm_snooze' }) }
- $miSnoozeM.Header = (T 'm_snooze_m'); $miSnooze.Header = $(if (Test-Snooze) { T 'm_snooze_off' ($script:snoozeUntil.ToString('HH:mm')) } else { T 'm_snooze' }); $miTheme.Header = $(switch ([string]$state.theme) { 'day' { T 'm_theme_day' } 'night' { T 'm_theme_night' } default { T 'm_theme_auto' } }); $miDemo.Header = $(if ($state.demo) { T 'm_demo_off' } else { T 'm_demo' }); $miHaSup.Header = (T 'm_ha_support'); $miBig.Header = (T 'm_bigger'); $miSmall.Header = (T 'm_smaller'); $miRefresh.Header = (T 'm_refresh'); $miTop.Header = (T 'm_top'); $miPop.Header = (T 'm_pop'); $miTray.Header = (T 'm_tray'); if ($script:trayMiOpen) { $script:trayMiOpen.Text = (T 'tray_open'); $script:trayMiExit.Text = (T 'm_exit') }; $miSound.Header = (T 'm_sound'); $miReset.Header = (T 'm_reset'); $miLog.Header = (T 'm_log'); $miHelp.Header = (T 'm_help'); $miHa.Header = (T 'm_ha'); $miHaOpen.Header = (T 'm_ha_open'); $miHaPanel.Header = (T 'm_ha_panel'); $miDiag.Header = (T 'm_diag'); $miNews.Header = (T 'm_news'); $miBug.Header = (T 'm_bug'); $miData.Header = (T 'm_data'); if ($script:trayMiHa) { $script:trayMiHa.Text = (T 'tray_ha') }; $miMode.Header = $(if ($state.simple) { T 'm_mode_full' } else { T 'm_mode_simple' }); $miSens.Header = (T 'm_sens'); $miCfg.Header = (T 'm_cfg'); $miUpd.Header = (T 'm_upd'); $miExit.Header = (T 'm_exit')
+ $miSnoozeM.Header = (T 'm_snooze_m'); $miSnooze.Header = $(if (Test-Snooze) { T 'm_snooze_off' ($script:snoozeUntil.ToString('HH:mm')) } else { T 'm_snooze' }); $miTheme.Header = $(switch ([string]$state.theme) { 'day' { T 'm_theme_day' } 'night' { T 'm_theme_night' } default { T 'm_theme_auto' } }); $miDemo.Header = $(if ($state.demo) { T 'm_demo_off' } else { T 'm_demo' }); $miHaSup.Header = (T 'm_ha_support'); $miBig.Header = (T 'm_bigger'); $miSmall.Header = (T 'm_smaller'); $miRefresh.Header = (T 'm_refresh'); $miTop.Header = (T 'm_top'); $miPop.Header = (T 'm_pop'); $miTray.Header = (T 'm_tray'); if ($script:trayMiOpen) { $script:trayMiOpen.Text = (T 'tray_open'); $script:trayMiExit.Text = (T 'm_exit') }; $miSound.Header = (T 'm_sound'); $miReset.Header = (T 'm_reset'); $miLog.Header = (T 'm_log'); $miHelp.Header = (T 'm_help'); $miHa.Header = (T 'm_ha'); $miHaOpen.Header = (T 'm_ha_open'); $miHaPanel.Header = (T 'm_ha_panel'); $miDiag.Header = (T 'm_diag'); $miNews.Header = (T 'm_news'); $miBug.Header = (T 'm_bug'); $miData.Header = (T 'm_data'); $miPicSave.Header = (T 'm_pic_save'); $miPicCopy.Header = (T 'm_pic_copy'); $miAbout.Header = (T 'm_about'); if ($script:trayMiHa) { $script:trayMiHa.Text = (T 'tray_ha') }; $miMode.Header = $(if ($state.simple) { T 'm_mode_full' } else { T 'm_mode_simple' }); $miSens.Header = (T 'm_sens'); $miCfg.Header = (T 'm_cfg'); $miUpd.Header = (T 'm_upd'); $miExit.Header = (T 'm_exit')
     $ui.RoomName.Text = 'Luftwächter'; $ui.TitleTag.Text = (T 'tagline')
     $ui.Footer.Text = (Get-FooterText)
     $ui.Copy.Text = $copyright + ' · GitHub'; $ui.Copy.ToolTip = (T 'copy_tip'); $ui.Ver.ToolTip = (T 'ver_tip')
@@ -2846,8 +2898,11 @@ if ($SmokeTest) {
     Smoke 'size picker highlight' { $state.size = 'L'; Apply-View; $okL = ($ui.SzBL.Background.Color.A -gt 0 -and $ui.SzBM.Background.Color.A -eq 0); $state.size = 'M'; Apply-View; ($okL -and $ui.SzBM.Background.Color.A -gt 0 -and $ui.SzBL.Background.Color.A -eq 0) }
     Smoke 'fade on room change' { $state.demo = $true; $script:lastShownRoom = 'zzz'; Update-Widget; Fade-In $ui.Panel; Fade-In $win 50; ($ui.Panel.Opacity -le 1.0) }
     Smoke 'grouped menu' { $nsep = @($menu.Items | Where-Object { $_ -is [System.Windows.Controls.Separator] }).Count; ($nsep -ge 4 -and $miAdv.Items.Count -eq 9 -and $menu.Items.Count -ge 20) }
-    Smoke 'diagnostics copy' { Copy-Diagnostics; ($script:lastDiag -match 'Luftwächter 5\.21\.0' -and $script:lastDiag -match 'PowerShell' -and $script:lastDiag -notmatch 'Bearer|token') }
+    Smoke 'diagnostics copy' { Copy-Diagnostics; ($script:lastDiag -match 'Luftwächter 5\.22\.0' -and $script:lastDiag -match 'PowerShell' -and $script:lastDiag -notmatch 'Bearer|token') }
     Smoke 'support menu items' { Apply-Lang; $okS = ([string]$miNews.Header -ne '' -and [string]$miBug.Header -ne '' -and [string]$miData.Header -ne ''); $state.lang = 'en'; Apply-Lang; $okE = ([string]$miBug.Header -match 'GitHub'); $state.lang = 'de'; Apply-Lang; ($okS -and $okE -and (Get-Diagnostics) -match 'Autostart') }
+    Smoke 'about text' { $state.lang = 'de'; $a1 = Get-AboutText; $state.lang = 'en'; $a2 = Get-AboutText; $state.lang = 'de'; ($a1 -match '5\.22\.0' -and $a1 -match 'Datenschutz' -and $a2 -match 'Privacy' -and $a2 -match 'github\.com/DanStasiak') }
+    Smoke 'picture export' { Update-Widget; $pp = Save-WidgetPicture $stateDir; $okP = ($pp -and (Test-Path $pp) -and ((Get-Item $pp).Length -gt 2000)); if ($okP) { $bb = [System.IO.File]::ReadAllBytes($pp); $okP = ($bb[0] -eq 0x89 -and $bb[1] -eq 0x50 -and $bb[2] -eq 0x4E -and $bb[3] -eq 0x47) }; $okP }
+    Smoke 'picture to clipboard' { Update-Widget; (Copy-WidgetPicture) }
     Smoke 'ha menu items' { $script:haMode = $true; Update-HaMenu; $a = ($miHaOpen.Visibility -eq 'Visible'); $script:haMode = $false; Update-HaMenu; $b = ($miHaOpen.Visibility -eq 'Collapsed'); $script:haMode = [bool]($script:haUrl -and $script:haTok); ($a -and $b) }
     Smoke 'header tooltips' { Apply-Lang; ([string]$ui.SzBC.ToolTip -ne '' -and [string]$ui.Time.ToolTip -ne '' -and [string]$miAdv.Header -ne '') }
     Smoke 'help explains readings' { $okh = $true; foreach ($q in 19, 20, 21, 22) { $state.lang = 'de'; if ((T ('b' + $q)) -notmatch 'Ursachen' -or (T ('b' + $q)).Length -lt 400) { $okh = $false }; $state.lang = 'en'; if ((T ('b' + $q)) -notmatch 'causes' -or (T ('b' + $q)).Length -lt 400) { $okh = $false } }; $state.lang = 'de'; $okh }
