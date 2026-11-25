@@ -1,0 +1,6 @@
+# Windows scripts are stored byte for byte (UTF-8 BOM + CRLF). Git must never convert their line endings,
+# whatever core.autocrlf is set to on the machine that edits them.
+*.ps1 -text
+*.bat -text
+*.vbs -text
+*.png binary

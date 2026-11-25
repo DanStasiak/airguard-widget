@@ -10,6 +10,10 @@ A small always-on-top **Windows desktop widget** that shows how good the air is 
 
 > **Try it in 30 seconds, no Home Assistant needed:** install the widget, right-click it and choose **Try the demo**. Three simulated rooms show how Luftwächter looks and what it tells you.
 
+**Quick start:** (1) download the ZIP from the [latest release](https://github.com/DanStasiak/airguard-widget/releases/latest) and unzip it, (2) double-click `Installieren.bat`, (3) right-click the widget → **Try the demo**, or connect Home Assistant with **Search network**. Help: [SUPPORT.md](SUPPORT.md).
+
+**Contents:** [Install](#install-windows-1011) · [How it works](#how-it-works) · [Choosing sensors](#choosing-sensors) · [Troubleshooting](#troubleshooting) · [Updating](#updating) · [Uninstall](#uninstall) · [Deutsch](#deutsch)
+
 **Which one do I need?**
 
 | | Luftwächter widget (this repo) | [luftwaechter-ha](https://github.com/DanStasiak/luftwaechter-ha) |
@@ -91,7 +95,7 @@ If a room has several sensors of one kind, the widget shows their **average** an
 | Window closed, cannot restart | Use the Start menu entry **Luftwächter**; it also ends stuck old copies. |
 | Windows says "unknown publisher" (SmartScreen) | The widget is not code-signed. Choose **More info → Run anyway**, or check the download first: `Get-FileHash` must match `SHA256SUMS.txt` on the release page. |
 | Installer shows a red error about scripts | Use `Installieren.bat` (it starts PowerShell with the right settings); do not run the `.ps1` by double-click. |
-| Bug report needs details | Right-click → **More → Copy diagnostics (for support)** and paste it into the issue. It never contains your token or Home Assistant address. |
+| Bug report needs details | Right-click → **More → Copy diagnostics (for support)** and paste it into the issue (or use right-click → *Report a problem*). It never contains your token or Home Assistant address. |
 | Anything else | Right-click → **Open log**, then open an [issue](https://github.com/DanStasiak/airguard-widget/issues/new/choose) (remove personal data from the log). |
 
 ## Updating
@@ -117,6 +121,8 @@ MIT License, Copyright (c) 2026 Dan Stasiak. You may use, change and share it fr
 # Deutsch
 
 **Luftwächter** ist ein kleines Windows-Widget, das zeigt, wie gut die Luft in deinen Räumen ist, und in einfachen Worten sagt, ob du lüften sollst. Kostenlos und quelloffen (MIT).
+
+**Schnellstart:** ZIP laden, entpacken, `Installieren.bat` doppelklicken, dann Rechtsklick → „Demo ausprobieren“ oder Home Assistant verbinden. Hilfe: [SUPPORT.md](SUPPORT.md).
 
 **Installieren:** ZIP von der [aktuellen Version](https://github.com/DanStasiak/airguard-widget/releases/latest) laden, entpacken, `Installieren.bat` doppelklicken. Der Installer sucht Home Assistant im Netzwerk, fragt nach einem langlebigen Zugangstoken (Home Assistant → Profil → Sicherheit) und speichert ihn verschlüsselt. Räume (Bereiche mit CO₂- oder Feinstaub-Sensor), Messwerte, Fenster und Geräte werden automatisch gefunden (siehe [`docs/HOME-ASSISTANT.md`](docs/HOME-ASSISTANT.md)). Optional gibt es einen Servermodus ([`docs/API.md`](docs/API.md)).
 

@@ -2,6 +2,28 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [5.21.0] - 2026-11-25
+- New: right-click → "What's new? (release notes)" opens the notes of your version on GitHub.
+- New: right-click → "Report a problem or suggest an idea (GitHub)" opens the issue form.
+- New: right-click → More → "Open the data folder" opens the folder with your settings and log in Explorer.
+- New: the tray icon menu has "Open Home Assistant" (when connected).
+- Improved: "Copy diagnostics" also lists the time zone, autostart, whether Home Assistant is set up, tray and quiet time, so most problems can be understood from one paste.
+- Improved: bug reports and feature requests are now GitHub forms with the right questions (version, connection mode, diagnostics), so reports arrive complete.
+- Improved: the repository keeps the right line endings automatically (Windows scripts stay CRLF, even when edited on another system).
+- Improved: the build checks also look for broken links between the documents, and the checks can be started by hand on GitHub.
+- Improved: a "Quick start in 3 steps" and contents list at the top of the README, a SUPPORT page that says where to ask what, and an updated contributing guide.
+- Improved: two more self-tests cover the new menu items and the richer diagnostics.
+- DE: Neu: Rechtsklick → „Was ist neu? (Versionshinweise)“ öffnet die Hinweise deiner Version auf GitHub.
+- DE: Neu: Rechtsklick → „Problem melden oder Idee vorschlagen (GitHub)“ öffnet das Meldeformular.
+- DE: Neu: Rechtsklick → Erweitert → „Datenordner öffnen“ zeigt den Ordner mit Einstellungen und Protokoll im Explorer.
+- DE: Neu: Das Tray-Menü hat „Home Assistant öffnen“ (wenn verbunden).
+- DE: Verbessert: „Diagnose kopieren“ nennt jetzt auch Zeitzone, Autostart, ob Home Assistant eingerichtet ist, Tray und Ruhezeit. So lassen sich die meisten Probleme aus einem Einfügen verstehen.
+- DE: Verbessert: Fehlermeldungen und Wünsche sind jetzt GitHub-Formulare mit den richtigen Fragen (Version, Verbindung, Diagnose). Meldungen kommen so vollständig an.
+- DE: Verbessert: Das Repository behält die richtigen Zeilenenden automatisch (Windows-Skripte bleiben CRLF, auch wenn sie auf einem anderen System bearbeitet werden).
+- DE: Verbessert: Die Prüfungen suchen auch kaputte Verweise zwischen den Dokumenten und lassen sich auf GitHub von Hand starten.
+- DE: Verbessert: „Schnellstart in 3 Schritten“ und Inhaltsverzeichnis oben in der README, eine SUPPORT-Seite, die sagt, wo man was fragt, und ein aktualisierter Leitfaden zum Mitmachen.
+- DE: Verbessert: Zwei weitere Selbsttests decken die neuen Menüpunkte und die ausführlichere Diagnose ab.
+
 ## [5.20.0] - 2026-11-25
 - New: right-click → More → "Open Home Assistant in the browser" and "Open the Luftwächter panel in Home Assistant" (only shown when you are connected to Home Assistant). The panel is the full-size view from the Luftwächter integration.
 - New: right-click → More → "Copy diagnostics (for support)" copies the version, Windows and PowerShell version, mode, room count and the last 20 log lines, so a bug report needs one paste. It never includes your token or your Home Assistant address. Glance over the log lines before posting them publicly.

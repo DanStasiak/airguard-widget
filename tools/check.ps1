@@ -49,6 +49,19 @@ if ([regex]::IsMatch($text, "(?<!\r)\n")) { Bad 'Luftwaechter.ps1 has lines with
 $sec = [regex]::Match($cl, '(?s)^## \[[^\]]+\][^\r\n]*(.*?)(?=^## \[|\z)', 'Multiline')
 if ($sec.Success -and $sec.Groups[1].Value -match '(?m)^- DE: ') { Ok 'newest CHANGELOG section has DE lines' } else { Bad 'newest CHANGELOG section has no "- DE:" lines' }
 
+# 5d. Relative links in the Markdown files point to files that exist
+$brokenLinks = @()
+foreach ($md in @(Get-ChildItem -Path $root -Filter *.md -File)) {
+    $body = [System.IO.File]::ReadAllText($md.FullName, [System.Text.Encoding]::UTF8)
+    foreach ($lm in [regex]::Matches($body, '\]\(([^)#\s]+)(#[^)]*)?\)')) {
+        $target = $lm.Groups[1].Value
+        if ($target -match '^(https?:|mailto:)') { continue }
+        if (-not (Test-Path (Join-Path $root $target))) { $brokenLinks += ($md.Name + ' -> ' + $target) }
+    }
+}
+if ($brokenLinks.Count -gt 0) { Bad ('broken document links: ' + ($brokenLinks -join ', ')) } else { Ok 'document links resolve' }
+if (Test-Path (Join-Path $root '.gitattributes')) { Ok '.gitattributes present' } else { Bad '.gitattributes missing (line endings are not protected)' }
+
 # 6. Smoke test: start the widget with demo data, walk through every view, fail on any error (Windows only)
 if ($env:OS -eq 'Windows_NT' -and -not $env:LUFT_SKIP_SMOKE) {
     $tmp = Join-Path $env:TEMP ('luft-check-' + [guid]::NewGuid().ToString('N'))

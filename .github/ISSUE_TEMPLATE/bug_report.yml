@@ -1,0 +1,31 @@
+name: Bug report
+description: Something does not work
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Widget version
+      description: Shown at the bottom right of the widget (or right-click → More → Copy diagnostics).
+      placeholder: "5.21.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: How is the widget connected?
+      options: [Home Assistant directly, Server mode (own server), Demo only, Not sure]
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: diag
+    attributes:
+      label: Diagnostics
+      description: Right-click the widget → More → Copy diagnostics, then paste here. It contains no token or Home Assistant address, but check the log lines for personal data first.
+      render: text

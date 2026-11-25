@@ -1,6 +1,7 @@
 name: Checks
 # Runs on every push and pull request: script syntax, versions, named controls, no secrets.
 on:
+  workflow_dispatch:
   push:
     branches: ['**']
   pull_request:
