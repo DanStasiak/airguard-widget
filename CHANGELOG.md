@@ -2,6 +2,18 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [5.20.0] - 2026-11-25
+- New: right-click → More → "Open Home Assistant in the browser" and "Open the Luftwächter panel in Home Assistant" (only shown when you are connected to Home Assistant). The panel is the full-size view from the Luftwächter integration.
+- New: right-click → More → "Copy diagnostics (for support)" copies the version, Windows and PowerShell version, mode, room count and the last 20 log lines, so a bug report needs one paste. It never includes your token or your Home Assistant address. Glance over the log lines before posting them publicly.
+- Improved: the More submenu is grouped so the Home Assistant entries sit together at the top.
+- Improved: the build checks are stricter (every text in the menu has a German and an English version, line endings, German release notes) and two new tests cover the new menu items, so mistakes are caught before a release.
+- Improved: release pages now say how to install and how to verify the download with the checksum file. The GitHub page got a "which one do I need" table, badges and a troubleshooting section, and links to the Home Assistant integration.
+- DE: Neu: Rechtsklick → Erweitert → „Home Assistant im Browser öffnen“ und „Luftwächter-Ansicht in Home Assistant öffnen“ (nur sichtbar, wenn du mit Home Assistant verbunden bist). Die Ansicht ist die Vollbild-Seite der Luftwächter-Integration.
+- DE: Neu: Rechtsklick → Erweitert → „Diagnose kopieren (für Support)“ kopiert Version, Windows- und PowerShell-Version, Modus, Raumanzahl und die letzten 20 Protokollzeilen. So genügt bei einem Fehlerbericht ein Einfügen. Dein Token und deine Home-Assistant-Adresse sind nie enthalten. Schau die Protokollzeilen vor dem öffentlichen Posten kurz an.
+- DE: Verbessert: Das Untermenü ist gruppiert, die Home-Assistant-Einträge stehen zusammen oben.
+- DE: Verbessert: Die Prüfungen vor einer Version sind strenger (jeder Menütext hat Deutsch und Englisch, Zeilenenden, deutsche Versionshinweise) und zwei neue Tests decken die neuen Menüpunkte ab, damit Fehler vor dem Release auffallen.
+- DE: Verbessert: Die Release-Seite erklärt jetzt Installation und Prüfsummen-Kontrolle. Die GitHub-Seite hat eine „Was brauche ich?“-Tabelle, Abzeichen und eine Hilfe bei Problemen und verweist auf die Home-Assistant-Integration.
+
 ## [5.19.0] - 2026-11-24
 - New: the help now explains each of the four readings (CO₂, fine dust, temperature, humidity): what it is, which limits the widget uses, common causes of poor values and what helps.
 - New: help sections fold open and closed with a click on the heading, plus "Expand all" and "Collapse all". The long list is now easy to scan.

@@ -1,6 +1,6 @@
 # Luftwächter (airguard-widget)
 
-[![Latest release](https://img.shields.io/github/v/release/DanStasiak/airguard-widget)](https://github.com/DanStasiak/airguard-widget/releases/latest) [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE) ![Windows 10/11](https://img.shields.io/badge/Windows-10%2F11-blue) ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-direct-41BDF5)
+[![Latest release](https://img.shields.io/github/v/release/DanStasiak/airguard-widget)](https://github.com/DanStasiak/airguard-widget/releases/latest) [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE) [![Checks](https://github.com/DanStasiak/airguard-widget/actions/workflows/check.yml/badge.svg)](https://github.com/DanStasiak/airguard-widget/actions/workflows/check.yml) [![Downloads](https://img.shields.io/github/downloads/DanStasiak/airguard-widget/total)](https://github.com/DanStasiak/airguard-widget/releases) ![Windows 10/11](https://img.shields.io/badge/Windows-10%2F11-blue) ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-direct-41BDF5)
 
 <p align="center"><img src="docs/screenshot-simple.png" width="32%" alt="Simple view with welcome card"> <img src="docs/screenshot-update.png" width="32%" alt="Update available on the button"> <img src="docs/screenshot-details.png" width="32%" alt="Details view"></p>
 
@@ -9,6 +9,15 @@
 A small always-on-top **Windows desktop widget** that shows how good the air is in your rooms and tells you in plain words whether to ventilate. Free and open source (MIT).
 
 > **Try it in 30 seconds, no Home Assistant needed:** install the widget, right-click it and choose **Try the demo**. Three simulated rooms show how Luftwächter looks and what it tells you.
+
+**Which one do I need?**
+
+| | Luftwächter widget (this repo) | [luftwaechter-ha](https://github.com/DanStasiak/luftwaechter-ha) |
+| --- | --- | --- |
+| What it is | Small always-on-top window for a Windows PC | Home Assistant integration with a sidebar panel |
+| Best for | A glance at the desk or in the kitchen, pop-ups, tray icon | Phone, tablet, wall display, automations |
+| Needs | Windows 10/11 and (optionally) Home Assistant | Home Assistant 2025.10 or newer |
+| Use both? | Yes: they read the same sensors and agree on the ratings | |
 
 - **Simple view by default**: a face, one clear sentence and the rooms, so anyone can use it; all values are one click away ("Details")
 - Traffic-light ring (CO₂), the four readings (CO₂, fine dust, temperature, humidity), a 3 h / 24 h curve with trend, forecast and daily summary
@@ -31,6 +40,7 @@ A small always-on-top **Windows desktop widget** that shows how good the air is 
 - **Look and feel:** highlighted size picker, soft glow on hover for everything clickable, smooth fade when switching rooms, right-click menu sorted into groups with a *More* submenu, tooltips on the header controls
 - **House at a glance:** window title shows e.g. "2 of 5 rooms poor"; hover a room button for its CO₂ and rating; keys 1–9 pick a room; *Copy all rooms* (Ctrl+Shift+C); screen-reader names
 - **Chart hover:** move the mouse over the curve to read the exact time and value; daily min/max show their times; tooltips on the tiles explain the ranges; tray tooltip names the worst room; slower polling while minimized
+- **Home Assistant shortcuts:** right-click → *More* → *Open Home Assistant* or *Open the Luftwächter panel* (full-size view from the [integration](https://github.com/DanStasiak/luftwaechter-ha)), and *Copy diagnostics* for bug reports
 - **Copy readings** (right-click) for pasting into a message; tray menu with *Refresh now*, *Quiet for 1 hour* and *Quiet until tomorrow morning* (quiet time survives a restart); mouse wheel over the room buttons switches rooms
 - **Daily air score** in the simple view: "Today: good air 92 % of the time", counted from today's readings, plus a 7-day score
 
@@ -79,6 +89,9 @@ If a room has several sensors of one kind, the widget shows their **average** an
 | A value looks wrong | Right-click → **Choose sensors for this room…** and pick the sensor you trust. |
 | A device is missing | Give it the label `airguard` in Home Assistant, or right-click a device row → Hide / "show all". |
 | Window closed, cannot restart | Use the Start menu entry **Luftwächter**; it also ends stuck old copies. |
+| Windows says "unknown publisher" (SmartScreen) | The widget is not code-signed. Choose **More info → Run anyway**, or check the download first: `Get-FileHash` must match `SHA256SUMS.txt` on the release page. |
+| Installer shows a red error about scripts | Use `Installieren.bat` (it starts PowerShell with the right settings); do not run the `.ps1` by double-click. |
+| Bug report needs details | Right-click → **More → Copy diagnostics (for support)** and paste it into the issue. It never contains your token or Home Assistant address. |
 | Anything else | Right-click → **Open log**, then open an [issue](https://github.com/DanStasiak/airguard-widget/issues/new/choose) (remove personal data from the log). |
 
 ## Updating
@@ -97,7 +110,7 @@ Run `Deinstallieren.bat` (removes autostart) and delete the folder `%LOCALAPPDAT
 
 ## License and credit
 
-MIT License, Copyright (c) 2026 Dan Stasiak. You may use, change and share it freely, also commercially, as long as the copyright notice and license text stay with it. See [LICENSE](LICENSE). Contributions welcome: [CONTRIBUTING.md](CONTRIBUTING.md).
+MIT License, Copyright (c) 2026 Dan Stasiak. You may use, change and share it freely, also commercially, as long as the copyright notice and license text stay with it. See [LICENSE](LICENSE). Contributions welcome: [CONTRIBUTING.md](CONTRIBUTING.md) · [Code of Conduct](CODE_OF_CONDUCT.md) · [Security](SECURITY.md).
 
 ---
 

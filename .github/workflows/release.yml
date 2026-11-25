@@ -41,6 +41,15 @@ jobs:
           sha256sum "Luftwaechter-$VER.zip" > SHA256SUMS.txt
           awk -v t="[$VER]" 'index($0,"## " t)==1{f=1;next} /^## \[/{f=0} f' CHANGELOG.md > notes.md
           test -s notes.md || echo "Release $VER" > notes.md
+          {
+            echo
+            echo "---"
+            echo "**Install (Windows 10/11):** download \`Luftwaechter-$VER.zip\` below, unzip it, double-click \`Installieren.bat\`. **Update:** press the ⟳ Update button in the widget."
+            echo
+            echo "**Verify the download (optional):** \`Get-FileHash .\\Luftwaechter-$VER.zip -Algorithm SHA256\` must match the line in \`SHA256SUMS.txt\`."
+            echo
+            echo "Using Home Assistant? The matching integration and sidebar panel: https://github.com/DanStasiak/luftwaechter-ha"
+          } >> notes.md
       - name: Publish release
         if: steps.v.outputs.exists == 'false'
         env:

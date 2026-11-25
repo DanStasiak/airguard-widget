@@ -39,6 +39,16 @@ if ($bad.Count -gt 0) { Bad ('private file in repository: ' + ($bad.Name -join '
 $hits = @(Get-ChildItem -Path $root -Recurse -File -Force -Include *.ps1, *.md, *.json, *.bat, *.vbs, *.yml | Where-Object { $_.FullName -notmatch '\\\.git\\' -and (Select-String -Path $_.FullName -Pattern 'eyJ[A-Za-z0-9_-]{30,}' -Quiet) })
 if ($hits.Count -gt 0) { Bad ('token-like text in: ' + ($hits.Name -join ', ')) } else { Ok 'no token-like text' }
 
+# 5b. Every literal T 'key' used in the code exists in the translation table, and the script keeps Windows line endings
+$haveKeys = @([regex]::Matches($text, '(?m)^\s+([A-Za-z0-9_]+) = @\(') | ForEach-Object { $_.Groups[1].Value })
+$usedKeys = @([regex]::Matches($text, "\bT '([A-Za-z0-9_]+)'") | ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique)
+$unknown = @($usedKeys | Where-Object { $haveKeys -notcontains $_ })
+if ($unknown.Count -gt 0) { Bad ('T keys without a translation: ' + ($unknown -join ', ')) } else { Ok ($usedKeys.Count.ToString() + ' translation keys all defined') }
+if ([regex]::IsMatch($text, "(?<!\r)\n")) { Bad 'Luftwaechter.ps1 has lines without CRLF line endings' } else { Ok 'CRLF line endings' }
+# 5c. The newest CHANGELOG section has German lines (the in-app update dialog shows them to German users)
+$sec = [regex]::Match($cl, '(?s)^## \[[^\]]+\][^\r\n]*(.*?)(?=^## \[|\z)', 'Multiline')
+if ($sec.Success -and $sec.Groups[1].Value -match '(?m)^- DE: ') { Ok 'newest CHANGELOG section has DE lines' } else { Bad 'newest CHANGELOG section has no "- DE:" lines' }
+
 # 6. Smoke test: start the widget with demo data, walk through every view, fail on any error (Windows only)
 if ($env:OS -eq 'Windows_NT' -and -not $env:LUFT_SKIP_SMOKE) {
     $tmp = Join-Path $env:TEMP ('luft-check-' + [guid]::NewGuid().ToString('N'))

@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall, [switch]$SmokeTest)
 
 $appName = 'Luftwaechter'
-$appVersion = '5.19.0'
+$appVersion = '5.20.0'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -525,6 +525,9 @@ $script:Strings = @{
     day_ok = @('Heute: {0} % der Zeit gute Luft 👍', 'Today: good air {0} % of the time 👍')
     day_low = @('Heute: nur {0} % gute Luft – lüfte öfter 🌬', 'Today: only {0} % good air – ventilate more often 🌬')
     m_demo = @('Demo ausprobieren', 'Try the demo')
+    m_ha_open = @('Home Assistant im Browser öffnen', 'Open Home Assistant in the browser')
+    m_ha_panel = @('Luftwächter-Ansicht in Home Assistant öffnen', 'Open the Luftwächter panel in Home Assistant')
+    m_diag = @('Diagnose kopieren (für Support)', 'Copy diagnostics (for support)')
     m_demo_off = @('Demo beenden', 'Stop the demo')
     demo_tag = @('Demo', 'Demo')
     m_theme_auto = @('Design: Automatisch (Tag/Nacht)', 'Theme: Automatic (day/night)')
@@ -1460,6 +1463,22 @@ function Update-HouseTitle($d) {
         [System.Windows.Automation.AutomationProperties]::SetName($ui.Card, (T 'sr_card' ([string]$d.room.name) (Get-LevelText ([string]$d.level)) ([string]$d.headline)))
     } catch { Write-Log ('Titel: ' + $_.Exception.Message) }
 }
+function Get-Diagnostics {
+    $mode = $(if ($state.demo) { 'demo' } elseif ($script:haMode) { 'home-assistant' } else { 'url' })
+    $lines = @(
+        ('Luftwächter ' + $appVersion),
+        ('PowerShell ' + $PSVersionTable.PSVersion.ToString() + ' · ' + [Environment]::OSVersion.VersionString),
+        ('Mode: ' + $mode + ' · language: ' + [string]$state.lang + ' · size: ' + [string]$state.size),
+        ('Rooms: ' + @($script:rooms).Count + ' · failed updates in a row: ' + [string]$script:fails),
+        ('Time: ' + (Get-Date).ToString('yyyy-MM-dd HH:mm')),
+        '--- log (last 20 lines) ---'
+    )
+    try { if (Test-Path $logFile) { $lines += @(Get-Content $logFile -Tail 20 -Encoding UTF8) } } catch {}
+    return ($lines -join [Environment]::NewLine)
+}
+function Copy-Diagnostics {
+    try { $script:lastDiag = Get-Diagnostics; [System.Windows.Clipboard]::SetText($script:lastDiag) } catch { Write-Log ('Diagnose: ' + $_.Exception.Message) }
+}
 function Copy-AllRooms {
     try {
         if (-not $script:rooms -or @($script:rooms).Count -eq 0) { return }
@@ -2378,6 +2397,9 @@ $miSens = New-Object System.Windows.Controls.MenuItem
 $miHelp = New-Object System.Windows.Controls.MenuItem
 $miUpd = New-Object System.Windows.Controls.MenuItem
 $miCfg = New-Object System.Windows.Controls.MenuItem
+$miHaOpen = New-Object System.Windows.Controls.MenuItem
+$miHaPanel = New-Object System.Windows.Controls.MenuItem
+$miDiag = New-Object System.Windows.Controls.MenuItem
 $miExit = New-Object System.Windows.Controls.MenuItem
 $miRefresh.Add_Click({ Update-Widget })
 $miTop.Add_Click({ $state.topmost = [bool]$miTop.IsChecked; $state.topmostSet = $true; $win.Topmost = $state.topmost; Save-State })
@@ -2388,6 +2410,9 @@ $miReset.Add_Click({ $w0 = [System.Windows.SystemParameters]::WorkArea; $win.Lef
 $miSound.Add_Click({ $state.sound = $miSound.IsChecked; Save-State })
 $miExit.Add_Click({ Exit-App })
 $miHa.Add_Click({ Show-HaDialog })
+$miHaOpen.Add_Click({ try { if ($script:haUrl) { Start-Process $script:haUrl } } catch { Write-Log ('HA öffnen: ' + $_.Exception.Message) } })
+$miHaPanel.Add_Click({ try { if ($script:haUrl) { Start-Process ($script:haUrl.TrimEnd('/') + '/luftwaechter') } } catch { Write-Log ('HA-Ansicht: ' + $_.Exception.Message) } })
+$miDiag.Add_Click({ Copy-Diagnostics })
 $miMode.Add_Click({ Toggle-Mode })
 $miCopy.Add_Click({ Copy-Readings })
 $miCopyAll.Add_Click({ Copy-AllRooms })
@@ -2413,7 +2438,9 @@ $miHelp.Add_Click({ $script:helpOpen = $true; Apply-View })
 $miCfg.Add_Click({ try { if (-not (Test-Path $cfgFile)) { Copy-Item (Join-Path $dir 'config.example.json') $cfgFile }; Start-Process notepad.exe -ArgumentList ('"' + $cfgFile + '"') } catch { Write-Log ('Konfig: ' + $_.Exception.Message) } })
 $miUpd.Add_Click({ Invoke-UpdateFlow $true })
 $miAdv = New-Object System.Windows.Controls.MenuItem
-foreach ($mx in @($miHa, $miSens, $miCfg, $miLog, $miDemo)) { [void]$miAdv.Items.Add($mx) }
+foreach ($mx in @($miHaOpen, $miHaPanel, $miHa, $miSens, $miCfg, $miDiag, $miLog, $miDemo)) { [void]$miAdv.Items.Add($mx) }
+function Update-HaMenu { $vis = $(if ($script:haMode) { 'Visible' } else { 'Collapsed' }); $miHaOpen.Visibility = $vis; $miHaPanel.Visibility = $vis }
+$menu.Add_Opened({ Update-HaMenu })
 $menuGroups = @(
     @($miMode, $miTheme, $miBig, $miSmall),
     @($miSnooze, $miSnoozeM, $miPop, $miTray, $miSound, $miTop),
@@ -2498,7 +2525,7 @@ function Apply-Lang {
     if ($state.lang -eq 'en') { $ui.LangEn.Foreground = Brush '#FFFFFFFF'; $ui.LangEn.FontWeight = 'Bold' } else { $ui.LangDe.Foreground = Brush '#FFFFFFFF'; $ui.LangDe.FontWeight = 'Bold' }
     $miCopy.Header = (T 'm_copy'); $miCopyAll.Header = (T 'm_copy_all'); $miExport.Header = (T 'm_export');
     if ($script:trayMiExit) { $script:trayMiExit.Text = (T 'm_exit'); $script:trayMiRefresh.Text = (T 'm_refresh'); $script:trayMiQuietM.Text = (T 'm_snooze_m'); $script:trayMiQuiet.Text = $(if (Test-Snooze) { T 'm_snooze_off' ($script:snoozeUntil.ToString('HH:mm')) } else { T 'm_snooze' }) }
- $miSnoozeM.Header = (T 'm_snooze_m'); $miSnooze.Header = $(if (Test-Snooze) { T 'm_snooze_off' ($script:snoozeUntil.ToString('HH:mm')) } else { T 'm_snooze' }); $miTheme.Header = $(switch ([string]$state.theme) { 'day' { T 'm_theme_day' } 'night' { T 'm_theme_night' } default { T 'm_theme_auto' } }); $miDemo.Header = $(if ($state.demo) { T 'm_demo_off' } else { T 'm_demo' }); $miHaSup.Header = (T 'm_ha_support'); $miBig.Header = (T 'm_bigger'); $miSmall.Header = (T 'm_smaller'); $miRefresh.Header = (T 'm_refresh'); $miTop.Header = (T 'm_top'); $miPop.Header = (T 'm_pop'); $miTray.Header = (T 'm_tray'); if ($script:trayMiOpen) { $script:trayMiOpen.Text = (T 'tray_open'); $script:trayMiExit.Text = (T 'm_exit') }; $miSound.Header = (T 'm_sound'); $miReset.Header = (T 'm_reset'); $miLog.Header = (T 'm_log'); $miHelp.Header = (T 'm_help'); $miHa.Header = (T 'm_ha'); $miMode.Header = $(if ($state.simple) { T 'm_mode_full' } else { T 'm_mode_simple' }); $miSens.Header = (T 'm_sens'); $miCfg.Header = (T 'm_cfg'); $miUpd.Header = (T 'm_upd'); $miExit.Header = (T 'm_exit')
+ $miSnoozeM.Header = (T 'm_snooze_m'); $miSnooze.Header = $(if (Test-Snooze) { T 'm_snooze_off' ($script:snoozeUntil.ToString('HH:mm')) } else { T 'm_snooze' }); $miTheme.Header = $(switch ([string]$state.theme) { 'day' { T 'm_theme_day' } 'night' { T 'm_theme_night' } default { T 'm_theme_auto' } }); $miDemo.Header = $(if ($state.demo) { T 'm_demo_off' } else { T 'm_demo' }); $miHaSup.Header = (T 'm_ha_support'); $miBig.Header = (T 'm_bigger'); $miSmall.Header = (T 'm_smaller'); $miRefresh.Header = (T 'm_refresh'); $miTop.Header = (T 'm_top'); $miPop.Header = (T 'm_pop'); $miTray.Header = (T 'm_tray'); if ($script:trayMiOpen) { $script:trayMiOpen.Text = (T 'tray_open'); $script:trayMiExit.Text = (T 'm_exit') }; $miSound.Header = (T 'm_sound'); $miReset.Header = (T 'm_reset'); $miLog.Header = (T 'm_log'); $miHelp.Header = (T 'm_help'); $miHa.Header = (T 'm_ha'); $miHaOpen.Header = (T 'm_ha_open'); $miHaPanel.Header = (T 'm_ha_panel'); $miDiag.Header = (T 'm_diag'); $miMode.Header = $(if ($state.simple) { T 'm_mode_full' } else { T 'm_mode_simple' }); $miSens.Header = (T 'm_sens'); $miCfg.Header = (T 'm_cfg'); $miUpd.Header = (T 'm_upd'); $miExit.Header = (T 'm_exit')
     $ui.RoomName.Text = 'Luftwächter'; $ui.TitleTag.Text = (T 'tagline')
     $ui.Footer.Text = (Get-FooterText)
     $ui.Copy.Text = $copyright + ' · GitHub'; $ui.Copy.ToolTip = (T 'copy_tip'); $ui.Ver.ToolTip = (T 'ver_tip')
@@ -2804,7 +2831,9 @@ if ($SmokeTest) {
     Smoke 'hover glow' { Set-Glow $ui.BtnHelp $true; $g1 = ($null -ne $ui.BtnHelp.Effect); Set-Glow $ui.BtnHelp $false; ($g1 -and $null -eq $ui.BtnHelp.Effect) }
     Smoke 'size picker highlight' { $state.size = 'L'; Apply-View; $okL = ($ui.SzBL.Background.Color.A -gt 0 -and $ui.SzBM.Background.Color.A -eq 0); $state.size = 'M'; Apply-View; ($okL -and $ui.SzBM.Background.Color.A -gt 0 -and $ui.SzBL.Background.Color.A -eq 0) }
     Smoke 'fade on room change' { $state.demo = $true; $script:lastShownRoom = 'zzz'; Update-Widget; Fade-In $ui.Panel; Fade-In $win 50; ($ui.Panel.Opacity -le 1.0) }
-    Smoke 'grouped menu' { $nsep = @($menu.Items | Where-Object { $_ -is [System.Windows.Controls.Separator] }).Count; ($nsep -ge 4 -and $miAdv.Items.Count -eq 5 -and $menu.Items.Count -ge 20) }
+    Smoke 'grouped menu' { $nsep = @($menu.Items | Where-Object { $_ -is [System.Windows.Controls.Separator] }).Count; ($nsep -ge 4 -and $miAdv.Items.Count -eq 8 -and $menu.Items.Count -ge 20) }
+    Smoke 'diagnostics copy' { Copy-Diagnostics; ($script:lastDiag -match 'Luftwächter 5\.20\.0' -and $script:lastDiag -match 'PowerShell' -and $script:lastDiag -notmatch 'Bearer|token') }
+    Smoke 'ha menu items' { $script:haMode = $true; Update-HaMenu; $a = ($miHaOpen.Visibility -eq 'Visible'); $script:haMode = $false; Update-HaMenu; $b = ($miHaOpen.Visibility -eq 'Collapsed'); $script:haMode = [bool]($script:haUrl -and $script:haTok); ($a -and $b) }
     Smoke 'header tooltips' { Apply-Lang; ([string]$ui.SzBC.ToolTip -ne '' -and [string]$ui.Time.ToolTip -ne '' -and [string]$miAdv.Header -ne '') }
     Smoke 'help explains readings' { $okh = $true; foreach ($q in 19, 20, 21, 22) { $state.lang = 'de'; if ((T ('b' + $q)) -notmatch 'Ursachen' -or (T ('b' + $q)).Length -lt 400) { $okh = $false }; $state.lang = 'en'; if ((T ('b' + $q)) -notmatch 'causes' -or (T ('b' + $q)).Length -lt 400) { $okh = $false } }; $state.lang = 'de'; $okh }
     Smoke 'help sections fold' { $state.demo = $true; Update-Widget; Build-Help; $okf = ($script:helpHeads.Count -eq 22); Set-HelpAll $false; $c1 = ($script:helpBodies[19].Visibility -eq 'Collapsed'); Toggle-HelpSection 19 $true; $o1 = ($script:helpBodies[19].Visibility -eq 'Visible'); Set-HelpAll $true; Set-HelpAll $false; ($okf -and $c1 -and $o1) }
