@@ -2,6 +2,10 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [5.22.1] - 2026-11-25
+- Fixed: "Save a picture of the widget" and "Copy a picture of the widget" cut off the right and bottom part when the widget was shown larger than the smallest size. The picture now always shows the whole widget, sharp at twice the size.
+- DE: Behoben: „Bild vom Widget speichern“ und „Bild vom Widget kopieren“ schnitten rechts und unten ab, wenn das Widget größer als die kleinste Größe war. Das Bild zeigt jetzt immer das ganze Widget, scharf in doppelter Größe.
+
 ## [5.22.0] - 2026-11-25
 - New: right-click → "Save a picture of the widget (PNG)" saves a sharp, double-size picture to your Pictures folder and shows it in Explorer. Handy for showing the air to family or in a bug report.
 - New: right-click → "Copy a picture of the widget" puts the same picture on the clipboard, ready to paste into a chat or mail.

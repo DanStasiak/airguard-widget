@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall, [switch]$SmokeTest)
 
 $appName = 'Luftwaechter'
-$appVersion = '5.22.0'
+$appVersion = '5.22.1'
 $appDate = '22.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -2906,9 +2906,9 @@ if ($SmokeTest) {
     Smoke 'size picker highlight' { $state.size = 'L'; Apply-View; $okL = ($ui.SzBL.Background.Color.A -gt 0 -and $ui.SzBM.Background.Color.A -eq 0); $state.size = 'M'; Apply-View; ($okL -and $ui.SzBM.Background.Color.A -gt 0 -and $ui.SzBL.Background.Color.A -eq 0) }
     Smoke 'fade on room change' { $state.demo = $true; $script:lastShownRoom = 'zzz'; Update-Widget; Fade-In $ui.Panel; Fade-In $win 50; ($ui.Panel.Opacity -le 1.0) }
     Smoke 'grouped menu' { $nsep = @($menu.Items | Where-Object { $_ -is [System.Windows.Controls.Separator] }).Count; ($nsep -ge 4 -and $miAdv.Items.Count -eq 9 -and $menu.Items.Count -ge 20) }
-    Smoke 'diagnostics copy' { Copy-Diagnostics; ($script:lastDiag -match 'Luftwächter 5\.22\.0' -and $script:lastDiag -match 'PowerShell' -and $script:lastDiag -notmatch 'Bearer|token') }
+    Smoke 'diagnostics copy' { Copy-Diagnostics; ($script:lastDiag -match 'Luftwächter 5\.22\.1' -and $script:lastDiag -match 'PowerShell' -and $script:lastDiag -notmatch 'Bearer|token') }
     Smoke 'support menu items' { Apply-Lang; $okS = ([string]$miNews.Header -ne '' -and [string]$miBug.Header -ne '' -and [string]$miData.Header -ne ''); $state.lang = 'en'; Apply-Lang; $okE = ([string]$miBug.Header -match 'GitHub'); $state.lang = 'de'; Apply-Lang; ($okS -and $okE -and (Get-Diagnostics) -match 'Autostart') }
-    Smoke 'about text' { $state.lang = 'de'; $a1 = Get-AboutText; $state.lang = 'en'; $a2 = Get-AboutText; $state.lang = 'de'; ($a1 -match '5\.22\.0' -and $a1 -match 'Datenschutz' -and $a2 -match 'Privacy' -and $a2 -match 'github\.com/DanStasiak') }
+    Smoke 'about text' { $state.lang = 'de'; $a1 = Get-AboutText; $state.lang = 'en'; $a2 = Get-AboutText; $state.lang = 'de'; ($a1 -match '5\.22\.1' -and $a1 -match 'Datenschutz' -and $a2 -match 'Privacy' -and $a2 -match 'github\.com/DanStasiak') }
     Smoke 'picture export' { Update-Widget; $pp = Save-WidgetPicture $stateDir; $okP = ($pp -and (Test-Path $pp) -and ((Get-Item $pp).Length -gt 2000)); if ($okP) { $bb = [System.IO.File]::ReadAllBytes($pp); $okP = ($bb[0] -eq 0x89 -and $bb[1] -eq 0x50 -and $bb[2] -eq 0x4E -and $bb[3] -eq 0x47) }; $okP }
     Smoke 'picture to clipboard' { Update-Widget; (Copy-WidgetPicture) }
     Smoke 'ha menu items' { $script:haMode = $true; Update-HaMenu; $a = ($miHaOpen.Visibility -eq 'Visible'); $script:haMode = $false; Update-HaMenu; $b = ($miHaOpen.Visibility -eq 'Collapsed'); $script:haMode = [bool]($script:haUrl -and $script:haTok); ($a -and $b) }
