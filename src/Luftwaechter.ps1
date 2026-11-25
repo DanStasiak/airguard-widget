@@ -1476,23 +1476,31 @@ function Update-HouseTitle($d) {
     } catch { Write-Log ('Titel: ' + $_.Exception.Message) }
 }
 function Get-WidgetBitmap {
+    $el = $ui.Scaler
+    $old = $el.LayoutTransform
     try {
-        $el = $ui.Scaler
+        # The widget is scaled with a layout transform; measure and draw it at its natural size, then draw at (scale x 2) for a sharp picture.
+        $s = 1.0; try { $s = [double]$old.Value.M11 } catch {}
+        if ($s -lt 0.5 -or $s -gt 4) { $s = 1.0 }
+        $el.LayoutTransform = [System.Windows.Media.Transform]::Identity
+        $el.UpdateLayout()
         $w = [double]$el.ActualWidth; $h = [double]$el.ActualHeight
         if ($w -lt 10 -or $h -lt 10) {
             $el.Measure((New-Object System.Windows.Size 700, 2000)); $w = [double]$el.DesiredSize.Width; $h = [double]$el.DesiredSize.Height
             $el.Arrange((New-Object System.Windows.Rect 0, 0, $w, $h)); $el.UpdateLayout()
         }
         if ($w -lt 10 -or $h -lt 10) { return $null }
-        $rtb = New-Object System.Windows.Media.Imaging.RenderTargetBitmap ([int][Math]::Ceiling($w * 2)), ([int][Math]::Ceiling($h * 2)), 192, 192, ([System.Windows.Media.PixelFormats]::Pbgra32)
+        $k = 2.0 * $s
+        $rtb = New-Object System.Windows.Media.Imaging.RenderTargetBitmap ([int][Math]::Ceiling($w * $k)), ([int][Math]::Ceiling($h * $k)), 96, 96, ([System.Windows.Media.PixelFormats]::Pbgra32)
         $dv = New-Object System.Windows.Media.DrawingVisual
         $dc = $dv.RenderOpen()
-        $dc.PushTransform((New-Object System.Windows.Media.ScaleTransform 2, 2))
+        $dc.PushTransform((New-Object System.Windows.Media.ScaleTransform $k, $k))
         $dc.DrawRectangle((New-Object System.Windows.Media.VisualBrush $el), $null, (New-Object System.Windows.Rect 0, 0, $w, $h))
         $dc.Pop(); $dc.Close()
         $rtb.Render($dv)
         return $rtb
     } catch { Write-Log ('Bild: ' + $_.Exception.Message); return $null }
+    finally { $el.LayoutTransform = $old; try { $el.UpdateLayout() } catch {} }
 }
 function Save-WidgetPicture([string]$folder) {
     $bmp = Get-WidgetBitmap
