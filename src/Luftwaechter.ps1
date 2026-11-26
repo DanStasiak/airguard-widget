@@ -545,8 +545,8 @@ $script:Strings = @{
     m_opacity = @('Durchsichtigkeit: {0} %', 'Transparency: {0} %')
     m_taskbar = @('In der Taskleiste anzeigen', 'Show in the taskbar')
     m_hover = @('Bei Mausberührung voll deckend', 'Fully opaque on hover')
-    m_export = @('Einstellungen sichern…', 'Back up settings…')
-    m_import = @('Einstellungen wiederherstellen…', 'Restore settings…')
+    m_bk_save = @('Einstellungen sichern…', 'Back up settings…')
+    m_bk_load = @('Einstellungen wiederherstellen…', 'Restore settings…')
     m_auto = @('Mit Windows starten', 'Start with Windows')
     m_diag = @('Diagnose kopieren (für Support)', 'Copy diagnostics (for support)')
     m_demo_off = @('Demo beenden', 'Stop the demo')
@@ -2550,8 +2550,8 @@ $miOpacity = New-Object System.Windows.Controls.MenuItem
 $miTaskbar = New-Object System.Windows.Controls.MenuItem; $miTaskbar.IsCheckable = $true; $miTaskbar.IsChecked = [bool]$state.taskbar
 $miAuto = New-Object System.Windows.Controls.MenuItem; $miAuto.IsCheckable = $true
 $miHover = New-Object System.Windows.Controls.MenuItem; $miHover.IsCheckable = $true; $miHover.IsChecked = [bool]$state.hoverFull
-$miExport = New-Object System.Windows.Controls.MenuItem
-$miImport = New-Object System.Windows.Controls.MenuItem
+$miBkSave = New-Object System.Windows.Controls.MenuItem
+$miBkLoad = New-Object System.Windows.Controls.MenuItem
 $miPicCopy = New-Object System.Windows.Controls.MenuItem
 $miAbout = New-Object System.Windows.Controls.MenuItem
 $miNews = New-Object System.Windows.Controls.MenuItem
@@ -2575,13 +2575,13 @@ $miPicCopy.Add_Click({ [void](Copy-WidgetPicture) })
 $miLock.Add_Click({ $state.locked = [bool]$miLock.IsChecked; Save-State })
 $miOpacity.Add_Click({ Step-Opacity })
 $miHover.Add_Click({ $state.hoverFull = [bool]$miHover.IsChecked; Save-State })
-$miExport.Add_Click({
+$miBkSave.Add_Click({
     try {
         $f = Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'Luftwaechter-Einstellungen.json'
         if (Export-Settings $f) { Start-Process explorer.exe -ArgumentList ('/select,"' + $f + '"') }
     } catch { Write-Log ('Sicherung: ' + $_.Exception.Message) }
 })
-$miImport.Add_Click({
+$miBkLoad.Add_Click({
     try {
         $d = New-Object System.Windows.Forms.OpenFileDialog
         $d.Filter = 'Luftwächter (*.json)|*.json'; $d.InitialDirectory = [Environment]::GetFolderPath('MyDocuments')
@@ -2625,7 +2625,7 @@ $miHelp.Add_Click({ $script:helpOpen = $true; Apply-View })
 $miCfg.Add_Click({ try { if (-not (Test-Path $cfgFile)) { Copy-Item (Join-Path $dir 'config.example.json') $cfgFile }; Start-Process notepad.exe -ArgumentList ('"' + $cfgFile + '"') } catch { Write-Log ('Konfig: ' + $_.Exception.Message) } })
 $miUpd.Add_Click({ Invoke-UpdateFlow $true })
 $miAdv = New-Object System.Windows.Controls.MenuItem
-foreach ($mx in @($miHaOpen, $miHaPanel, $miHa, $miSens, $miCfg, $miAuto, $miExport, $miImport, $miData, $miDiag, $miLog, $miDemo)) { [void]$miAdv.Items.Add($mx) }
+foreach ($mx in @($miHaOpen, $miHaPanel, $miHa, $miSens, $miCfg, $miAuto, $miBkSave, $miBkLoad, $miData, $miDiag, $miLog, $miDemo)) { [void]$miAdv.Items.Add($mx) }
 function Update-HaMenu { $miAuto.IsChecked = (Test-Autostart); if ($script:trayMiHa) { $script:trayMiHa.Visible = [bool]$script:haMode }; $vis = $(if ($script:haMode) { 'Visible' } else { 'Collapsed' }); $miHaOpen.Visibility = $vis; $miHaPanel.Visibility = $vis }
 $menu.Add_Opened({ Update-HaMenu })
 $menuGroups = @(
@@ -2712,7 +2712,7 @@ function Apply-Lang {
     if ($state.lang -eq 'en') { $ui.LangEn.Foreground = Brush '#FFFFFFFF'; $ui.LangEn.FontWeight = 'Bold' } else { $ui.LangDe.Foreground = Brush '#FFFFFFFF'; $ui.LangDe.FontWeight = 'Bold' }
     $miCopy.Header = (T 'm_copy'); $miCopyAll.Header = (T 'm_copy_all'); $miExport.Header = (T 'm_export');
     if ($script:trayMiExit) { $script:trayMiExit.Text = (T 'm_exit'); $script:trayMiRefresh.Text = (T 'm_refresh'); $script:trayMiQuietM.Text = (T 'm_snooze_m'); $script:trayMiQuiet.Text = $(if (Test-Snooze) { T 'm_snooze_off' ($script:snoozeUntil.ToString('HH:mm')) } else { T 'm_snooze' }) }
- $miSnoozeM.Header = (T 'm_snooze_m'); $miSnooze.Header = $(if (Test-Snooze) { T 'm_snooze_off' ($script:snoozeUntil.ToString('HH:mm')) } else { T 'm_snooze' }); $miTheme.Header = $(switch ([string]$state.theme) { 'day' { T 'm_theme_day' } 'night' { T 'm_theme_night' } default { T 'm_theme_auto' } }); $miDemo.Header = $(if ($state.demo) { T 'm_demo_off' } else { T 'm_demo' }); $miHaSup.Header = (T 'm_ha_support'); $miBig.Header = (T 'm_bigger'); $miSmall.Header = (T 'm_smaller'); $miRefresh.Header = (T 'm_refresh'); $miTop.Header = (T 'm_top'); $miPop.Header = (T 'm_pop'); $miTray.Header = (T 'm_tray'); if ($script:trayMiOpen) { $script:trayMiOpen.Text = (T 'tray_open'); $script:trayMiExit.Text = (T 'm_exit') }; $miSound.Header = (T 'm_sound'); $miReset.Header = (T 'm_reset'); $miLog.Header = (T 'm_log'); $miHelp.Header = (T 'm_help'); $miHa.Header = (T 'm_ha'); $miHaOpen.Header = (T 'm_ha_open'); $miHaPanel.Header = (T 'm_ha_panel'); $miDiag.Header = (T 'm_diag'); $miNews.Header = (T 'm_news'); $miBug.Header = (T 'm_bug'); $miData.Header = (T 'm_data'); $miPicSave.Header = (T 'm_pic_save'); $miLock.Header = (T 'm_lock'); $miOpacity.Header = (T 'm_opacity' ([int][Math]::Round([double]$state.opacity * 100))); $miTaskbar.Header = (T 'm_taskbar'); $miAuto.Header = (T 'm_auto'); $miHover.Header = (T 'm_hover'); $miExport.Header = (T 'm_export'); $miImport.Header = (T 'm_import'); $miPicCopy.Header = (T 'm_pic_copy'); $miAbout.Header = (T 'm_about'); if ($script:trayMiHa) { $script:trayMiHa.Text = (T 'tray_ha') }; $miMode.Header = $(if ($state.simple) { T 'm_mode_full' } else { T 'm_mode_simple' }); $miSens.Header = (T 'm_sens'); $miCfg.Header = (T 'm_cfg'); $miUpd.Header = (T 'm_upd'); $miExit.Header = (T 'm_exit')
+ $miSnoozeM.Header = (T 'm_snooze_m'); $miSnooze.Header = $(if (Test-Snooze) { T 'm_snooze_off' ($script:snoozeUntil.ToString('HH:mm')) } else { T 'm_snooze' }); $miTheme.Header = $(switch ([string]$state.theme) { 'day' { T 'm_theme_day' } 'night' { T 'm_theme_night' } default { T 'm_theme_auto' } }); $miDemo.Header = $(if ($state.demo) { T 'm_demo_off' } else { T 'm_demo' }); $miHaSup.Header = (T 'm_ha_support'); $miBig.Header = (T 'm_bigger'); $miSmall.Header = (T 'm_smaller'); $miRefresh.Header = (T 'm_refresh'); $miTop.Header = (T 'm_top'); $miPop.Header = (T 'm_pop'); $miTray.Header = (T 'm_tray'); if ($script:trayMiOpen) { $script:trayMiOpen.Text = (T 'tray_open'); $script:trayMiExit.Text = (T 'm_exit') }; $miSound.Header = (T 'm_sound'); $miReset.Header = (T 'm_reset'); $miLog.Header = (T 'm_log'); $miHelp.Header = (T 'm_help'); $miHa.Header = (T 'm_ha'); $miHaOpen.Header = (T 'm_ha_open'); $miHaPanel.Header = (T 'm_ha_panel'); $miDiag.Header = (T 'm_diag'); $miNews.Header = (T 'm_news'); $miBug.Header = (T 'm_bug'); $miData.Header = (T 'm_data'); $miPicSave.Header = (T 'm_pic_save'); $miLock.Header = (T 'm_lock'); $miOpacity.Header = (T 'm_opacity' ([int][Math]::Round([double]$state.opacity * 100))); $miTaskbar.Header = (T 'm_taskbar'); $miAuto.Header = (T 'm_auto'); $miHover.Header = (T 'm_hover'); $miBkSave.Header = (T 'm_bk_save'); $miBkLoad.Header = (T 'm_bk_load'); $miPicCopy.Header = (T 'm_pic_copy'); $miAbout.Header = (T 'm_about'); if ($script:trayMiHa) { $script:trayMiHa.Text = (T 'tray_ha') }; $miMode.Header = $(if ($state.simple) { T 'm_mode_full' } else { T 'm_mode_simple' }); $miSens.Header = (T 'm_sens'); $miCfg.Header = (T 'm_cfg'); $miUpd.Header = (T 'm_upd'); $miExit.Header = (T 'm_exit')
     $ui.RoomName.Text = 'Luftwächter'; $ui.TitleTag.Text = (T 'tagline')
     $ui.Footer.Text = (Get-FooterText)
     $ui.Copy.Text = $copyright + ' · GitHub'; $ui.Copy.ToolTip = (T 'copy_tip'); $ui.Ver.ToolTip = (T 'ver_tip')
