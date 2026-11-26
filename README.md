@@ -103,11 +103,16 @@ Click the widget once, then:
 | + / − | bigger / smaller | F5 | refresh now |
 | Ctrl+C | copy readings | Ctrl+Shift+C | copy all rooms |
 | Q | quiet time on/off | T | change theme |
+| A | last alerts | | |
 | L | language | U | check for updates |
 | O | transparency (100 / 85 / 70 %) | P | always on top |
 | W | weather row open / closed | E | save history as CSV |
 | G | open Home Assistant | Ctrl+Shift+S | save a picture |
 | Ctrl+Shift+D | copy diagnostics | F1 / Esc | help / close |
+
+## Alerts and quiet hours
+
+When the advice changes to *open* or *close* the window, Luftwächter can play a soft sound, show a balloon next to the clock and a pop-up. By default it stays silent from 22:00 to 07:00. Right-click → **Quiet hours** steps through 22–7, 23–6, 21–8, 20–9 and off. Key **Q** or *Quiet for an hour* mutes everything for a while. Key **A** (or Advanced → *Last alerts…*) lists the last 15 changes, even those that arrived while quiet. *Send a test alert* (Advanced) shows what an alert looks like. Details: [`docs/ALERTS.md`](docs/ALERTS.md).
 
 ## Window options
 
@@ -151,6 +156,7 @@ Each release has a `SHA256SUMS.txt`. In PowerShell: `Get-FileHash .\Luftwaechter
 | Window closed, cannot restart | Use the Start menu entry **Luftwächter**; it also ends stuck old copies. |
 | The widget is not on screen | Look for the icon next to the clock and click it. Still nothing: right-click the tray icon → *Open*, then right-click the widget → *Reset position*. |
 | The widget is too faint to read | Press **O** until it is solid again (or turn on *Fully opaque on hover*). |
+| I get no alerts | Check quiet hours (right-click → *Quiet hours*), *Quiet for an hour* (title shows 🔕) and the sound / pop-up / tray options. *Send a test alert* (Advanced) proves that Windows plays sounds and shows balloons. |
 | My settings were lost after a crash | A damaged settings file is kept as `state.json.bad` in the data folder and the widget starts fresh. Restore your look with *Restore settings…*. |
 | Something is wrong and I do not know what | Right-click → Advanced → *Report a problem…* copies the diagnostics and opens the GitHub form; paste them there. |
 | Windows says "unknown publisher" (SmartScreen) | The widget is not code-signed. Choose **More info → Run anyway**, or check the download first: `Get-FileHash` must match `SHA256SUMS.txt` on the release page. |
@@ -163,6 +169,8 @@ Each release has a `SHA256SUMS.txt`. In PowerShell: `Get-FileHash .\Luftwaechter
 **How do I move my look to a new PC?** Right-click → Advanced → *Back up settings…*, copy the file from *Documents* to the new PC and use *Restore settings…* there. Home Assistant needs its own token on each PC.
 
 **How do I start it hidden?** Right-click → *Start hidden in the tray*. A click on the tray icon shows it.
+
+**Can I change when it is quiet?** Yes: right-click → *Quiet hours* picks 22–7, 23–6, 21–8, 20–9 or off. Alerts are still listed under key **A**.
 
 **Where are the details of every setting?** In [`docs/SETTINGS.md`](docs/SETTINGS.md).
 

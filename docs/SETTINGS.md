@@ -11,6 +11,9 @@
 | `topmost` | always on top (key P) |
 | `opacity` | 1.0, 0.85 or 0.7 (key O) |
 | `hoverFull` | solid while the mouse is over the widget |
+| `quietOn` | night quiet hours on / off (default on) |
+| `quietFrom`, `quietTo` | start and end hour, 0–23 (default 22 and 7; may wrap past midnight) |
+| `alerts` | the last 15 alerts (text only, written by the widget) |
 | `locked` | position locked |
 | `taskbar` | show in the taskbar |
 | `snap` | snap to screen edges |

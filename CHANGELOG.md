@@ -2,6 +2,26 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [5.27.0] - 2026-11-26
+- New: **Quiet hours** are adjustable (right-click → *Quiet hours*: 22–7, 23–6, 21–8, 20–9 or off). Before they were fixed at 22:00–07:00.
+- New: key **A** and Advanced → **Last alerts…** list the last 15 window advice changes, also those that came during quiet time.
+- New: Advanced → **Send a test alert** plays the sound and shows a balloon, so you can check that alerts reach you.
+- Improved: the sound that ends a ventilation run also respects quiet hours.
+- Improved: quiet hours are saved, included in *Back up settings…* and shown in the diagnostics.
+- Repaired: a damaged `config.json` is kept as `config.json.bad` instead of being silently ignored.
+- Improved: the log's first line now names the PowerShell version, which helps with problem reports.
+- Improved: GitHub page with an *Alerts and quiet hours* section, a new troubleshooting row and FAQ answer, key **A** in the keyboard table and the new guide `docs/ALERTS.md`; `docs/SETTINGS.md` lists the new settings.
+- Improved: four more self-tests (quiet hours across midnight, preset steps, alert list limit, saved quiet settings).
+- DE: Neu: **Ruhezeit** ist einstellbar (Rechtsklick → *Ruhezeit*: 22–7, 23–6, 21–8, 20–9 oder aus). Vorher fest 22:00–07:00.
+- DE: Neu: Taste **A** und Erweitert → **Letzte Hinweise…** listen die letzten 15 Lüftungshinweise, auch die aus der Ruhezeit.
+- DE: Neu: Erweitert → **Testhinweis senden** spielt den Ton und zeigt eine Sprechblase, so lässt sich prüfen, ob Hinweise ankommen.
+- DE: Verbessert: Der Ton am Ende eines Lüftungslaufs beachtet jetzt ebenfalls die Ruhezeit.
+- DE: Verbessert: Die Ruhezeit wird gespeichert, in *Einstellungen sichern…* mitgenommen und in der Diagnose genannt.
+- DE: Repariert: Eine beschädigte `config.json` wird als `config.json.bad` aufgehoben statt stillschweigend ignoriert.
+- DE: Verbessert: Die erste Protokollzeile nennt jetzt die PowerShell-Version, das hilft bei Problemmeldungen.
+- DE: Verbessert: GitHub-Seite mit Abschnitt *Hinweise und Ruhezeit*, neuer Fehlerhilfe-Zeile und FAQ-Antwort, Taste **A** in der Tastentabelle und neuer Anleitung `docs/ALERTS.md`; `docs/SETTINGS.md` nennt die neuen Einstellungen.
+- DE: Verbessert: Vier weitere Selbsttests (Ruhezeit über Mitternacht, Voreinstellungs-Schritte, Listenlimit, gespeicherte Ruhezeit).
+
 ## [5.26.0] - 2026-11-26
 - New: keys **W** (weather row open / closed) and **E** (save history as CSV). The help lists them.
 - New: **Snap to screen edges** can be switched off, and **Start hidden in the tray** lets the widget start quietly next to the clock.
