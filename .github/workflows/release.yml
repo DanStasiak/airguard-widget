@@ -12,7 +12,7 @@ jobs:
   check:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Quality checks
         shell: powershell
         run: .\tools\check.ps1
@@ -20,7 +20,7 @@ jobs:
     needs: check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Work out version
         id: v
         run: |
