@@ -2,6 +2,22 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [5.25.0] - 2026-11-26
+- New: **Fully opaque on hover**: a see-through widget turns solid while the mouse is over it (on by default, switch in the right-click menu).
+- New: **Back up settings…** and **Restore settings…** (Advanced) save and load your look as a small file in Documents. Only known options with valid values are accepted; the Home Assistant token is never included.
+- New: key **P** keeps the widget on top (or not). The help lists it.
+- Improved: "Copy diagnostics" also reports the window options (transparency, lock, taskbar, hover).
+- Improved: GitHub page with a command-line table, a "Verify your download" section and updated window options.
+- Improved: SECURITY page explains what a settings backup contains.
+- Improved: two more self-tests (settings backup and restore including bad files, opaque on hover).
+- DE: Neu: **Bei Mausberührung voll deckend**: ein durchsichtiges Widget wird fest, solange die Maus darüber ist (standardmäßig an, im Rechtsklick-Menü schaltbar).
+- DE: Neu: **Einstellungen sichern…** und **Einstellungen wiederherstellen…** (Erweitert) speichern und laden dein Aussehen als kleine Datei in „Dokumente“. Es werden nur bekannte Optionen mit gültigen Werten angenommen; das Home-Assistant-Token ist nie enthalten.
+- DE: Neu: Taste **P** hält das Widget im Vordergrund (oder nicht). Die Hilfe nennt sie.
+- DE: Verbessert: „Diagnose kopieren“ nennt auch die Fenster-Optionen (Durchsichtigkeit, Sperre, Taskleiste, Mausberührung).
+- DE: Verbessert: GitHub-Seite mit Befehlszeilen-Tabelle, Abschnitt „Download prüfen“ und aktualisierten Fenster-Optionen.
+- DE: Verbessert: Die Sicherheitsseite erklärt, was eine Einstellungs-Sicherung enthält.
+- DE: Verbessert: Zwei weitere Selbsttests (Sichern und Wiederherstellen inkl. fehlerhafter Dateien, voll deckend bei Mausberührung).
+
 ## [5.24.0] - 2026-11-25
 - New: **Transparency** (right-click or key O): 100, 85 or 70 %. Your choice is remembered.
 - New: **Lock position** so the widget cannot be dragged by accident.

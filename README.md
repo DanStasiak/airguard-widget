@@ -104,13 +104,13 @@ Click the widget once, then:
 | Ctrl+C | copy readings | Ctrl+Shift+C | copy all rooms |
 | Q | quiet time on/off | T | change theme |
 | L | language | U | check for updates |
-| O | transparency (100 / 85 / 70 %) | | |
+| O | transparency (100 / 85 / 70 %) | P | always on top |
 | G | open Home Assistant | Ctrl+Shift+S | save a picture |
 | Ctrl+Shift+D | copy diagnostics | F1 / Esc | help / close |
 
 ## Window options
 
-Right-click the widget: **Lock position** (no accidental dragging), **Transparency** (also key **O**), **Show in the taskbar**. Under **Advanced** you find **Start with Windows**, which adds or removes the autostart shortcut for you.
+Right-click the widget: **Lock position** (no accidental dragging), **Transparency** (also key **O**), **Show in the taskbar**. **Fully opaque on hover** makes a see-through widget solid while the mouse is over it. Press **P** to keep it on top. Under **Advanced** you find **Start with Windows**, which adds or removes the autostart shortcut for you, and **Back up settings…** / **Restore settings…**, which save and load your look (theme, language, transparency, lock and so on) as a small file in *Documents*. That makes moving to a new PC a two-click job. Your Home Assistant token is never part of the backup.
 
 ## Where settings are stored
 
@@ -122,6 +122,18 @@ Right-click the widget: **Lock position** (no accidental dragging), **Transparen
 | Log for troubleshooting | `%APPDATA%\Luftwaechter\protokoll.txt` |
 
 Uninstalling removes the app; delete the `%APPDATA%\Luftwaechter` folder to remove everything.
+
+## Command line
+
+| Command | What it does |
+| --- | --- |
+| `powershell -ExecutionPolicy Bypass -File Luftwaechter.ps1 -Install` | install for the current user (what `Installieren.bat` runs) |
+| `... -Uninstall` | remove the program and shortcuts (what `Deinstallieren.bat` runs) |
+| `... -SmokeTest` | run the built-in self-tests without showing the window (used by the CI) |
+
+## Verify your download
+
+Each release has a `SHA256SUMS.txt`. In PowerShell: `Get-FileHash .\Luftwaechter-<version>.zip -Algorithm SHA256` must print the same value as the line for that file.
 
 ## System requirements and contents
 

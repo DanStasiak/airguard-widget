@@ -7,3 +7,5 @@
 - Secrets: the Home Assistant token is stored encrypted for your Windows account (DPAPI) in `ha-token.bin`, never in `config.json`, the log, diagnostics or pictures. The repository checks fail if token-like text is committed.
 - Network: the widget talks to your Home Assistant (or your own server) and to `api.github.com` for update checks. There is no telemetry.
 - Supported version: the latest release. Please update before reporting a problem.
+
+- Settings backups (*Back up settings…*) contain only look-and-feel options, never the Home Assistant token. Restoring a file accepts only known options with valid values.

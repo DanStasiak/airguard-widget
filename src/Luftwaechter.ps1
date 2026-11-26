@@ -4,8 +4,8 @@
 param([switch]$Install, [switch]$Uninstall, [switch]$SmokeTest)
 
 $appName = 'Luftwaechter'
-$appVersion = '5.24.0'
-$appDate = '25.11.2026'
+$appVersion = '5.25.0'
+$appDate = '26.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
 $repoName = 'airguard-widget'
@@ -340,7 +340,7 @@ function Write-Log([string]$m) {
         Add-Content -Path $logFile -Value ((Get-Date).ToString('yyyy-MM-dd HH:mm:ss') + '  ' + $m) -Encoding UTF8
     } catch {}
 }
-$state = @{ left = $null; top = $null; topmost = $false; topmostSet = $false; popup = $true; tray = $true; room = [string]$cfg.defaultRoom; size = 'M'; weatherOpen = $false; drawerOpen = $false; sound = $true; sparkHours = 3; metric = 0; hidden = @(); lang = 'de'; hist = @{}; hist7 = @{}; sensors = @{}; simple = $true; tourDone = $false; demo = $false; theme = 'auto'; seenVer = ''; opacity = 1.0; locked = $false; taskbar = $true }
+$state = @{ left = $null; top = $null; topmost = $false; topmostSet = $false; popup = $true; tray = $true; room = [string]$cfg.defaultRoom; size = 'M'; weatherOpen = $false; drawerOpen = $false; sound = $true; sparkHours = 3; metric = 0; hidden = @(); lang = 'de'; hist = @{}; hist7 = @{}; sensors = @{}; simple = $true; tourDone = $false; demo = $false; theme = 'auto'; seenVer = ''; opacity = 1.0; locked = $false; taskbar = $true; hoverFull = $true }
 try { if ((Get-Culture).TwoLetterISOLanguageName -ne 'de') { $state.lang = 'en' } } catch {}
 if (Test-Path $stateFile) {
     try {
@@ -360,6 +360,7 @@ if (Test-Path $stateFile) {
         if ($null -ne $s.opacity -and [double]$s.opacity -ge 0.5 -and [double]$s.opacity -le 1.0) { $state.opacity = [double]$s.opacity }
         if ($null -ne $s.locked) { $state.locked = [bool]$s.locked }
         if ($null -ne $s.taskbar) { $state.taskbar = [bool]$s.taskbar }
+        if ($null -ne $s.hoverFull) { $state.hoverFull = [bool]$s.hoverFull }
         if ($s.snooze) { $state.snooze = [string]$s.snooze }
         if ($s.theme) { $state.theme = [string]$s.theme }
         if ($null -ne $s.demo) { $state.demo = [bool]$s.demo }
@@ -543,6 +544,9 @@ $script:Strings = @{
     m_lock = @('Position sperren', 'Lock position')
     m_opacity = @('Durchsichtigkeit: {0} %', 'Transparency: {0} %')
     m_taskbar = @('In der Taskleiste anzeigen', 'Show in the taskbar')
+    m_hover = @('Bei Mausberührung voll deckend', 'Fully opaque on hover')
+    m_export = @('Einstellungen sichern…', 'Back up settings…')
+    m_import = @('Einstellungen wiederherstellen…', 'Restore settings…')
     m_auto = @('Mit Windows starten', 'Start with Windows')
     m_diag = @('Diagnose kopieren (für Support)', 'Copy diagnostics (for support)')
     m_demo_off = @('Demo beenden', 'Stop the demo')
@@ -558,7 +562,7 @@ $script:Strings = @{
     offline_tip = @('Luftwächter · offline', 'Luftwächter · offline')
     quiet_tag = @('🔕 Ruhe bis {0}', '🔕 Quiet until {0}')
     h18 = @('Tastatur', 'Keyboard')
-    b18 = @('Klicke einmal auf das Widget, dann: ← / → anderer Raum · D einfache Ansicht oder Details · + / − größer oder kleiner · F5 sofort aktualisieren · Strg+C Werte kopieren · Strg+Umschalt+C alle Räume · G Home Assistant öffnen · L Sprache · O Durchsichtigkeit · U Updates suchen · Pos1 / Ende erster / letzter Raum · Strg+Umschalt+S Bild speichern · Strg+Umschalt+D Diagnose kopieren · 1–9 Raum wählen · Maus über die Kurve zeigt Uhrzeit und Wert · Q Ruhe an/aus · T Design wechseln · F1 Hilfe · Esc schließt Hilfe und Geräte-Fenster. Beim Verschieben rastet das Widget an den Bildschirmrändern ein.', 'Click the widget once, then: ← / → other room · D simple view or details · + / − bigger or smaller · F5 refresh now · Ctrl+C copy readings · Ctrl+Shift+C all rooms · G open Home Assistant · L language · O transparency · U check for updates · Home / End first / last room · Ctrl+Shift+S save picture · Ctrl+Shift+D copy diagnostics · 1–9 pick a room · hover the curve for time and value · Q quiet on/off · T switch theme · F1 help · Esc closes help and the device panel. When you move the widget it snaps to the screen edges.')
+    b18 = @('Klicke einmal auf das Widget, dann: ← / → anderer Raum · D einfache Ansicht oder Details · + / − größer oder kleiner · F5 sofort aktualisieren · Strg+C Werte kopieren · Strg+Umschalt+C alle Räume · G Home Assistant öffnen · L Sprache · O Durchsichtigkeit · P immer im Vordergrund · U Updates suchen · Pos1 / Ende erster / letzter Raum · Strg+Umschalt+S Bild speichern · Strg+Umschalt+D Diagnose kopieren · 1–9 Raum wählen · Maus über die Kurve zeigt Uhrzeit und Wert · Q Ruhe an/aus · T Design wechseln · F1 Hilfe · Esc schließt Hilfe und Geräte-Fenster. Beim Verschieben rastet das Widget an den Bildschirmrändern ein.', 'Click the widget once, then: ← / → other room · D simple view or details · + / − bigger or smaller · F5 refresh now · Ctrl+C copy readings · Ctrl+Shift+C all rooms · G open Home Assistant · L language · O transparency · P always on top · U check for updates · Home / End first / last room · Ctrl+Shift+S save picture · Ctrl+Shift+D copy diagnostics · 1–9 pick a room · hover the curve for time and value · Q quiet on/off · T switch theme · F1 help · Esc closes help and the device panel. When you move the widget it snaps to the screen edges.')
     week_tag = @(' · Woche: {0} %', ' · week: {0} %')
     sz_tip_s = @('Klein', 'Small')
     sz_tip_m = @('Normal', 'Normal')
@@ -970,7 +974,7 @@ $script:helpOpen = $false
 
 function Save-State {
     try {
-        $o = @{ left = $win.Left; top = $win.Top; topmost = $state.topmost; topmostSet = $state.topmostSet; popup = $state.popup; tray = $state.tray; room = $state.room; size = $state.size; weatherOpen = $state.weatherOpen; drawerOpen = $state.drawerOpen; sound = $state.sound; sparkHours = $state.sparkHours; metric = $state.metric; hidden = @($state.hidden); lang = $state.lang; hist = $state.hist; hist7 = $state.hist7; sensors = $state.sensors; simple = $state.simple; tourDone = $state.tourDone; demo = $state.demo; theme = $state.theme; seenVer = $state.seenVer; snooze = [string]$state.snooze; opacity = $state.opacity; locked = $state.locked; taskbar = $state.taskbar }
+        $o = @{ left = $win.Left; top = $win.Top; topmost = $state.topmost; topmostSet = $state.topmostSet; popup = $state.popup; tray = $state.tray; room = $state.room; size = $state.size; weatherOpen = $state.weatherOpen; drawerOpen = $state.drawerOpen; sound = $state.sound; sparkHours = $state.sparkHours; metric = $state.metric; hidden = @($state.hidden); lang = $state.lang; hist = $state.hist; hist7 = $state.hist7; sensors = $state.sensors; simple = $state.simple; tourDone = $state.tourDone; demo = $state.demo; theme = $state.theme; seenVer = $state.seenVer; snooze = [string]$state.snooze; opacity = $state.opacity; locked = $state.locked; taskbar = $state.taskbar; hoverFull = $state.hoverFull }
         ($o | ConvertTo-Json -Depth 4) | Set-Content -Path $stateFile -Encoding UTF8
     } catch { Write-Log ('Speichern: ' + $_.Exception.Message) }
 }
@@ -1485,9 +1489,33 @@ function Update-HouseTitle($d) {
 }
 function Apply-Window {
     try {
-        $win.Opacity = [double]$state.opacity
+        $win.Opacity = (Get-TargetOpacity $win.IsMouseOver)
         $win.ShowInTaskbar = ([bool]$state.taskbar -or -not [bool]$state.tray)
     } catch { Write-Log ('Fenster: ' + $_.Exception.Message) }
+}
+function Get-TargetOpacity([bool]$hover) {
+    if ($hover -and [bool]$state.hoverFull) { return 1.0 }
+    return [double]$state.opacity
+}
+$script:settingKeys = @('theme', 'lang', 'sound', 'popup', 'tray', 'simple', 'topmost', 'opacity', 'locked', 'taskbar', 'hoverFull')
+function Export-Settings([string]$path) {
+    try {
+        $o = [ordered]@{ app = $appName; version = $appVersion }
+        foreach ($k in $script:settingKeys) { $o[$k] = $state[$k] }
+        ($o | ConvertTo-Json -Depth 3) | Set-Content -Path $path -Encoding UTF8
+        return $true
+    } catch { Write-Log ('Sicherung: ' + $_.Exception.Message); return $false }
+}
+function Import-Settings([string]$path) {
+    try {
+        $s = Get-Content $path -Raw -Encoding UTF8 | ConvertFrom-Json
+        if ([string]$s.app -ne $appName) { return $false }
+        if (@('auto', 'day', 'night') -contains [string]$s.theme) { $state.theme = [string]$s.theme }
+        if (@('de', 'en') -contains [string]$s.lang) { $state.lang = [string]$s.lang }
+        foreach ($k in 'sound', 'popup', 'tray', 'simple', 'topmost', 'locked', 'taskbar', 'hoverFull') { if ($null -ne $s.$k) { $state[$k] = [bool]$s.$k } }
+        if ($null -ne $s.opacity -and [double]$s.opacity -ge 0.5 -and [double]$s.opacity -le 1.0) { $state.opacity = [double]$s.opacity }
+        return $true
+    } catch { Write-Log ('Wiederherstellen: ' + $_.Exception.Message); return $false }
 }
 function Step-Opacity {
     $state.opacity = $(if ([double]$state.opacity -gt 0.9) { 0.85 } elseif ([double]$state.opacity -gt 0.75) { 0.7 } else { 1.0 })
@@ -1575,6 +1603,7 @@ function Get-Diagnostics {
         ('Rooms: ' + @($script:rooms).Count + ' · failed updates in a row: ' + [string]$script:fails),
         ('Time: ' + (Get-Date).ToString('yyyy-MM-dd HH:mm') + ' · time zone: ' + [TimeZoneInfo]::Local.Id),
         ('Autostart: ' + (Test-Path $startupLnk) + ' · Home Assistant set up: ' + [bool]$script:haMode + ' · tray: ' + [string]$state.tray + ' · quiet: ' + (Test-Snooze)),
+        ('Window: opacity ' + [string]$state.opacity + ' · locked: ' + [string]$state.locked + ' · taskbar: ' + [string]$state.taskbar + ' · opaque on hover: ' + [string]$state.hoverFull),
         ('Config warnings: ' + $(if (@(Get-ConfigWarnings).Count) { (@(Get-ConfigWarnings) -join '; ') } else { 'none' })),
         ('Last error: ' + $(if ($script:lastErr) { ([string]$script:lastErr -replace 'https?://\S+', '<address>') } else { 'none' })),
         '--- log (last 20 lines) ---'
@@ -2428,6 +2457,7 @@ $win.Add_KeyDown({ param($s, $e)
         'D' { $mods = [System.Windows.Input.Keyboard]::Modifiers; if (($mods -band [System.Windows.Input.ModifierKeys]::Control) -and ($mods -band [System.Windows.Input.ModifierKeys]::Shift)) { Copy-Diagnostics } else { Toggle-Mode }; $e.Handled = $true }
         'S' { $mods = [System.Windows.Input.Keyboard]::Modifiers; if (($mods -band [System.Windows.Input.ModifierKeys]::Control) -and ($mods -band [System.Windows.Input.ModifierKeys]::Shift)) { [void](Save-WidgetPicture ''); $e.Handled = $true } }
         'O' { Step-Opacity; $e.Handled = $true }
+        'P' { $state.topmost = -not [bool]$state.topmost; $state.topmostSet = $true; $win.Topmost = [bool]$state.topmost; $miTop.IsChecked = [bool]$state.topmost; Save-State; $e.Handled = $true }
         'L' { $state.lang = $(if ($state.lang -eq 'de') { 'en' } else { 'de' }); Apply-Lang; Save-State; Update-Widget; $e.Handled = $true }
         'U' { Invoke-UpdateFlow $true; $e.Handled = $true }
         'Home' { Select-RoomIndex 0; $e.Handled = $true }
@@ -2519,6 +2549,9 @@ $miLock = New-Object System.Windows.Controls.MenuItem; $miLock.IsCheckable = $tr
 $miOpacity = New-Object System.Windows.Controls.MenuItem
 $miTaskbar = New-Object System.Windows.Controls.MenuItem; $miTaskbar.IsCheckable = $true; $miTaskbar.IsChecked = [bool]$state.taskbar
 $miAuto = New-Object System.Windows.Controls.MenuItem; $miAuto.IsCheckable = $true
+$miHover = New-Object System.Windows.Controls.MenuItem; $miHover.IsCheckable = $true; $miHover.IsChecked = [bool]$state.hoverFull
+$miExport = New-Object System.Windows.Controls.MenuItem
+$miImport = New-Object System.Windows.Controls.MenuItem
 $miPicCopy = New-Object System.Windows.Controls.MenuItem
 $miAbout = New-Object System.Windows.Controls.MenuItem
 $miNews = New-Object System.Windows.Controls.MenuItem
@@ -2541,6 +2574,26 @@ $miPicSave.Add_Click({ $pp = Save-WidgetPicture ''; if ($pp) { try { Start-Proce
 $miPicCopy.Add_Click({ [void](Copy-WidgetPicture) })
 $miLock.Add_Click({ $state.locked = [bool]$miLock.IsChecked; Save-State })
 $miOpacity.Add_Click({ Step-Opacity })
+$miHover.Add_Click({ $state.hoverFull = [bool]$miHover.IsChecked; Save-State })
+$miExport.Add_Click({
+    try {
+        $f = Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'Luftwaechter-Einstellungen.json'
+        if (Export-Settings $f) { Start-Process explorer.exe -ArgumentList ('/select,"' + $f + '"') }
+    } catch { Write-Log ('Sicherung: ' + $_.Exception.Message) }
+})
+$miImport.Add_Click({
+    try {
+        $d = New-Object System.Windows.Forms.OpenFileDialog
+        $d.Filter = 'Luftwächter (*.json)|*.json'; $d.InitialDirectory = [Environment]::GetFolderPath('MyDocuments')
+        if ($d.ShowDialog() -eq 'OK' -and (Import-Settings $d.FileName)) {
+            $miPop.IsChecked = [bool]$state.popup; $miTray.IsChecked = [bool]$state.tray; $miSound.IsChecked = [bool]$state.sound; $miTop.IsChecked = [bool]$state.topmost
+            $miLock.IsChecked = [bool]$state.locked; $miTaskbar.IsChecked = [bool]$state.taskbar; $miHover.IsChecked = [bool]$state.hoverFull
+            $win.Topmost = [bool]$state.topmost; Apply-Window; Apply-Theme; Apply-Lang; Save-State; Update-Widget
+        }
+    } catch { Write-Log ('Wiederherstellen: ' + $_.Exception.Message) }
+})
+$win.Add_MouseEnter({ if ($state.hoverFull) { $win.Opacity = 1.0 } })
+$win.Add_MouseLeave({ $win.Opacity = [double]$state.opacity })
 $miTaskbar.Add_Click({ $state.taskbar = [bool]$miTaskbar.IsChecked; Apply-Window; Save-State })
 $miAuto.Add_Click({ if (-not (Set-Autostart ([bool]$miAuto.IsChecked))) { $miAuto.IsChecked = (Test-Autostart) } })
 $miAbout.Add_Click({ try { [void][System.Windows.MessageBox]::Show((Get-AboutText), (T 'm_about'), 'OK', 'Information') } catch { Write-Log ('Über: ' + $_.Exception.Message) } })
@@ -2572,14 +2625,14 @@ $miHelp.Add_Click({ $script:helpOpen = $true; Apply-View })
 $miCfg.Add_Click({ try { if (-not (Test-Path $cfgFile)) { Copy-Item (Join-Path $dir 'config.example.json') $cfgFile }; Start-Process notepad.exe -ArgumentList ('"' + $cfgFile + '"') } catch { Write-Log ('Konfig: ' + $_.Exception.Message) } })
 $miUpd.Add_Click({ Invoke-UpdateFlow $true })
 $miAdv = New-Object System.Windows.Controls.MenuItem
-foreach ($mx in @($miHaOpen, $miHaPanel, $miHa, $miSens, $miCfg, $miAuto, $miData, $miDiag, $miLog, $miDemo)) { [void]$miAdv.Items.Add($mx) }
+foreach ($mx in @($miHaOpen, $miHaPanel, $miHa, $miSens, $miCfg, $miAuto, $miExport, $miImport, $miData, $miDiag, $miLog, $miDemo)) { [void]$miAdv.Items.Add($mx) }
 function Update-HaMenu { $miAuto.IsChecked = (Test-Autostart); if ($script:trayMiHa) { $script:trayMiHa.Visible = [bool]$script:haMode }; $vis = $(if ($script:haMode) { 'Visible' } else { 'Collapsed' }); $miHaOpen.Visibility = $vis; $miHaPanel.Visibility = $vis }
 $menu.Add_Opened({ Update-HaMenu })
 $menuGroups = @(
     @($miMode, $miTheme, $miBig, $miSmall),
     @($miSnooze, $miSnoozeM, $miPop, $miTray, $miSound, $miTop),
     @($miRefresh, $miCopy, $miCopyAll, $miExport),
-    @($miReset, $miLock, $miOpacity, $miTaskbar, $miPicSave, $miPicCopy, $miAdv),
+    @($miReset, $miLock, $miOpacity, $miHover, $miTaskbar, $miPicSave, $miPicCopy, $miAdv),
     @($miHelp, $miNews, $miBug, $miAbout, $miHaSup, $miUpd),
     @($miExit)
 )
@@ -2659,7 +2712,7 @@ function Apply-Lang {
     if ($state.lang -eq 'en') { $ui.LangEn.Foreground = Brush '#FFFFFFFF'; $ui.LangEn.FontWeight = 'Bold' } else { $ui.LangDe.Foreground = Brush '#FFFFFFFF'; $ui.LangDe.FontWeight = 'Bold' }
     $miCopy.Header = (T 'm_copy'); $miCopyAll.Header = (T 'm_copy_all'); $miExport.Header = (T 'm_export');
     if ($script:trayMiExit) { $script:trayMiExit.Text = (T 'm_exit'); $script:trayMiRefresh.Text = (T 'm_refresh'); $script:trayMiQuietM.Text = (T 'm_snooze_m'); $script:trayMiQuiet.Text = $(if (Test-Snooze) { T 'm_snooze_off' ($script:snoozeUntil.ToString('HH:mm')) } else { T 'm_snooze' }) }
- $miSnoozeM.Header = (T 'm_snooze_m'); $miSnooze.Header = $(if (Test-Snooze) { T 'm_snooze_off' ($script:snoozeUntil.ToString('HH:mm')) } else { T 'm_snooze' }); $miTheme.Header = $(switch ([string]$state.theme) { 'day' { T 'm_theme_day' } 'night' { T 'm_theme_night' } default { T 'm_theme_auto' } }); $miDemo.Header = $(if ($state.demo) { T 'm_demo_off' } else { T 'm_demo' }); $miHaSup.Header = (T 'm_ha_support'); $miBig.Header = (T 'm_bigger'); $miSmall.Header = (T 'm_smaller'); $miRefresh.Header = (T 'm_refresh'); $miTop.Header = (T 'm_top'); $miPop.Header = (T 'm_pop'); $miTray.Header = (T 'm_tray'); if ($script:trayMiOpen) { $script:trayMiOpen.Text = (T 'tray_open'); $script:trayMiExit.Text = (T 'm_exit') }; $miSound.Header = (T 'm_sound'); $miReset.Header = (T 'm_reset'); $miLog.Header = (T 'm_log'); $miHelp.Header = (T 'm_help'); $miHa.Header = (T 'm_ha'); $miHaOpen.Header = (T 'm_ha_open'); $miHaPanel.Header = (T 'm_ha_panel'); $miDiag.Header = (T 'm_diag'); $miNews.Header = (T 'm_news'); $miBug.Header = (T 'm_bug'); $miData.Header = (T 'm_data'); $miPicSave.Header = (T 'm_pic_save'); $miLock.Header = (T 'm_lock'); $miOpacity.Header = (T 'm_opacity' ([int][Math]::Round([double]$state.opacity * 100))); $miTaskbar.Header = (T 'm_taskbar'); $miAuto.Header = (T 'm_auto'); $miPicCopy.Header = (T 'm_pic_copy'); $miAbout.Header = (T 'm_about'); if ($script:trayMiHa) { $script:trayMiHa.Text = (T 'tray_ha') }; $miMode.Header = $(if ($state.simple) { T 'm_mode_full' } else { T 'm_mode_simple' }); $miSens.Header = (T 'm_sens'); $miCfg.Header = (T 'm_cfg'); $miUpd.Header = (T 'm_upd'); $miExit.Header = (T 'm_exit')
+ $miSnoozeM.Header = (T 'm_snooze_m'); $miSnooze.Header = $(if (Test-Snooze) { T 'm_snooze_off' ($script:snoozeUntil.ToString('HH:mm')) } else { T 'm_snooze' }); $miTheme.Header = $(switch ([string]$state.theme) { 'day' { T 'm_theme_day' } 'night' { T 'm_theme_night' } default { T 'm_theme_auto' } }); $miDemo.Header = $(if ($state.demo) { T 'm_demo_off' } else { T 'm_demo' }); $miHaSup.Header = (T 'm_ha_support'); $miBig.Header = (T 'm_bigger'); $miSmall.Header = (T 'm_smaller'); $miRefresh.Header = (T 'm_refresh'); $miTop.Header = (T 'm_top'); $miPop.Header = (T 'm_pop'); $miTray.Header = (T 'm_tray'); if ($script:trayMiOpen) { $script:trayMiOpen.Text = (T 'tray_open'); $script:trayMiExit.Text = (T 'm_exit') }; $miSound.Header = (T 'm_sound'); $miReset.Header = (T 'm_reset'); $miLog.Header = (T 'm_log'); $miHelp.Header = (T 'm_help'); $miHa.Header = (T 'm_ha'); $miHaOpen.Header = (T 'm_ha_open'); $miHaPanel.Header = (T 'm_ha_panel'); $miDiag.Header = (T 'm_diag'); $miNews.Header = (T 'm_news'); $miBug.Header = (T 'm_bug'); $miData.Header = (T 'm_data'); $miPicSave.Header = (T 'm_pic_save'); $miLock.Header = (T 'm_lock'); $miOpacity.Header = (T 'm_opacity' ([int][Math]::Round([double]$state.opacity * 100))); $miTaskbar.Header = (T 'm_taskbar'); $miAuto.Header = (T 'm_auto'); $miHover.Header = (T 'm_hover'); $miExport.Header = (T 'm_export'); $miImport.Header = (T 'm_import'); $miPicCopy.Header = (T 'm_pic_copy'); $miAbout.Header = (T 'm_about'); if ($script:trayMiHa) { $script:trayMiHa.Text = (T 'tray_ha') }; $miMode.Header = $(if ($state.simple) { T 'm_mode_full' } else { T 'm_mode_simple' }); $miSens.Header = (T 'm_sens'); $miCfg.Header = (T 'm_cfg'); $miUpd.Header = (T 'm_upd'); $miExit.Header = (T 'm_exit')
     $ui.RoomName.Text = 'Luftwächter'; $ui.TitleTag.Text = (T 'tagline')
     $ui.Footer.Text = (Get-FooterText)
     $ui.Copy.Text = $copyright + ' · GitHub'; $ui.Copy.ToolTip = (T 'copy_tip'); $ui.Ver.ToolTip = (T 'ver_tip')
@@ -2880,7 +2933,7 @@ $pulseTimer.Interval = [TimeSpan]::FromMilliseconds(1000)
 $pulseTimer.Add_Tick({
     $h = (Get-Date).Hour
     # Tag-/Nachtdesign: Die Durchsichtigkeit stellt der Nutzer ein (Taste O), die Farbe wechselt
-    $win.Opacity = [double]$state.opacity
+    $win.Opacity = (Get-TargetOpacity $win.IsMouseOver)
     $nt = $false
     switch ([string]$state.theme) { 'night' { $nt = $true } 'day' { $nt = $false } default { $nt = ($h -ge 22 -or $h -lt 7) } }
     if ($nt -ne $script:nightOn) { Apply-Theme }
@@ -2965,16 +3018,18 @@ if ($SmokeTest) {
     Smoke 'hover glow' { Set-Glow $ui.BtnHelp $true; $g1 = ($null -ne $ui.BtnHelp.Effect); Set-Glow $ui.BtnHelp $false; ($g1 -and $null -eq $ui.BtnHelp.Effect) }
     Smoke 'size picker highlight' { $state.size = 'L'; Apply-View; $okL = ($ui.SzBL.Background.Color.A -gt 0 -and $ui.SzBM.Background.Color.A -eq 0); $state.size = 'M'; Apply-View; ($okL -and $ui.SzBM.Background.Color.A -gt 0 -and $ui.SzBL.Background.Color.A -eq 0) }
     Smoke 'fade on room change' { $state.demo = $true; $script:lastShownRoom = 'zzz'; Update-Widget; Fade-In $ui.Panel; Fade-In $win 50; ($ui.Panel.Opacity -le 1.0) }
-    Smoke 'grouped menu' { $nsep = @($menu.Items | Where-Object { $_ -is [System.Windows.Controls.Separator] }).Count; ($nsep -ge 4 -and $miAdv.Items.Count -eq 10 -and $menu.Items.Count -ge 20) }
-    Smoke 'diagnostics copy' { Copy-Diagnostics; ($script:lastDiag -match 'Luftwächter 5\.24\.0' -and $script:lastDiag -match 'PowerShell' -and $script:lastDiag -notmatch 'Bearer|token') }
+    Smoke 'grouped menu' { $nsep = @($menu.Items | Where-Object { $_ -is [System.Windows.Controls.Separator] }).Count; ($nsep -ge 4 -and $miAdv.Items.Count -eq 12 -and $menu.Items.Count -ge 20) }
+    Smoke 'diagnostics copy' { Copy-Diagnostics; ($script:lastDiag -match 'Luftwächter 5\.25\.0' -and $script:lastDiag -match 'opacity' -and $script:lastDiag -match 'PowerShell' -and $script:lastDiag -notmatch 'Bearer|token') }
     Smoke 'support menu items' { Apply-Lang; $okS = ([string]$miNews.Header -ne '' -and [string]$miBug.Header -ne '' -and [string]$miData.Header -ne ''); $state.lang = 'en'; Apply-Lang; $okE = ([string]$miBug.Header -match 'GitHub'); $state.lang = 'de'; Apply-Lang; ($okS -and $okE -and (Get-Diagnostics) -match 'Autostart') }
     Smoke 'opacity steps' { $state.opacity = 1.0; Step-Opacity; $a1 = [double]$state.opacity; Step-Opacity; $a2 = [double]$state.opacity; Step-Opacity; $a3 = [double]$state.opacity; ($a1 -eq 0.85 -and $a2 -eq 0.7 -and $a3 -eq 1.0 -and [Math]::Abs($win.Opacity - 1.0) -lt 0.01 -and ([string]$miOpacity.Header -match '100')) }
     Smoke 'taskbar and lock' { $state.taskbar = $false; $state.tray = $true; Apply-Window; $a = (-not $win.ShowInTaskbar); $state.tray = $false; Apply-Window; $b = $win.ShowInTaskbar; $state.tray = $true; $state.taskbar = $true; Apply-Window; $state.locked = $true; Save-State; $c = ((Get-Content $stateFile -Raw) -match '"locked":\s*true'); $state.locked = $false; Save-State; ($a -and $b -and $c) }
+    Smoke 'settings backup' { $f = Join-Path $stateDir 'backup.json'; $state.theme = 'night'; $state.opacity = 0.85; $state.locked = $true; $ok1 = (Export-Settings $f); $state.theme = 'day'; $state.opacity = 1.0; $state.locked = $false; $ok2 = (Import-Settings $f); $r = ($ok1 -and $ok2 -and $state.theme -eq 'night' -and $state.opacity -eq 0.85 -and $state.locked); Set-Content -Path $f -Value '{"app":"other","opacity":0.6}' -Encoding UTF8; $bad = (Import-Settings $f); Set-Content -Path $f -Value '{"app":"Luftwaechter","opacity":5,"theme":"pink"}' -Encoding UTF8; [void](Import-Settings $f); $state.theme = 'auto'; $state.opacity = 1.0; $state.locked = $false; ($r -and -not $bad) }
+    Smoke 'opaque on hover' { $state.opacity = 0.7; $state.hoverFull = $true; $a = (Get-TargetOpacity $true); $b = (Get-TargetOpacity $false); $state.hoverFull = $false; $c = (Get-TargetOpacity $true); $state.hoverFull = $true; $state.opacity = 1.0; ($a -eq 1.0 -and $b -eq 0.7 -and $c -eq 0.7) }
     Smoke 'autostart toggle' { $startupLnk = Join-Path $stateDir 'autostart-test.lnk'; $o1 = (Set-Autostart $true); $y = (Test-Autostart); [void](Set-Autostart $false); $n = (Test-Autostart); (($o1 -and $y -and -not $n) -or (-not $o1 -and -not $n)) }
     Smoke 'config warnings' { $c0 = $cfg; $cfg = [pscustomobject]@{ refreshSeconds = 99; updateCheckMinutes = 5; haUrl = 'ftp://x'; url = '' }; $ww = @(Get-ConfigWarnings); $cfg = $c0; ($ww.Count -ge 3 -and (Get-Diagnostics) -match 'Config warnings') }
     Smoke 'last error is scrubbed' { $script:lastErr = 'The remote name could not be resolved: http://192.168.1.50:8123/api/states'; $dg = Get-Diagnostics; $script:lastErr = $null; ($dg -match '<address>' -and $dg -notmatch '192\.168') }
     Smoke 'offline hint text' { $state.lang = 'de'; $h1 = (T 'offline_hint'); $state.lang = 'en'; $h2 = (T 'offline_hint'); $state.lang = 'de'; ($h1 -match 'Diagnose' -and $h2 -match 'diagnostics') }
-    Smoke 'about text' { $state.lang = 'de'; $a1 = Get-AboutText; $state.lang = 'en'; $a2 = Get-AboutText; $state.lang = 'de'; ($a1 -match '5\.24\.0' -and $a1 -match 'Datenschutz' -and $a2 -match 'Privacy' -and $a2 -match 'github\.com/DanStasiak') }
+    Smoke 'about text' { $state.lang = 'de'; $a1 = Get-AboutText; $state.lang = 'en'; $a2 = Get-AboutText; $state.lang = 'de'; ($a1 -match '5\.25\.0' -and $a1 -match 'Datenschutz' -and $a2 -match 'Privacy' -and $a2 -match 'github\.com/DanStasiak') }
     Smoke 'picture export' { Update-Widget; $pp = Save-WidgetPicture $stateDir; $okP = ($pp -and (Test-Path $pp) -and ((Get-Item $pp).Length -gt 2000)); if ($okP) { $bb = [System.IO.File]::ReadAllBytes($pp); $okP = ($bb[0] -eq 0x89 -and $bb[1] -eq 0x50 -and $bb[2] -eq 0x4E -and $bb[3] -eq 0x47) }; $okP }
     Smoke 'picture to clipboard' { Update-Widget; (Copy-WidgetPicture) }
     Smoke 'ha menu items' { $script:haMode = $true; Update-HaMenu; $a = ($miHaOpen.Visibility -eq 'Visible'); $script:haMode = $false; Update-HaMenu; $b = ($miHaOpen.Visibility -eq 'Collapsed'); $script:haMode = [bool]($script:haUrl -and $script:haTok); ($a -and $b) }
