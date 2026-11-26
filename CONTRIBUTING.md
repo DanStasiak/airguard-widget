@@ -19,7 +19,7 @@ By contributing you agree that your contribution is licensed under the MIT Licen
 
 On Windows the same checks also run a smoke test that starts the widget with demo data. Every `T 'key'` you use in the code needs a German and an English entry in the table, and every new menu item needs a line in `Apply-Lang`.
 
-Run `powershell -File tools\check.ps1` before you push. The same checks run automatically on GitHub (syntax, version numbers, controls, no secrets); a release is only published when they pass.
+Run `powershell -File tools\check.ps1` before you push. Mind two traps: a text key in the `$script:Strings` table must exist only once, and a menu item variable (`$miSomething = New-Object ...`) must be created only once. The build fails on both. Settings you add belong in `docs/SETTINGS.md`. The same checks run automatically on GitHub (syntax, version numbers, controls, no secrets); a release is only published when they pass.
 
 ## Release notes
 

@@ -3,3 +3,9 @@ contact_links:
   - name: Question or help with setup
     url: https://github.com/DanStasiak/airguard-widget/discussions
     about: Ask here first if you are not sure it is a bug.
+  - name: Read the FAQ and troubleshooting first
+    url: https://github.com/DanStasiak/airguard-widget#troubleshooting
+    about: The widget missing from the screen, faint text and lost settings are answered there.
+  - name: Security problem
+    url: https://github.com/DanStasiak/airguard-widget/security/policy
+    about: Please report security problems privately.

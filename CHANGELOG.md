@@ -2,6 +2,30 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [5.26.0] - 2026-11-26
+- New: keys **W** (weather row open / closed) and **E** (save history as CSV). The help lists them.
+- New: **Snap to screen edges** can be switched off, and **Start hidden in the tray** lets the widget start quietly next to the clock.
+- New: the tray menu has **Transparency** and **Lock position**.
+- New: **Report a problem…** (Advanced) copies the diagnostics and opens the GitHub form, so a report always comes with the facts.
+- Repaired: settings are saved safely (written to a temporary file first), so a crash or power cut can no longer leave half a file.
+- Repaired: a damaged settings file is kept as `state.json.bad` and the widget starts fresh instead of silently ignoring it.
+- Repaired: the log is kept as `protokoll.txt.old` when it grows past 100 KB instead of being deleted, so the cause of a problem is not lost.
+- Improved: "Copy diagnostics" reports the new window options and the size of the settings and log files.
+- Improved: GitHub page with three new troubleshooting rows, three new FAQ answers, a keyboard table with the new keys and a link to the new settings reference (`docs/SETTINGS.md`).
+- Improved: `.editorconfig`, a clearer issue chooser (FAQ and security links) and a longer contributing checklist.
+- Improved: four more self-tests (safe save, damaged file, log rotation, new options saved).
+- DE: Neu: Tasten **W** (Wetterzeile auf / zu) und **E** (Verlauf als CSV speichern). Die Hilfe nennt sie.
+- DE: Neu: **An Bildschirmrändern einrasten** lässt sich ausschalten, und **Beim Start im Infobereich bleiben** startet das Widget leise neben der Uhr.
+- DE: Neu: Das Symbol-Menü im Infobereich hat **Durchsichtigkeit** und **Position sperren**.
+- DE: Neu: **Problem melden…** (Erweitert) kopiert die Diagnose und öffnet das GitHub-Formular, damit jede Meldung die Fakten enthält.
+- DE: Repariert: Einstellungen werden sicher gespeichert (erst in eine temporäre Datei), ein Absturz oder Stromausfall hinterlässt keine halbe Datei mehr.
+- DE: Repariert: Eine beschädigte Einstellungsdatei wird als `state.json.bad` aufgehoben, das Widget startet frisch, statt sie stillschweigend zu ignorieren.
+- DE: Repariert: Das Protokoll wird ab 100 KB als `protokoll.txt.old` aufgehoben statt gelöscht, die Ursache eines Problems geht nicht verloren.
+- DE: Verbessert: „Diagnose kopieren“ nennt die neuen Fenster-Optionen und die Größe der Einstellungs- und Protokolldatei.
+- DE: Verbessert: GitHub-Seite mit drei neuen Fehlersuche-Zeilen, drei neuen FAQ-Antworten, den neuen Tasten und einem Link zur Einstellungs-Referenz (`docs/SETTINGS.md`).
+- DE: Verbessert: `.editorconfig`, übersichtlichere Ticket-Auswahl (FAQ- und Sicherheits-Links) und längere Checkliste für Mitwirkende.
+- DE: Verbessert: Vier weitere Selbsttests (sicheres Speichern, beschädigte Datei, Protokoll-Wechsel, neue Optionen gespeichert).
+
 ## [5.25.0] - 2026-11-26
 - New: **Fully opaque on hover**: a see-through widget turns solid while the mouse is over it (on by default, switch in the right-click menu).
 - New: **Back up settings…** and **Restore settings…** (Advanced) save and load your look as a small file in Documents. Only known options with valid values are accepted; the Home Assistant token is never included.

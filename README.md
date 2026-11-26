@@ -12,7 +12,7 @@ A small always-on-top **Windows desktop widget** that shows how good the air is 
 
 **Quick start:** (1) download the ZIP from the [latest release](https://github.com/DanStasiak/airguard-widget/releases/latest) and unzip it, (2) double-click `Installieren.bat`, (3) right-click the widget → **Try the demo**, or connect Home Assistant with **Search network**. Help: [SUPPORT.md](SUPPORT.md).
 
-**Contents:** [Install](#install-windows-1011) · [How it works](#how-it-works) · [Choosing sensors](#choosing-sensors) · [Keyboard](#keyboard-shortcuts) · [Troubleshooting](#troubleshooting) · [Updating](#updating) · [FAQ](#faq) · [Privacy](#privacy) · [Uninstall](#uninstall) · [Deutsch](#deutsch)
+**Contents:** [Install](#install-windows-1011) · [How it works](#how-it-works) · [Choosing sensors](#choosing-sensors) · [Keyboard](#keyboard-shortcuts) · [Troubleshooting](#troubleshooting) · [Settings](docs/SETTINGS.md) · [Updating](#updating) · [FAQ](#faq) · [Privacy](#privacy) · [Uninstall](#uninstall) · [Deutsch](#deutsch)
 
 **Which one do I need?**
 
@@ -105,12 +105,13 @@ Click the widget once, then:
 | Q | quiet time on/off | T | change theme |
 | L | language | U | check for updates |
 | O | transparency (100 / 85 / 70 %) | P | always on top |
+| W | weather row open / closed | E | save history as CSV |
 | G | open Home Assistant | Ctrl+Shift+S | save a picture |
 | Ctrl+Shift+D | copy diagnostics | F1 / Esc | help / close |
 
 ## Window options
 
-Right-click the widget: **Lock position** (no accidental dragging), **Transparency** (also key **O**), **Show in the taskbar**. **Fully opaque on hover** makes a see-through widget solid while the mouse is over it. Press **P** to keep it on top. Under **Advanced** you find **Start with Windows**, which adds or removes the autostart shortcut for you, and **Back up settings…** / **Restore settings…**, which save and load your look (theme, language, transparency, lock and so on) as a small file in *Documents*. That makes moving to a new PC a two-click job. Your Home Assistant token is never part of the backup.
+Right-click the widget: **Lock position** (no accidental dragging), **Transparency** (also key **O**), **Show in the taskbar**. **Snap to screen edges** and **Start hidden in the tray** can be switched off or on. The tray menu also has *Transparency* and *Lock position*. **Fully opaque on hover** makes a see-through widget solid while the mouse is over it. Press **P** to keep it on top. Under **Advanced** you find **Start with Windows**, which adds or removes the autostart shortcut for you, and **Back up settings…** / **Restore settings…**, which save and load your look (theme, language, transparency, lock and so on) as a small file in *Documents*. That makes moving to a new PC a two-click job. Your Home Assistant token is never part of the backup.
 
 ## Where settings are stored
 
@@ -148,12 +149,22 @@ Each release has a `SHA256SUMS.txt`. In PowerShell: `Get-FileHash .\Luftwaechter
 | A value looks wrong | Right-click → **Choose sensors for this room…** and pick the sensor you trust. |
 | A device is missing | Give it the label `airguard` in Home Assistant, or right-click a device row → Hide / "show all". |
 | Window closed, cannot restart | Use the Start menu entry **Luftwächter**; it also ends stuck old copies. |
+| The widget is not on screen | Look for the icon next to the clock and click it. Still nothing: right-click the tray icon → *Open*, then right-click the widget → *Reset position*. |
+| The widget is too faint to read | Press **O** until it is solid again (or turn on *Fully opaque on hover*). |
+| My settings were lost after a crash | A damaged settings file is kept as `state.json.bad` in the data folder and the widget starts fresh. Restore your look with *Restore settings…*. |
+| Something is wrong and I do not know what | Right-click → Advanced → *Report a problem…* copies the diagnostics and opens the GitHub form; paste them there. |
 | Windows says "unknown publisher" (SmartScreen) | The widget is not code-signed. Choose **More info → Run anyway**, or check the download first: `Get-FileHash` must match `SHA256SUMS.txt` on the release page. |
 | Installer shows a red error about scripts | Use `Installieren.bat` (it starts PowerShell with the right settings); do not run the `.ps1` by double-click. |
 | Bug report needs details | Right-click → **More → Copy diagnostics (for support)** and paste it into the issue (or use right-click → *Report a problem*). It never contains your token or Home Assistant address. |
 | Anything else | Right-click → **Open log**, then open an [issue](https://github.com/DanStasiak/airguard-widget/issues/new/choose) (remove personal data from the log). |
 
 ## FAQ
+
+**How do I move my look to a new PC?** Right-click → Advanced → *Back up settings…*, copy the file from *Documents* to the new PC and use *Restore settings…* there. Home Assistant needs its own token on each PC.
+
+**How do I start it hidden?** Right-click → *Start hidden in the tray*. A click on the tray icon shows it.
+
+**Where are the details of every setting?** In [`docs/SETTINGS.md`](docs/SETTINGS.md).
 
 **Can I use it on a second PC?** Yes. Install it on each PC (the ZIP is the same). Each copy has its own token and settings.
 
