@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall, [switch]$SmokeTest)
 
 $appName = 'Luftwaechter'
-$appVersion = '5.27.0'
+$appVersion = '5.28.0'
 $appDate = '26.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -552,7 +552,7 @@ $script:Strings = @{
     m_pic_save = @('Bild vom Widget speichern (PNG)', 'Save a picture of the widget (PNG)')
     m_pic_copy = @('Bild vom Widget kopieren', 'Copy a picture of the widget')
     m_about = @('Über Luftwächter…', 'About Luftwächter…')
-    about_t = @('Luftwächter {0}\nEin kleines Widget, das zeigt, wie gut die Luft in deinen Räumen ist.\n\nKostenlos und quelloffen (MIT-Lizenz) · © 2026 Dan Stasiak\nhttps://github.com/DanStasiak/airguard-widget\n\nLuftwächter ist ein unabhängiges Community-Projekt und nicht mit Home Assistant, Nabu Casa oder der Open Home Foundation verbunden.\n\nDatenschutz: Das Widget spricht nur mit deinem Home Assistant und prüft bei GitHub auf neue Versionen. Es gibt keine Telemetrie.', 'Luftwächter {0}\nA small widget that shows how good the air is in your rooms.\n\nFree and open source (MIT licence) · © 2026 Dan Stasiak\nhttps://github.com/DanStasiak/airguard-widget\n\nLuftwächter is an independent community project and is not affiliated with Home Assistant, Nabu Casa or the Open Home Foundation.\n\nPrivacy: the widget only talks to your Home Assistant and checks GitHub for new versions. There is no telemetry.')
+    about_t = @('Luftwächter {0}\nEin kleines Widget, das zeigt, wie gut die Luft in deinen Räumen ist.\n\nKostenlos und quelloffen (MIT-Lizenz) · © 2026 Dan Stasiak\nhttps://github.com/DanStasiak/airguard-widget\n\n☕ Gefällt dir Luftwächter? Ein Kaffee für den Entwickler (freiwillig): https://buymeacoffee.com/dstasiak\n\nLuftwächter ist ein unabhängiges Community-Projekt und nicht mit Home Assistant, Nabu Casa oder der Open Home Foundation verbunden.\n\nDatenschutz: Das Widget spricht nur mit deinem Home Assistant und prüft bei GitHub auf neue Versionen. Es gibt keine Telemetrie.', 'Luftwächter {0}\nA small widget that shows how good the air is in your rooms.\n\nFree and open source (MIT licence) · © 2026 Dan Stasiak\nhttps://github.com/DanStasiak/airguard-widget\n\n☕ Like Luftwächter? Buy the developer a coffee (optional): https://buymeacoffee.com/dstasiak\n\nLuftwächter is an independent community project and is not affiliated with Home Assistant, Nabu Casa or the Open Home Foundation.\n\nPrivacy: the widget only talks to your Home Assistant and checks GitHub for new versions. There is no telemetry.')
     pic_saved = @('Bild gespeichert: {0}', 'Picture saved: {0}')
     offline_hint = @('Keine Verbindung. Prüfe, ob Home Assistant läuft und der PC im Heimnetz ist. Bleibt es so: Rechtsklick → Erweitert → „Diagnose kopieren“.', 'No connection. Check that Home Assistant is running and this PC is on your home network. If it stays like this: right-click → More → “Copy diagnostics”.')
     m_lock = @('Position sperren', 'Lock position')
@@ -568,6 +568,7 @@ $script:Strings = @{
     alerts_none = @('Noch keine Hinweise seit dem Start.', 'No alerts yet.')
     test_title = @('Luftwächter Test', 'Luftwächter test')
     test_body = @('So klingt und sieht ein Hinweis aus.', 'This is what an alert sounds and looks like.')
+    m_coffee = @('☕ Kaffee spendieren (freiwillig)', '☕ Buy me a coffee (optional)')
     m_report = @('Problem melden…', 'Report a problem…')
     m_hover = @('Bei Mausberührung voll deckend', 'Fully opaque on hover')
     m_bk_save = @('Einstellungen sichern…', 'Back up settings…')
@@ -2613,6 +2614,8 @@ $miSnooze = New-Object System.Windows.Controls.MenuItem
 $miTheme = New-Object System.Windows.Controls.MenuItem
 $miDemo = New-Object System.Windows.Controls.MenuItem
 $miHaSup = New-Object System.Windows.Controls.MenuItem
+$miCoffee = New-Object System.Windows.Controls.MenuItem
+$miCoffee.Add_Click({ try { Start-Process 'https://buymeacoffee.com/dstasiak' } catch {} })
 $miSens = New-Object System.Windows.Controls.MenuItem
 $miHelp = New-Object System.Windows.Controls.MenuItem
 $miUpd = New-Object System.Windows.Controls.MenuItem
@@ -2721,7 +2724,7 @@ $menuGroups = @(
     @($miSnooze, $miSnoozeM, $miQuietH, $miPop, $miTray, $miSound, $miTop),
     @($miRefresh, $miCopy, $miCopyAll, $miExport),
     @($miReset, $miLock, $miOpacity, $miHover, $miTaskbar, $miSnap, $miStartHid, $miPicSave, $miPicCopy, $miAdv),
-    @($miHelp, $miNews, $miBug, $miAbout, $miHaSup, $miUpd),
+    @($miHelp, $miNews, $miBug, $miAbout, $miCoffee, $miHaSup, $miUpd),
     @($miExit)
 )
 for ($gi = 0; $gi -lt $menuGroups.Count; $gi++) {
@@ -2800,7 +2803,7 @@ function Apply-Lang {
     if ($state.lang -eq 'en') { $ui.LangEn.Foreground = Brush '#FFFFFFFF'; $ui.LangEn.FontWeight = 'Bold' } else { $ui.LangDe.Foreground = Brush '#FFFFFFFF'; $ui.LangDe.FontWeight = 'Bold' }
     $miCopy.Header = (T 'm_copy'); $miCopyAll.Header = (T 'm_copy_all'); $miExport.Header = (T 'm_export');
     if ($script:trayMiExit) { $script:trayMiOpacity.Text = (T 'm_opacity' ([int][Math]::Round([double]$state.opacity * 100))); $script:trayMiLock.Text = (T 'm_lock'); $script:trayMiLock.Checked = [bool]$state.locked; $script:trayMiExit.Text = (T 'm_exit'); $script:trayMiRefresh.Text = (T 'm_refresh'); $script:trayMiQuietM.Text = (T 'm_snooze_m'); $script:trayMiQuiet.Text = $(if (Test-Snooze) { T 'm_snooze_off' ($script:snoozeUntil.ToString('HH:mm')) } else { T 'm_snooze' }) }
- $miSnoozeM.Header = (T 'm_snooze_m'); $miSnooze.Header = $(if (Test-Snooze) { T 'm_snooze_off' ($script:snoozeUntil.ToString('HH:mm')) } else { T 'm_snooze' }); $miTheme.Header = $(switch ([string]$state.theme) { 'day' { T 'm_theme_day' } 'night' { T 'm_theme_night' } default { T 'm_theme_auto' } }); $miDemo.Header = $(if ($state.demo) { T 'm_demo_off' } else { T 'm_demo' }); $miHaSup.Header = (T 'm_ha_support'); $miBig.Header = (T 'm_bigger'); $miSmall.Header = (T 'm_smaller'); $miRefresh.Header = (T 'm_refresh'); $miTop.Header = (T 'm_top'); $miPop.Header = (T 'm_pop'); $miTray.Header = (T 'm_tray'); if ($script:trayMiOpen) { $script:trayMiOpen.Text = (T 'tray_open'); $script:trayMiExit.Text = (T 'm_exit') }; $miSound.Header = (T 'm_sound'); $miReset.Header = (T 'm_reset'); $miLog.Header = (T 'm_log'); $miHelp.Header = (T 'm_help'); $miHa.Header = (T 'm_ha'); $miHaOpen.Header = (T 'm_ha_open'); $miHaPanel.Header = (T 'm_ha_panel'); $miDiag.Header = (T 'm_diag'); $miNews.Header = (T 'm_news'); $miBug.Header = (T 'm_bug'); $miData.Header = (T 'm_data'); $miPicSave.Header = (T 'm_pic_save'); $miLock.Header = (T 'm_lock'); $miOpacity.Header = (T 'm_opacity' ([int][Math]::Round([double]$state.opacity * 100))); $miTaskbar.Header = (T 'm_taskbar'); $miAuto.Header = (T 'm_auto'); $miHover.Header = (T 'm_hover'); $miSnap.Header = (T 'm_snap'); $miStartHid.Header = (T 'm_starthid'); $miReport.Header = (T 'm_report'); $miAlerts.Header = (T 'm_alerts'); $miTestAl.Header = (T 'm_test_alert'); $miQuietH.Header = (T 'm_quiet_h' $(if ($state.quietOn) { ('{0:00}–{1:00}' -f [int]$state.quietFrom, [int]$state.quietTo) } else { T 'm_quiet_off' })); $miBkSave.Header = (T 'm_bk_save'); $miBkLoad.Header = (T 'm_bk_load'); $miPicCopy.Header = (T 'm_pic_copy'); $miAbout.Header = (T 'm_about'); if ($script:trayMiHa) { $script:trayMiHa.Text = (T 'tray_ha') }; $miMode.Header = $(if ($state.simple) { T 'm_mode_full' } else { T 'm_mode_simple' }); $miSens.Header = (T 'm_sens'); $miCfg.Header = (T 'm_cfg'); $miUpd.Header = (T 'm_upd'); $miExit.Header = (T 'm_exit')
+ $miSnoozeM.Header = (T 'm_snooze_m'); $miSnooze.Header = $(if (Test-Snooze) { T 'm_snooze_off' ($script:snoozeUntil.ToString('HH:mm')) } else { T 'm_snooze' }); $miTheme.Header = $(switch ([string]$state.theme) { 'day' { T 'm_theme_day' } 'night' { T 'm_theme_night' } default { T 'm_theme_auto' } }); $miDemo.Header = $(if ($state.demo) { T 'm_demo_off' } else { T 'm_demo' }); $miHaSup.Header = (T 'm_ha_support'); $miBig.Header = (T 'm_bigger'); $miSmall.Header = (T 'm_smaller'); $miRefresh.Header = (T 'm_refresh'); $miTop.Header = (T 'm_top'); $miPop.Header = (T 'm_pop'); $miTray.Header = (T 'm_tray'); if ($script:trayMiOpen) { $script:trayMiOpen.Text = (T 'tray_open'); $script:trayMiExit.Text = (T 'm_exit') }; $miSound.Header = (T 'm_sound'); $miReset.Header = (T 'm_reset'); $miLog.Header = (T 'm_log'); $miHelp.Header = (T 'm_help'); $miHa.Header = (T 'm_ha'); $miHaOpen.Header = (T 'm_ha_open'); $miHaPanel.Header = (T 'm_ha_panel'); $miDiag.Header = (T 'm_diag'); $miNews.Header = (T 'm_news'); $miBug.Header = (T 'm_bug'); $miData.Header = (T 'm_data'); $miPicSave.Header = (T 'm_pic_save'); $miLock.Header = (T 'm_lock'); $miOpacity.Header = (T 'm_opacity' ([int][Math]::Round([double]$state.opacity * 100))); $miTaskbar.Header = (T 'm_taskbar'); $miAuto.Header = (T 'm_auto'); $miHover.Header = (T 'm_hover'); $miSnap.Header = (T 'm_snap'); $miStartHid.Header = (T 'm_starthid'); $miReport.Header = (T 'm_report'); $miCoffee.Header = (T 'm_coffee'); $miAlerts.Header = (T 'm_alerts'); $miTestAl.Header = (T 'm_test_alert'); $miQuietH.Header = (T 'm_quiet_h' $(if ($state.quietOn) { ('{0:00}–{1:00}' -f [int]$state.quietFrom, [int]$state.quietTo) } else { T 'm_quiet_off' })); $miBkSave.Header = (T 'm_bk_save'); $miBkLoad.Header = (T 'm_bk_load'); $miPicCopy.Header = (T 'm_pic_copy'); $miAbout.Header = (T 'm_about'); if ($script:trayMiHa) { $script:trayMiHa.Text = (T 'tray_ha') }; $miMode.Header = $(if ($state.simple) { T 'm_mode_full' } else { T 'm_mode_simple' }); $miSens.Header = (T 'm_sens'); $miCfg.Header = (T 'm_cfg'); $miUpd.Header = (T 'm_upd'); $miExit.Header = (T 'm_exit')
     $ui.RoomName.Text = 'Luftwächter'; $ui.TitleTag.Text = (T 'tagline')
     $ui.Footer.Text = (Get-FooterText)
     $ui.Copy.Text = $copyright + ' · GitHub'; $ui.Copy.ToolTip = (T 'copy_tip'); $ui.Ver.ToolTip = (T 'ver_tip')
@@ -3107,7 +3110,7 @@ if ($SmokeTest) {
     Smoke 'size picker highlight' { $state.size = 'L'; Apply-View; $okL = ($ui.SzBL.Background.Color.A -gt 0 -and $ui.SzBM.Background.Color.A -eq 0); $state.size = 'M'; Apply-View; ($okL -and $ui.SzBM.Background.Color.A -gt 0 -and $ui.SzBL.Background.Color.A -eq 0) }
     Smoke 'fade on room change' { $state.demo = $true; $script:lastShownRoom = 'zzz'; Update-Widget; Fade-In $ui.Panel; Fade-In $win 50; ($ui.Panel.Opacity -le 1.0) }
     Smoke 'grouped menu' { $nsep = @($menu.Items | Where-Object { $_ -is [System.Windows.Controls.Separator] }).Count; ($nsep -ge 4 -and $miAdv.Items.Count -eq 15 -and $menu.Items.Count -ge 20) }
-    Smoke 'diagnostics copy' { Copy-Diagnostics; ($script:lastDiag -match 'Luftwächter 5\.27\.0' -and $script:lastDiag -match 'opacity' -and $script:lastDiag -match 'Files: settings' -and $script:lastDiag -match 'PowerShell' -and $script:lastDiag -notmatch 'Bearer|token') }
+    Smoke 'diagnostics copy' { Copy-Diagnostics; ($script:lastDiag -match 'Luftwächter 5\.28\.0' -and $script:lastDiag -match 'opacity' -and $script:lastDiag -match 'Files: settings' -and $script:lastDiag -match 'PowerShell' -and $script:lastDiag -notmatch 'Bearer|token') }
     Smoke 'support menu items' { Apply-Lang; $okS = ([string]$miNews.Header -ne '' -and [string]$miBug.Header -ne '' -and [string]$miData.Header -ne ''); $state.lang = 'en'; Apply-Lang; $okE = ([string]$miBug.Header -match 'GitHub'); $state.lang = 'de'; Apply-Lang; ($okS -and $okE -and (Get-Diagnostics) -match 'Autostart') }
     Smoke 'opacity steps' { $state.opacity = 1.0; Step-Opacity; $a1 = [double]$state.opacity; Step-Opacity; $a2 = [double]$state.opacity; Step-Opacity; $a3 = [double]$state.opacity; ($a1 -eq 0.85 -and $a2 -eq 0.7 -and $a3 -eq 1.0 -and [Math]::Abs($win.Opacity - 1.0) -lt 0.01 -and ([string]$miOpacity.Header -match '100')) }
     Smoke 'taskbar and lock' { $state.taskbar = $false; $state.tray = $true; Apply-Window; $a = (-not $win.ShowInTaskbar); $state.tray = $false; Apply-Window; $b = $win.ShowInTaskbar; $state.tray = $true; $state.taskbar = $true; Apply-Window; $state.locked = $true; Save-State; $c = ((Get-Content $stateFile -Raw) -match '"locked":\s*true'); $state.locked = $false; Save-State; ($a -and $b -and $c) }
@@ -3121,7 +3124,7 @@ if ($SmokeTest) {
     Smoke 'config warnings' { $c0 = $cfg; $cfg = [pscustomobject]@{ refreshSeconds = 99; updateCheckMinutes = 5; haUrl = 'ftp://x'; url = '' }; $ww = @(Get-ConfigWarnings); $cfg = $c0; ($ww.Count -ge 3 -and (Get-Diagnostics) -match 'Config warnings') }
     Smoke 'last error is scrubbed' { $script:lastErr = 'The remote name could not be resolved: http://192.168.1.50:8123/api/states'; $dg = Get-Diagnostics; $script:lastErr = $null; ($dg -match '<address>' -and $dg -notmatch '192\.168') }
     Smoke 'offline hint text' { $state.lang = 'de'; $h1 = (T 'offline_hint'); $state.lang = 'en'; $h2 = (T 'offline_hint'); $state.lang = 'de'; ($h1 -match 'Diagnose' -and $h2 -match 'diagnostics') }
-    Smoke 'about text' { $state.lang = 'de'; $a1 = Get-AboutText; $state.lang = 'en'; $a2 = Get-AboutText; $state.lang = 'de'; ($a1 -match '5\.27\.0' -and $a1 -match 'Datenschutz' -and $a2 -match 'Privacy' -and $a2 -match 'github\.com/DanStasiak') }
+    Smoke 'about text' { $state.lang = 'de'; $a1 = Get-AboutText; $state.lang = 'en'; $a2 = Get-AboutText; $state.lang = 'de'; ($a1 -match '5\.28\.0' -and $a1 -match 'Datenschutz' -and $a2 -match 'Privacy' -and $a2 -match 'github\.com/DanStasiak') }
     Smoke 'picture export' { Update-Widget; $pp = Save-WidgetPicture $stateDir; $okP = ($pp -and (Test-Path $pp) -and ((Get-Item $pp).Length -gt 2000)); if ($okP) { $bb = [System.IO.File]::ReadAllBytes($pp); $okP = ($bb[0] -eq 0x89 -and $bb[1] -eq 0x50 -and $bb[2] -eq 0x4E -and $bb[3] -eq 0x47) }; $okP }
     Smoke 'picture to clipboard' { Update-Widget; (Copy-WidgetPicture) }
     Smoke 'ha menu items' { $script:haMode = $true; Update-HaMenu; $a = ($miHaOpen.Visibility -eq 'Visible'); $script:haMode = $false; Update-HaMenu; $b = ($miHaOpen.Visibility -eq 'Collapsed'); $script:haMode = [bool]($script:haUrl -and $script:haTok); ($a -and $b) }
@@ -3135,6 +3138,7 @@ if ($SmokeTest) {
     Smoke 'quiet hours steps' { $o1 = $state.quietOn; $o2 = $state.quietFrom; $o3 = $state.quietTo; $state.quietOn = $false; $seen = @(); for ($i = 0; $i -lt 5; $i++) { Step-Quiet; $seen += ([string]$state.quietOn + ':' + $state.quietFrom) }; $state.quietOn = $o1; $state.quietFrom = $o2; $state.quietTo = $o3; Save-State; ($seen -join ',') -eq 'True:22,True:23,True:21,True:20,False:20' }
     Smoke 'alert list capped' { $keep = $state.alerts; $state.alerts = @(); for ($i = 0; $i -lt 20; $i++) { Add-AlertLog 'oeffnen' ('Test ' + $i) }; $n = @($state.alerts).Count; $first = [string]@($state.alerts)[0]; $state.alerts = $keep; ($n -eq 15 -and $first -match 'Test 19') }
     Smoke 'quiet settings saved' { Save-State; $j = Get-Content $stateFile -Raw -Encoding UTF8 | ConvertFrom-Json; ($null -ne $j.quietOn -and $j.quietFrom -ge 0 -and $j.quietTo -ge 0 -and $null -ne $j.alerts -or @($state.alerts).Count -eq 0) }
+    Smoke 'coffee link' { $state.lang = 'de'; $a1 = Get-AboutText; $state.lang = 'en'; $a2 = Get-AboutText; $state.lang = 'de'; ($a1 -match 'buymeacoffee\.com/dstasiak' -and $a2 -match 'buymeacoffee\.com/dstasiak' -and $miCoffee.Header -match 'offee|Kaffee') }
     Smoke 'no errors logged' {
         $new = @(); if (Test-Path $logFile) { $new = @(Get-Content -Path $logFile -Encoding UTF8 | Select-Object -Skip $l0 | Where-Object { $_ -notmatch 'Start v' }) }
         foreach ($x in $new) { Write-Host ('      log: ' + $x) }

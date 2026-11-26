@@ -194,6 +194,10 @@ Each release has a `SHA256SUMS.txt`. In PowerShell: `Get-FileHash .\Luftwaechter
 
 Press **⟳ Update** at the bottom right (or right-click → *Check for updates*). The widget compares its version with the latest GitHub release, shows the changes and asks whether to proceed. It then downloads the release, verifies the SHA-256 checksum and the script syntax, keeps a backup of the old version and restarts itself. Your `config.json` and state are untouched. The widget also checks silently on its own (default every 60 minutes, `updateCheckMinutes` in `config.json`): when a new version exists, the button turns green, pulses gently and shows the version number, and a tray notice appears once. Hover the button to see when it last checked.
 
+## Support the project
+
+Luftwächter is free and stays free. If it brightens your home and you would like to say thanks, you can [buy me a coffee](https://buymeacoffee.com/dstasiak) (the *Sponsor* button on this page leads there too; in the widget: right-click → *Buy me a coffee*). Entirely optional: the widget never asks, never shows pop-ups about it and sends nothing anywhere.
+
 ## Built for Home Assistant ♥
 
 Luftwächter exists because of [Home Assistant](https://www.home-assistant.io), the free, open-source, local-first smart-home platform. If you like it as much as we do, please support the project: [donate to the Open Home Foundation](https://www.openhomefoundation.org) or subscribe to [Home Assistant Cloud](https://www.nabucasa.com). The widget has a *Support Home Assistant* entry in its right-click menu.

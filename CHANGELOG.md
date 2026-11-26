@@ -2,6 +2,10 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [5.28.0] - 2026-11-26
+- New: an optional **Buy me a coffee** link in the About box and the right-click menu, a *Sponsor* button on the GitHub page and a "Support the project" section in the README. The widget never asks, never pops up and sends nothing.
+- DE: Neu: ein freiwilliger **Kaffee-Link** im „Über“-Fenster und im Rechtsklick-Menü, ein *Sponsor*-Button auf der GitHub-Seite und der Abschnitt „Support the project“ in der README. Das Widget fragt nie nach, blendet nichts ein und sendet nichts.
+
 ## [5.27.0] - 2026-11-26
 - New: **Quiet hours** are adjustable (right-click → *Quiet hours*: 22–7, 23–6, 21–8, 20–9 or off). Before they were fixed at 22:00–07:00.
 - New: key **A** and Advanced → **Last alerts…** list the last 15 window advice changes, also those that came during quiet time.
