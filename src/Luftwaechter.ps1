@@ -5,7 +5,7 @@ param([switch]$Install, [switch]$Uninstall, [switch]$SmokeTest)
 
 $appName = 'Luftwaechter'
 $appVersion = '5.29.0'
-$appDate = '26.11.2026'
+$appDate = '27.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
 $repoName = 'airguard-widget'
