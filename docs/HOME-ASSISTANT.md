@@ -22,6 +22,14 @@ Since v4 the widget talks straight to Home Assistant (HA). No server in between.
 
 Assign your devices to areas in HA (Settings → Areas) and the rooms appear by themselves.
 
+### Rain sensor
+
+If you have a rain sensor, the widget uses it automatically: any `binary_sensor` whose name or entity id ends in `rain` or `regen` (for example "Solar Rain Sensor Rain") counts. While it is on, the widget treats it as raining at your house instead of relying on the weather forecast alone. An open window then gets the advice to close it, and a room with stale air is told to wait for the rain to stop. With no rain sensor, the weather entity decides.
+
+### Speaker and sound for window reminders
+
+The widget itself speaks nothing. Window reminders by phone and speaker come from the Home Assistant integration; see "Where to set up reminders, speaker, sound and rain sensor" in the [integration README](https://github.com/DanStasiak/luftwaechter-ha#where-to-set-up-reminders-speaker-sound-and-rain-sensor). If that integration is installed, the widget shows its advice (setting `useIntegration`, see [SETTINGS](SETTINGS.md)).
+
 ### Show only some devices
 
 If an area has many switches you do not want in the widget, give the **label `airguard`** to the entities you do want (HA: Settings → Labels, then add to entities). As soon as at least one entity has that label, only labelled devices are shown (and `button` entities become possible).
