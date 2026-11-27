@@ -2,6 +2,10 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [5.31.0] - 2026-11-27
+- New: **one source of truth.** If the Luftwächter integration is installed in Home Assistant, the widget shows the integration's advice (including the close-window, rain and reminder logic) so desktop and phone never disagree. Without the integration, or with `"useIntegration": false` in the settings file, the widget uses its own built-in logic as before.
+- DE: Neu: **eine gemeinsame Quelle.** Ist die Luftwächter-Integration in Home Assistant installiert, zeigt das Widget deren Rat (mit Fenster-schließen-, Regen- und Erinnerungslogik), damit Desktop und Handy nie widersprüchlich sind. Ohne die Integration oder mit `"useIntegration": false` in der Einstellungsdatei nutzt das Widget wie bisher seine eigene Logik.
+
 ## [5.30.0] - 2026-11-27
 - New: **rain sensor.** If Home Assistant has a binary sensor whose name ends in rain or Regen (for example *Solar Rain Sensor #2 Rain*), the widget uses it. With rain, an open window with good air says "Please close the window", and a closed room that needs fresh air says "Do not ventilate yet, it is raining" (unless the air is already stale). Without a rain sensor everything works as before, using the weather.
 - DE: Neu: **Regensensor.** Hat Home Assistant einen Binärsensor, dessen Name auf rain oder Regen endet (zum Beispiel *Solar Rain Sensor #2 Rain*), nutzt das Widget ihn. Bei Regen meldet ein offenes Fenster mit guter Luft „Bitte Fenster schließen“, und ein geschlossener Raum, der frische Luft braucht, meldet „Jetzt noch nicht lüften, es regnet“ (außer die Luft ist schon verbraucht). Ohne Regensensor bleibt alles wie bisher über das Wetter.

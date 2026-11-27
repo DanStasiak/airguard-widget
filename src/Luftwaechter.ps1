@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall, [switch]$SmokeTest)
 
 $appName = 'Luftwaechter'
-$appVersion = '5.30.0'
+$appVersion = '5.31.0'
 $appDate = '27.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -1952,12 +1952,36 @@ $script:HaTpl = @'
 {%- endif -%}
 {%- endfor -%}
 {%- set wl = states.weather | list -%}
+{%- set hs = namespace(d=none) -%}
+{%- for s in states.sensor if hs.d is none and s.attributes.rooms is defined and s.attributes.summary is defined and s.attributes.lang is defined -%}
+{%- set bl = namespace(o={}) -%}
+{%- set cur = namespace(l=[]) -%}
+{%- for r in s.attributes.rooms -%}{%- set cur.l = cur.l + [{'k': r.key, 'a': r.action, 'h': r.headline, 'd': r.detail, 'm': r.ventMin, 'o': r.openMin}] -%}{%- endfor -%}
+{%- set bl.o = dict(bl.o, **{s.attributes.lang: cur.l}) -%}
+{%- for lg, v in (s.attributes.alt or {}).items() -%}
+{%- set al = namespace(l=[]) -%}
+{%- for r in v.rooms -%}{%- set al.l = al.l + [{'k': r.key, 'a': r.action, 'h': r.headline, 'd': r.detail, 'm': r.ventMin, 'o': r.openMin}] -%}{%- endfor -%}
+{%- set bl.o = dict(bl.o, **{lg: al.l}) -%}
+{%- endfor -%}
+{%- set hs.d = bl.o -%}
+{%- endfor -%}
 {%- set rs = namespace(v=none) -%}
 {%- for b in states.binary_sensor -%}{%- if rs.v is none and b.state in ['on', 'off'] and ((b.name | lower | regex_search('(^|[ _.])(rain|regen)$')) or (b.entity_id | regex_search('(^|[_.])(rain|regen)$'))) -%}{%- set rs.v = b.state -%}{%- endif -%}{%- endfor -%}
 __WIDLINE__
-{{ {'r': rooms.l, 'L': lab, 'rs': rs.v, 'w': ({'id': wid, 't': state_attr(wid, 'temperature'), 'c': states(wid), 'h': state_attr(wid, 'humidity'), 'ws': state_attr(wid, 'wind_speed'), 'wu': state_attr(wid, 'wind_speed_unit'), 'wb': state_attr(wid, 'wind_bearing'), 'cl': state_attr(wid, 'cloud_coverage'), 'p': state_attr(wid, 'pressure')} if wid else none)} | tojson }}
+{{ {'r': rooms.l, 'L': lab, 'rs': rs.v, 'hs': hs.d, 'w': ({'id': wid, 't': state_attr(wid, 'temperature'), 'c': states(wid), 'h': state_attr(wid, 'humidity'), 'ws': state_attr(wid, 'wind_speed'), 'wu': state_attr(wid, 'wind_speed_unit'), 'wb': state_attr(wid, 'wind_bearing'), 'cl': state_attr(wid, 'cloud_coverage'), 'p': state_attr(wid, 'pressure')} if wid else none)} | tojson }}
 '@
 
+# Luftwächter-Integration in Home Assistant: ihr Rat ist die eine Quelle der Wahrheit, das Widget zeigt ihn nur an
+function Get-IntegrationAdvice($hs, [string]$key, [string]$lang) {
+    if ($null -eq $hs -or -not $key) { return $null }
+    $l = $lang; if (-not ($hs.PSObject.Properties.Name -contains $l)) { return $null }
+    $r = @($hs.$l | Where-Object { [string]$_.k -eq $key }) | Select-Object -First 1
+    if ($null -eq $r) { return $null }
+    $map = @{ open = 'oeffnen'; close = 'schliessen'; keep_open = 'offen_lassen'; wait = 'warten'; keep_closed = 'zu_lassen'; unknown = 'unbekannt' }
+    $act = $map[[string]$r.a]
+    if (-not $act) { return $null }
+    return [pscustomobject]@{ action = $act; headline = [string]$r.h; detail = [string]$r.d; ventMin = [int]$r.m; openMin = [int]$r.o }
+}
 function Lx([string]$de, [string]$en) { if ($state.lang -eq 'en') { return $en } else { return $de } }
 function Num($v) {
     $o = 0.0
@@ -2165,6 +2189,10 @@ function Build-HaData($data, [string]$wantRoom) {
     } else {
         $action = 'zu_lassen'; $headline = (Lx 'Alles in Ordnung' 'All good')
         if ($hasWindow) { $detail = (Lx 'Das Fenster kann zu bleiben.' 'The window can stay closed.') } else { $detail = (Lx 'Die Luft ist in Ordnung.' 'The air is fine.') }
+    }
+    if ($cfg.useIntegration -ne $false) {
+        $ia = Get-IntegrationAdvice $data.hs ([string]$chosen.key) ([string]$state.lang)
+        if ($null -ne $ia -and $ia.action -ne 'unbekannt') { $action = $ia.action; $headline = $ia.headline; $detail = $ia.detail; $ventMin = $ia.ventMin; $openMin = $ia.openMin }
     }
     $values = @(
         [pscustomobject]@{ key = 'CO₂'; value = (Fmt $co2 0); unit = 'ppm'; level = $ev.lv[0] },
@@ -3129,7 +3157,7 @@ if ($SmokeTest) {
     Smoke 'size picker highlight' { $state.size = 'L'; Apply-View; $okL = ($ui.SzBL.Background.Color.A -gt 0 -and $ui.SzBM.Background.Color.A -eq 0); $state.size = 'M'; Apply-View; ($okL -and $ui.SzBM.Background.Color.A -gt 0 -and $ui.SzBL.Background.Color.A -eq 0) }
     Smoke 'fade on room change' { $state.demo = $true; $script:lastShownRoom = 'zzz'; Update-Widget; Fade-In $ui.Panel; Fade-In $win 50; ($ui.Panel.Opacity -le 1.0) }
     Smoke 'grouped menu' { $nsep = @($menu.Items | Where-Object { $_ -is [System.Windows.Controls.Separator] }).Count; ($nsep -ge 4 -and $miAdv.Items.Count -eq 15 -and $menu.Items.Count -ge 20) }
-    Smoke 'diagnostics copy' { Copy-Diagnostics; ($script:lastDiag -match 'Luftwächter 5\.30\.0' -and $script:lastDiag -match 'opacity' -and $script:lastDiag -match 'Files: settings' -and $script:lastDiag -match 'PowerShell' -and $script:lastDiag -notmatch 'Bearer|token') }
+    Smoke 'diagnostics copy' { Copy-Diagnostics; ($script:lastDiag -match 'Luftwächter 5\.31\.0' -and $script:lastDiag -match 'opacity' -and $script:lastDiag -match 'Files: settings' -and $script:lastDiag -match 'PowerShell' -and $script:lastDiag -notmatch 'Bearer|token') }
     Smoke 'support menu items' { Apply-Lang; $okS = ([string]$miNews.Header -ne '' -and [string]$miBug.Header -ne '' -and [string]$miData.Header -ne ''); $state.lang = 'en'; Apply-Lang; $okE = ([string]$miBug.Header -match 'GitHub'); $state.lang = 'de'; Apply-Lang; ($okS -and $okE -and (Get-Diagnostics) -match 'Autostart') }
     Smoke 'opacity steps' { $state.opacity = 1.0; Step-Opacity; $a1 = [double]$state.opacity; Step-Opacity; $a2 = [double]$state.opacity; Step-Opacity; $a3 = [double]$state.opacity; ($a1 -eq 0.85 -and $a2 -eq 0.7 -and $a3 -eq 1.0 -and [Math]::Abs($win.Opacity - 1.0) -lt 0.01 -and ([string]$miOpacity.Header -match '100')) }
     Smoke 'taskbar and lock' { $state.taskbar = $false; $state.tray = $true; Apply-Window; $a = (-not $win.ShowInTaskbar); $state.tray = $false; Apply-Window; $b = $win.ShowInTaskbar; $state.tray = $true; $state.taskbar = $true; Apply-Window; $state.locked = $true; Save-State; $c = ((Get-Content $stateFile -Raw) -match '"locked":\s*true'); $state.locked = $false; Save-State; ($a -and $b -and $c) }
@@ -3143,7 +3171,8 @@ if ($SmokeTest) {
     Smoke 'config warnings' { $c0 = $cfg; $cfg = [pscustomobject]@{ refreshSeconds = 99; updateCheckMinutes = 5; haUrl = 'ftp://x'; url = '' }; $ww = @(Get-ConfigWarnings); $cfg = $c0; ($ww.Count -ge 3 -and (Get-Diagnostics) -match 'Config warnings') }
     Smoke 'last error is scrubbed' { $script:lastErr = 'The remote name could not be resolved: http://192.168.1.50:8123/api/states'; $dg = Get-Diagnostics; $script:lastErr = $null; ($dg -match '<address>' -and $dg -notmatch '192\.168') }
     Smoke 'offline hint text' { $state.lang = 'de'; $h1 = (T 'offline_hint'); $state.lang = 'en'; $h2 = (T 'offline_hint'); $state.lang = 'de'; ($h1 -match 'Diagnose' -and $h2 -match 'diagnostics') }
-    Smoke 'about text' { $state.lang = 'de'; $a1 = Get-AboutText; $state.lang = 'en'; $a2 = Get-AboutText; $state.lang = 'de'; ($a1 -match '5\.30\.0' -and $a1 -match 'Datenschutz' -and $a2 -match 'Privacy' -and $a2 -match 'github\.com/DanStasiak') }
+    Smoke 'integration advice' { $hs = '{"de":[{"k":"a1","a":"close","h":"Bitte Fenster schließen","d":"x","m":0,"o":12}],"en":[{"k":"a1","a":"wait","h":"Do not ventilate yet","d":"y","m":0,"o":0}]}' | ConvertFrom-Json; $i1 = Get-IntegrationAdvice $hs 'a1' 'de'; $i2 = Get-IntegrationAdvice $hs 'a1' 'en'; ($i1.action -eq 'schliessen' -and $i1.openMin -eq 12 -and $i2.action -eq 'warten' -and $null -eq (Get-IntegrationAdvice $hs 'zz' 'de') -and $null -eq (Get-IntegrationAdvice $null 'a1' 'de') -and $null -eq (Get-IntegrationAdvice $hs 'a1' 'fr')) }
+    Smoke 'about text' { $state.lang = 'de'; $a1 = Get-AboutText; $state.lang = 'en'; $a2 = Get-AboutText; $state.lang = 'de'; ($a1 -match '5\.31\.0' -and $a1 -match 'Datenschutz' -and $a2 -match 'Privacy' -and $a2 -match 'github\.com/DanStasiak') }
     Smoke 'picture export' { Update-Widget; $pp = Save-WidgetPicture $stateDir; $okP = ($pp -and (Test-Path $pp) -and ((Get-Item $pp).Length -gt 2000)); if ($okP) { $bb = [System.IO.File]::ReadAllBytes($pp); $okP = ($bb[0] -eq 0x89 -and $bb[1] -eq 0x50 -and $bb[2] -eq 0x4E -and $bb[3] -eq 0x47) }; $okP }
     Smoke 'picture to clipboard' { Update-Widget; (Copy-WidgetPicture) }
     Smoke 'ha menu items' { $script:haMode = $true; Update-HaMenu; $a = ($miHaOpen.Visibility -eq 'Visible'); $script:haMode = $false; Update-HaMenu; $b = ($miHaOpen.Visibility -eq 'Collapsed'); $script:haMode = [bool]($script:haUrl -and $script:haTok); ($a -and $b) }

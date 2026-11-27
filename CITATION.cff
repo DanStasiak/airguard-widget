@@ -8,6 +8,6 @@ authors:
 repository-code: "https://github.com/DanStasiak/airguard-widget"
 url: "https://github.com/DanStasiak/airguard-widget"
 license: MIT
-version: "5.30.0"
+version: "5.31.0"
 date-released: "2026-11-26"
 keywords: [windows, widget, home-assistant, air-quality, co2, powershell]

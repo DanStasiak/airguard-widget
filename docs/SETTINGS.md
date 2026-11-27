@@ -27,7 +27,7 @@ A damaged `state.json` is kept as `state.json.bad`. The log `protokoll.txt` is k
 
 ## What you can set yourself (`config.json`, next to the program)
 
-See `config.example.json`. Typical entries: `haUrl`, `refreshSeconds` (2 to 10), `updateCheckMinutes` (15 to 1440), `defaultRoom`. *Copy diagnostics* lists values outside the allowed range.
+See `config.example.json`. Typical entries: `haUrl`, `refreshSeconds` (2 to 10), `updateCheckMinutes` (15 to 1440), `defaultRoom`, `useIntegration` (`false` = ignore the Luftwächter integration and always use the widget's own advice). *Copy diagnostics* lists values outside the allowed range.
 
 ## Backups
 
