@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall, [switch]$SmokeTest, [switch]$ShowVersion)
 
 $appName = 'Luftwaechter'
-$appVersion = '5.32.0'
+$appVersion = '5.33.0'
 $appDate = '27.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 if ($ShowVersion) { Write-Output ('Luftwaechter ' + $appVersion + ' (' + $appDate + ')'); exit 0 }
@@ -350,7 +350,7 @@ function Backup-BadFile([string]$path) {
         return $true
     } catch { return $false }
 }
-$state = @{ quietOn = $true; quietFrom = 22; quietTo = 7; alerts = @(); left = $null; top = $null; topmost = $false; topmostSet = $false; popup = $true; tray = $true; room = [string]$cfg.defaultRoom; size = 'M'; weatherOpen = $false; drawerOpen = $false; sound = $true; sparkHours = 3; metric = 0; hidden = @(); lang = 'de'; hist = @{}; hist7 = @{}; sensors = @{}; simple = $true; tourDone = $false; demo = $false; theme = 'auto'; seenVer = ''; opacity = 1.0; locked = $false; taskbar = $true; hoverFull = $true; snap = $true; startHidden = $false; symbols = $false; reduceMotion = $false }
+$state = @{ quietOn = $true; quietFrom = 22; quietTo = 7; alerts = @(); left = $null; top = $null; topmost = $false; topmostSet = $false; popup = $true; tray = $true; room = [string]$cfg.defaultRoom; size = 'M'; weatherOpen = $false; drawerOpen = $false; sound = $true; sparkHours = 3; metric = 0; hidden = @(); lang = 'de'; hist = @{}; hist7 = @{}; sensors = @{}; simple = $true; tourDone = $false; demo = $false; theme = 'auto'; seenVer = ''; opacity = 1.0; locked = $false; taskbar = $true; hoverFull = $true; snap = $true; startHidden = $false; symbols = $false; reduceMotion = $false; emojiFaces = $false }
 try { if ((Get-Culture).TwoLetterISOLanguageName -ne 'de') { $state.lang = 'en' } } catch {}
 if (Test-Path $stateFile) {
     try {
@@ -379,6 +379,7 @@ if (Test-Path $stateFile) {
         if ($null -ne $s.startHidden) { $state.startHidden = [bool]$s.startHidden }
         if ($null -ne $s.symbols) { $state.symbols = [bool]$s.symbols }
         if ($null -ne $s.reduceMotion) { $state.reduceMotion = [bool]$s.reduceMotion }
+        if ($null -ne $s.emojiFaces) { $state.emojiFaces = [bool]$s.emojiFaces }
         if ($s.snooze) { $state.snooze = [string]$s.snooze }
         if ($s.theme) { $state.theme = [string]$s.theme }
         if ($null -ne $s.demo) { $state.demo = [bool]$s.demo }
@@ -570,6 +571,8 @@ $script:Strings = @{
     m_alerts_clear = @('Hinweisliste leeren', 'Clear the alert list')
     m_symbols = @('Formen neben den Farben (✓ ! ✕)', 'Shapes next to the colours (✓ ! ✕)')
     m_motion = @('Weniger Bewegung (keine Überblendung)', 'Reduce motion (no fades)')
+    m_faces = @('Emoji statt Maskottchen (M)', 'Emoji faces instead of the mascot (M)')
+    face_alt = @('Luftwächter-Maskottchen: {0}', 'Luftwächter mascot: {0}')
     m_reset2 = @('Einstellungen zurücksetzen…', 'Reset settings…')
     reset_ask = @('Alle Einstellungen (Aussehen, Ruhezeit, Hinweise, Fenster) auf die Standardwerte setzen? Zuvor wird eine Sicherung als settings-before-reset.json im Datenordner angelegt. Verbindung, Räume und Verlauf bleiben erhalten.', 'Reset all settings (look, quiet hours, alerts, window) to the defaults? A backup is saved first as settings-before-reset.json in the data folder. Your connection, rooms and history are kept.')
     m_test_alert = @('Testhinweis senden', 'Send a test alert')
@@ -597,7 +600,7 @@ $script:Strings = @{
     offline_tip = @('Luftwächter · offline', 'Luftwächter · offline')
     quiet_tag = @('🔕 Ruhe bis {0}', '🔕 Quiet until {0}')
     h18 = @('Tastatur', 'Keyboard')
-    b18 = @('Klicke einmal auf das Widget, dann: ← / → anderer Raum · D einfache Ansicht oder Details · + / − größer oder kleiner · F5 sofort aktualisieren · Strg+C Werte kopieren · Strg+Umschalt+C alle Räume · G Home Assistant öffnen · L Sprache · O Durchsichtigkeit · P immer im Vordergrund · W Wetter · E CSV speichern · U Updates suchen · Pos1 / Ende erster / letzter Raum · Strg+Umschalt+S Bild speichern · Strg+Umschalt+D Diagnose kopieren · 1–9 Raum wählen · Maus über die Kurve zeigt Uhrzeit und Wert · Q Ruhe an/aus · N Ruhe bis morgen früh · T Design wechseln · Y Formen neben Farben · H ins Infofeld ausblenden · R aktualisieren · A letzte Hinweise · F1 oder ? Hilfe · Esc schließt Hilfe und Geräte-Fenster. Beim Verschieben rastet das Widget an den Bildschirmrändern ein.', 'Click the widget once, then: ← / → other room · D simple view or details · + / − bigger or smaller · F5 refresh now · Ctrl+C copy readings · Ctrl+Shift+C all rooms · G open Home Assistant · L language · O transparency · P always on top · W weather · E save CSV · U check for updates · Home / End first / last room · Ctrl+Shift+S save picture · Ctrl+Shift+D copy diagnostics · 1–9 pick a room · hover the curve for time and value · Q quiet on/off · N quiet until tomorrow morning · T switch theme · Y shapes next to colours · H hide to the tray · R refresh · A last alerts · F1 or ? help · Esc closes help and the device panel. When you move the widget it snaps to the screen edges.')
+    b18 = @('Klicke einmal auf das Widget, dann: ← / → anderer Raum · D einfache Ansicht oder Details · + / − größer oder kleiner · F5 sofort aktualisieren · Strg+C Werte kopieren · Strg+Umschalt+C alle Räume · G Home Assistant öffnen · L Sprache · O Durchsichtigkeit · P immer im Vordergrund · W Wetter · E CSV speichern · U Updates suchen · Pos1 / Ende erster / letzter Raum · Strg+Umschalt+S Bild speichern · Strg+Umschalt+D Diagnose kopieren · 1–9 Raum wählen · Maus über die Kurve zeigt Uhrzeit und Wert · Q Ruhe an/aus · N Ruhe bis morgen früh · T Design wechseln · Y Formen neben Farben · H ins Infofeld ausblenden · R aktualisieren · A letzte Hinweise · M Maskottchen oder Emoji · F1 oder ? Hilfe · Esc schließt Hilfe und Geräte-Fenster. Beim Verschieben rastet das Widget an den Bildschirmrändern ein.', 'Click the widget once, then: ← / → other room · D simple view or details · + / − bigger or smaller · F5 refresh now · Ctrl+C copy readings · Ctrl+Shift+C all rooms · G open Home Assistant · L language · O transparency · P always on top · W weather · E save CSV · U check for updates · Home / End first / last room · Ctrl+Shift+S save picture · Ctrl+Shift+D copy diagnostics · 1–9 pick a room · hover the curve for time and value · Q quiet on/off · N quiet until tomorrow morning · T switch theme · Y shapes next to colours · H hide to the tray · R refresh · A last alerts · M mascot or emoji faces · F1 or ? help · Esc closes help and the device panel. When you move the widget it snaps to the screen edges.')
     week_tag = @(' · Woche: {0} %', ' · week: {0} %')
     sz_tip_s = @('Klein', 'Small')
     sz_tip_m = @('Normal', 'Normal')
@@ -775,6 +778,7 @@ $xaml = @"
           <Grid Width="96" Height="96">
             <Ellipse Width="89" Height="89" Stroke="#FF2C3646" StrokeThickness="9"/>
             <Path x:Name="Arc" Stroke="#FF7A8594" StrokeThickness="9" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Margin="6,6,0,0" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+            <Image x:Name="FaceImg" Width="62" Height="62" HorizontalAlignment="Center" VerticalAlignment="Center" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" Visibility="Collapsed"/>
             <TextBlock x:Name="Face" FontFamily="Segoe UI Emoji" FontSize="32" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White"/>
           </Grid>
           <TextBlock x:Name="Level" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center" Foreground="#FF7A8594"/>
@@ -879,7 +883,7 @@ $xaml = @"
 $win = [Windows.Markup.XamlReader]::Load((New-Object System.Xml.XmlNodeReader ([xml]$xaml)))
 $conv = New-Object Windows.Media.BrushConverter
 function Brush([string]$hex) { return $conv.ConvertFromString($hex) }
-$names = @('SzBS', 'SzBM', 'SzBL', 'SzBC', 'SzBP', 'DayScore', 'Tour', 'TourH', 'TourT', 'TourOk', 'TourOkT', 'GrpTiles', 'GrpFoot', 'GrpUpd', 'SzBox', 'BtnMode', 'BtnModeT', 'TabArr', 'TabLbl', 'Scaler', 'Card', 'Ver', 'RoomStrip', 'SparkBox', 'SparkLabel', 'Glow', 'WOut', 'WOutB', 'TitleBox', 'RoomName', 'RoomSub', 'TitleTag', 'Time', 'SzS', 'SzM', 'SzL', 'SzC', 'SzP', 'BtnHelp', 'BtnLang', 'LangDe', 'LangEn', 'WMoreT', 'WLessT', 'WTitleT', 'Help', 'HelpClose', 'HelpTitle', 'HelpScroll', 'HelpBody', 'HelpVer', 'BtnUpd', 'BtnUpdT', 'Copy', 'Pill', 'PillDot', 'PillText', 'Arc', 'Face', 'Level', 'Trend', 'Panel', 'IcClosed', 'IcOpen', 'Headline', 'Detail', 'BarTrack', 'BarFill', 'Details', 'Spark', 'SparkR', 'Peak', 'WLine', 'WMore', 'WLineText', 'WFull', 'WLess', 'WIcon', 'WTemp', 'WCond', 'WTip', 'Footer', 'Tab', 'Drawer', 'DrawerClose', 'DrawerTitle', 'DevPanel')
+$names = @('FaceImg', 'SzBS', 'SzBM', 'SzBL', 'SzBC', 'SzBP', 'DayScore', 'Tour', 'TourH', 'TourT', 'TourOk', 'TourOkT', 'GrpTiles', 'GrpFoot', 'GrpUpd', 'SzBox', 'BtnMode', 'BtnModeT', 'TabArr', 'TabLbl', 'Scaler', 'Card', 'Ver', 'RoomStrip', 'SparkBox', 'SparkLabel', 'Glow', 'WOut', 'WOutB', 'TitleBox', 'RoomName', 'RoomSub', 'TitleTag', 'Time', 'SzS', 'SzM', 'SzL', 'SzC', 'SzP', 'BtnHelp', 'BtnLang', 'LangDe', 'LangEn', 'WMoreT', 'WLessT', 'WTitleT', 'Help', 'HelpClose', 'HelpTitle', 'HelpScroll', 'HelpBody', 'HelpVer', 'BtnUpd', 'BtnUpdT', 'Copy', 'Pill', 'PillDot', 'PillText', 'Arc', 'Face', 'Level', 'Trend', 'Panel', 'IcClosed', 'IcOpen', 'Headline', 'Detail', 'BarTrack', 'BarFill', 'Details', 'Spark', 'SparkR', 'Peak', 'WLine', 'WMore', 'WLineText', 'WFull', 'WLess', 'WIcon', 'WTemp', 'WCond', 'WTip', 'Footer', 'Tab', 'Drawer', 'DrawerClose', 'DrawerTitle', 'DevPanel')
 for ($i = 1; $i -le 4; $i++) { $names += @("C$i", "D$i", "V$i", "K$i", "WK$i", "WV$i") }
 $ui = @{}
 foreach ($n in $names) { $ui[$n] = $win.FindName($n) }
@@ -924,8 +928,269 @@ function Show-Window {
         $popTimer.Stop(); $popTimer.Start()
     } catch { Write-Log ('Show-Window: ' + $_.Exception.Message) }
 }
-function Get-TrayIcon([string]$hex) {
-    if ($script:trayIcons.ContainsKey($hex)) { return $script:trayIcons[$hex] }
+$script:mascotB64 = @{
+    gut_f = (-join @(
+        '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'))
+    gut_t = (-join @(
+        'iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAMAAABEpIrGAAAAwFBMVEUmT2CUqLHQ5N3p6+2xyMfT2d5m5kMPNVF4lJ26urq6w81/',
+        'f39utrZb3jeysv+vusamwL6y//8AGzs2mzkzhkdadIsgcjxMtESntcIAAH8Af39NeXt/f79/f/9BsDh///+1wMf/AADf37/MzMwA',
+        'AADp+e7///8yV2zd8eZqhZTO49tWdYVEZ3mNpq3///+qqqoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+        'AAAAAAAAAACwIHs1AAAAMHRSTlP+6f5l/pL+/v8EqwID+gO0/QP//f/////RAgL/BAL+AnMBCAoA/gb+/vv9/v79MAPxXtgrAAAB',
+        '3klEQVR42m2TiXKcMAyG5YNzQ3a7R5qe6WHZGNvw/m9XyRBgm/V4wIw+pF+HwXxctsnPv/kDHthpj6N6VaZ5CFhjC+H9N9ea6Q6w',
+        'z9PhqbGTGQVcLz87ON4B9m0FBXRdWXaxMM8bQHFH1R4LNf5poSs/l+XlttdAcVsfwbnoMV3KKwGgi8a+AwfyG4REHJJzcL2WZfly',
+        'Q/mLXcyAFQlRDgMinqCCywsElKTyMAPWKhw88IqC3dRJooyVeC+UNSpVFEJqESrwukfU3ukoSBoDlLkHEpCXTBFIrPMDug1oHUWX',
+        'Wi+UFic+rYAxIpK4uq59TeBQ10nU4gMw5ACSk+HTMANZ5MEcgXRh7XyfQ9CBEXhdsmhMQRp69OdzoheK89nTW0NuBgGfjILTLC57',
+        '6E+aHpicItOSZuBf/lsxKO4h5E4Jl39d0uwZ7iEnkbN4MgUIctGHxHYRJH0I2ObBUimzCxlioJ0dudvIEuY6TOQiJ4CD1lwGclC1',
+        'HGABflC/K7nXKSs/5pFcJmoyKlCxNgLmHLeZbIyKOyJAu9jXqaZMHHA9eQc42q/2HiBC3Sqd++Rca81i34DfRPiKukTDVZjVvr96',
+        '3/lOgQOhzJfVfnc3G7qV3hc2V/ARwImP4849r3+Pn3kmS241rgAAAABJRU5ErkJggg=='))
+    mittel_f = (-join @(
+        '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',
+        'nf8+AAAAAElFTkSuQmCC'))
+    mittel_t = (-join @(
+        'iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAMAAABEpIrGAAAAwFBMVEUkXluToqvs7e/N1NnIyLhOZnJieYhItGBUymW4w8uwucYF',
+        'Kkhdrq7f4+c0llcAf39///+0tP+/wbR/f79/f/+qt7+sscT//wDS0tkAAAD47NL+9dn//////uO3ua42V2wlRlpyhZCqqqra1sJM',
+        'Z3aKlZX///4ROE/k3McoS2Slq6R/f3+Fmai/v7+v//9XdIkAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+        'AAAAAAAAAAAeA1eNAAAAMHRSTlP+4mKV/v38/v2srf4D8P4CAgP9BAKswwEiAP7+Bv7+/v77A/3+/jL9/v/9AusEA/+7F/0NAAAB',
+        '8ElEQVR42m2T6ZqrIAyGAXfbznq2AApUcK3j/d/dCdSlM0/zo1W/F74kEAJPYpLz+bo+kyf6qrX/QD4FziBZVJZ/boVHD0C+X6ev',
+        'eYIvYLeF+ChhOgD5tj6gvpCXPM8zEsG8A2jWsqKMWAutIXmWZTlJ2ZGDBFkYa5Ui5nIhGSFZnnWXA5hAUusaLvoxUZZ4h6yjl3Kz',
+        'kJOkVFS86UVVxfZEXl6IHsVA4XUFJLs0qda607ZGcKSuFtx2VK6NksBol9Z9H49JR0zMhWjMUNsbpuaBK7SpbirhA5dbTQalDK+S',
+        'AyiGXnCvc/ytRF/XHPkdAKAJ6rzBMhDho3GONkKoB0AJUTvnjOvRfuTohKzakpygVLiB6Lm34N4j7IVl3oEZItWg4E4k9kisTw5f',
+        '4yFaTxOPR40+SZo2HuhTg+srqhhKa5lLgq48lLH9VXY5zkJSzTdto7gORQQAkxjG8Pmj9hGSrUlIYW11a3QAYq/HAVBL61O4W1wh',
+        'Iq7aLcIGXQFv+63+NcnbKQ573EPwzrT3203Wi86Wjm/ngSUk9xqPuZiBWV/J2suEFKu+3+oztnOv1ZLf8lX+mKwzsLT7wEyrRqsi',
+        'tOA78BcJc8Imu26JYNcfR+8TWjpoNVD2oH+bzRlkZNJIwvvDR/JjrNv2cTkA/AcT/2PQTZk/sgAAAABJRU5ErkJggg=='))
+    schlecht_f = (-join @(
+        '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'))
+    schlecht_t = (-join @(
+        'iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAMAAABEpIrGAAAAwFBMVEUkWGKkp7Dr7O0vnGLS2N3b1Nhns7OvusW6xc1VdYmrucW0',
+        '///Eur1CX3JAxGyqqqrKvcIALEWxsf8AEjMAAH8Af38/x2t/f79Au21Zg47/f38AAAD86OT79/b////y2tjTyMr74N5zhpWPmaVp',
+        'e4s1Vm4nSmNNZ3qqp69/f38TN1L///+Xp7W/v7+RorCKkZwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+        'AAAAAAAAAABsuYf7AAAAMHRSTlP+82f9kP4Dtqj/9AP+/v4D//0D/wIC/wT//wIA/v4F/v7+/fr9/v7+/gL9MtIE+P7UPDDYAAAC',
+        'DklEQVR42nWTh5KjMAxAZUogXJJNsnvVFVc6//93JwNJ2Ns5zTAeo2d1Af0q4wd+YrvAF7XYvvY/AOqSipBMUPEPIO5v7WEUoyh+',
+        'QwrnQaw2HoBoH2AJkKaXFAbRihfwh9I+KYss6ZPjLU0h/ZUeEzo+AXRY6uCcg0mFBn5cUoSKxccCtFSQ46ykVMbdAp8gvVwu6SCe',
+        'MbRiMIxLJRnn1+C1u8U4psVHBIRImLIeUEKDYGOa/BrAFvSwAt9oYjpLlFSNBbBEMnmy1sCwZfFGewuKsyj4PHjw/jxLHkwsFgIH',
+        'Wnp8VNcIyEjJHI+anR8ApYNDvZRouGHMaBUvNXPTDqjrmsxaEzxlY/WsWC3dsKXZ0sJJhh50QMuSKU/iTfqCfl+AkWYuRx/MvxMm',
+        'JdPvNh7KZ1uamCXMHOMzYUlEnVUM1roEVREQtNfdnHN5agwhZDbNtWZX3dl+AxAZ3MkaPVV5zliuKqNnrfyS5QLEIBpuK/4UY3gD',
+        'WTSw9gJ9eE4qzlY145PiXvdY483FnWbeMPs0kFvedCXdtbsVU6eUVau+snndoYEXgLaSY8ck0WaajDaSn2HJ8TWTI00C1Dgzp1Mc',
+        'mwCbg9dUH2gG3dZzFqBYR3q/F4fohXDshfSufKzNDhBIYPWw3d0xo0/9fvV+0p44cH5I6MdT/2k3RyoyrXEr77ufn5YXK9f3O/NR',
+        '/gKfPGn9nYD1kwAAAABJRU5ErkJggg=='))
+    unknown_f = (-join @(
+        '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',
+        'AElFTkSuQmCC'))
+    unknown_t = (-join @(
+        'iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAMAAABEpIrGAAAAwFBMVEXW293N09jV1NRXcIMyUGagr7eZqbO4uP+xvcS4//+9xMkA',
+        'HTh/v7+5w8khPFMAAP8A//+1wMYAAADa4urU3eX///+XqLXk6/K4xc+ouMTu8/hwhpbI09y/v79/f3////+jsr3CzdeesL6qqqoY',
+        'OlKHm6lmfI5KZnmyvcXl6OgeQFgkRVx8kqGZqLKgrrm9x84AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+        'AAAAAAAAAAAh3fZWAAAAMHRSTlNgnCD//7zYA68DX/8EjvwBAcMA/v4G+v3+/P3+/gQCK/j+/wP//P7+0Uz///7U8baTDXHfAAAB',
+        '5UlEQVR42m2TiZLbIAyGca5N9+i2QgiE8e3c1/u/XQV2ss40mgwQ9PlHEkjB/2a6NM7SH/XCL7/qoCiD4iXQgVnvidt2D+UT0BVd',
+        'WRTGwOzaOofWLZ8AcYw2q9larXWbwdsPIO7qK1tnysxu5DUHjazi7ggYqG7UMjORJcSc0VPIygcgfqLGijIy5W7nvKerd+8xDZXO',
+        'NyvnbXBBW4+8yBve1N6fb5LRAJQH67anvu+PO9IeG3Lo9W6zN6KdAFD57zm5xtGu7+eMVod8wYFGoANF2+BjanIC7Y798bSQDVeP',
+        'QAn71mvU0VAYHRqUUbtRQUZyGtFFw/sioHb8ANgJn4ttZdGMC8uXR5ArtqIdQhROgTRSEcvreBkCFJCxKOv8o0+zO31s48xfsdYC',
+        'vIGqU4TneYxFh3me4iUFv2BIs9q4pC3CYjpdpnZ1NR4hpd5zTBPRJsO4trw09/dQSKVSHZCS4eSEQeGPuZKNn9V3QEJcGTO5btWG',
+        'IYpoKeLNIDACxlwGiWQye/oLZvLs5cVsajtcRzzfUj37ngJCHIj9SEitJMIOnhqngHeqPQ6IOx9S0zx1ViTIpmxZArz7J43zKdWg',
+        'eEt0qX7809b7hGpJbbPJzMT/1JvSSCKiAAy8Boa+hrKc7v0DoK1TmhENGaoAAAAASUVORK5CYII='))
+    neutral_f = (-join @(
+        'iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAMAAADVRocKAAAAwFBMVEXS2t/N0NM1nmEfWldWcYQAHjtfY2iZn6KWmpyjsrwcIyR8',
+        'kqFBXXJ+hIe5vcA5O0V4fYKqqv+6vsGq//+/w8V/f/9Cumh///+8wMMAAADz+PoDKUUQNU/V5e45qWP////k6+82VmyUp7O3xc5J',
+        'ZXlvhpcqS2LL1NurucMjRV1/f3+FmKaqqqrk5+hjfI2zt7oAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+        'AAAAAAAAAAAtbczvAAAAMHRSTlPsov/+/v4kTyz+EP7+MXIYMwOFA4kC/wJ3AP7+/v7/Avz+/v7+/v7//v0C/gPT/XD23JIqAAAH',
+        'Z0lEQVR42rVaiZaiOhCNCigus7ydJDQBwiaK//93r6rABRIQHafOmek53e29lVpuksqw4JMWRca32Afhj0jx2wiiE2D/cTAY2AfC',
+        'gob/8hacHaLjRwmOt6hv1wuuGr4YLoH9ck63m/VlsWCc87QS6rz9YIgA3rssFCdjSSykSLkXHD9EAPCbBSL7dePEKymElKLkh08R',
+        'nIIA4EsnF61JuQISn6/xJx8g2AQ/ztzPO2Sw5ddyiSvYfIYgCn5wtQd0QF5+feEf+PtzOTgBfgpRR7+/brYSggFB9OsEUXDgKbr/',
+        '1bOVkPz8hlREx9PpeOxpjqcY4C+XQ4L45Ua7dyp01em2gAXPTXxIQcMvrxB04N+9zdrz2u/8Tfhrnpn4mAIfimg2AcFDp57bTj0v',
+        'Lpvu+9tzKDG/rd/L678gBcros3ECiMf2ggrDi9T3y0IRyQF/1C6ghf9a3Zik0Fxt5qppFGy/AWTZxLLr1NxJgISBKV6JroBW90qC',
+        'CJVcecFmDgF4sT7zounAqV9RbHRJ4UqpAzA6D5ESUEOcLzZz+uCIOhM6BC9jDRZXrZiJPAGUuo3Q6jHTEoUITA0YmDX83xe8RsR9',
+        'nXZqzIvEqYgDKDIXWxjdv+GvMAOorYXyemlgNv+/n7l2RZUVvG++JgodQwqWq2uiuwqSIf5KMuw1ZsH3zjx3Zaa4aZgWiQIKNXOL',
+        'D+YCdQ5Nw6b2JAfUp64uuN2Igmz5T4sO4ZFYQfRTVOyeoDIT/wLxSfi4FRklnJQanMe9TOSMdwsQdX/PYWaAuC/ZHU6xoggH0Qrr',
+        '+Fq7baXtuh9AeQ31iFkC5BTXwmninKKxynXms0eONIs78JVOrvwllQD/b4ogCM48bANBPSw7o47IehyqKMGK++qStsb6ZcSMowJ9',
+        'INUY53sPX7/EdTGam0y4OhHDPcEg2IKXhSZ0cDkpIQVFmuycvGtlqX1b/dIBQGOQ8kmCI66gxloX+4T1i6fWHUfVpMOsJ5j1jD8n',
+        'oBwjvE4tXrJkL9tYVU6dMmJRYUrMIi9JBmXF2XijIX7sSlH5Y4FmWX7Nh6xisKrNVFW3uZsmQHwN+FpN9BlUaC4fmoDq61qp0wQn',
+        '2KtqF1vlmWGHVLJt6Nx5qKxpAlwAfMrhs0wxlqZpEfZXN0WAKlFeZfdNK6cIMEI7MXcBbxCgjmaohr9gyTTBN94IcVfqovTLtJiq',
+        'KJUmmY514z8QjDcaEjg3gjCTLprM9S61krDEWQnXBcg8zrrE7aYJLg8rqJs6SepGV4hROaURbQccALUqqaHVTfAmxA5XYOZAgRKA',
+        'o6LqURQxoGtTWh0xIdddkndmMMISBOJxGw2laxfuPVbhtxECamTSRGs6m/yeiWaf2rMOIpKNbplIkEz0AbsTsJFfCUEIxjf9tpPp',
+        'hPmAWhQTnR3CbvRYYQwIkv5Fc0BQYKM8BKaRJGeJsqpqjIIaP0TLNy/7/f3grOAjrKdorShXZlAckmxRP3LvUMr644qhmlZS9Es+',
+        'c0n4DQl02u/nA1IIwPjZlPYboxEcF7fQfNBpStPGLXu1qqCI9pMEeDkyyiiJ89jSHKXO82ywG0ijSgcEB5JDI6MjeqcsWgq3kEPw',
+        '7+imj/fH60H8DYMUQIlsx+8HdHKXI7381MIQDkfDHA8JSE/jt/DhgEQb+mWCoNuVBXtrAdgFwz42D16My/diFGKEpDSmgsy43ji2',
+        'OpoRIIqQOW5hgS1GyRsLwPkCfPDJzK5Ti/iNAIW5LUJDgp90NhrqEeiwrll/w+9dQwGeukzzP56NcyJSVFCUQYhhrlBpuI+UaZlk',
+        'MMuUTtj3P7TPZS0Ea2gFcwkgNDvd3gglMKXD+FDqLBM1kyDySC7ysVoJh3fa1n9cABwLvEGKrRdxmjfNP0ESPGWgsizAOkqgfU0W',
+        'L+BTCblGF9sJ2tOLmecpfFqzLQPWcU43tbSdwMb8TyWpvDcc2I3MiyKPMzFnX1AdPpWoY85MxyZeP7s8P7vrXOHxl6GJme2Vyz6z',
+        'o9useKIYN/exgrBxftgWMEIAs1espHYMN+1+yCgBjT1AY2PNCFQ1FXL8RhvejeWjFTQxmKWDsDu296gHfEowqOh3SwVNT35BVoHB',
+        'zabhaRsTxdkQuaez6/Y6YkapDx+urm9Pp+BFgvaI4Q5u/gP41v/SHOrPej/AYsWjr9grOzxnhI+PBpvgDYKWgabJhc17nq6u/o/j',
+        'Tz+xYJRqBJG+AQ/9RUNgxg/j8Xn6hoMMPt0zsiF+2NDawmn/nz4SYbUyHKOJfcF74YnbEebZm/T/+TMXMChFYDJ5YNgR6Y4vtqP1',
+        'OfcdbYPDeIfGdHCQ6NzXxJiCPjzxf85D3Z/4HJKQxxUuAsckFB4Fp7ix/n3pJRBicOFtSwknDZO8Cxjznro/8y0T9hF4MqrJbxm3',
+        'A+qQ/xXMwZ/5WAoTZ/gfB3vKROv+eU54XniNPdG7V0Kti/I30/0XnnsjWgTfVRJOvej+KfgsAVUT/icBEL7LbPdfe7DGM8N6cYbe',
+        'mu3+qy/iUe/LbyAA16MgOr70if8BBe2e0dXyM/sAAAAASUVORK5CYII='))
+    neutral_t = (-join @(
+        'iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAMAAABEpIrGAAAAwFBMVEWaqbbt7u/R19whaFkznV+5w8tAtWix//+wusW9x88GKkZE',
+        'ZXhxcbh/v7/BztUAf399k6K0tP/w8N4AAH9/f/9///+zvcWot8MAAADz+Pr////Y5ew0Vm0oSmNxh5eTpbOKm6r////I09rj6u4R',
+        'NlBGY3m/v7+rusRYc4aqqqoWQ1QiRFxRbIJke45/f3/R2+IAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+        'AAAAAAAAAAAY080DAAAAMHRSTlPdYpT+/az+A7b+//8DBP0C/wMIAgICfdwA/gb+/v77+/Iv/v79/gT9/gP+/v78Av0GkqpbAAAB',
+        '4UlEQVR42m2TB5ubMAyGbRzSjLvc6F0reWLCHuH//7vKhnLkSZQJ36uJxeDRZBW/P+MFe6LT23v+N4HqKSBBJszas07h5Q6QH+2t',
+        'qmQLngkhdjtxgHYDyO8VzMRuTy9xl4Lyep4eEu4/E03qbi9GHu4uAOVNbam1Li06saME++KYVFIuwA0kG7IJUTmtjQgpugGnPyHH',
+        'DEjmEPFKHzyWRSdENyIaRp4RkJLj1Zq+70xTE1NnTOG1LNj/QUngrmjqXOWsKbrxSExudT2wpUgJfuxzXIwNFKrXVmGZUe0BaCE1',
+        'Cjd2jcX8ABSmpKBZyBxtcu8ZRdRsnUMEjvV7aYOvHVyurgFYirzBQePcZR5mQc4hlDIHeItABYkOd9xJTxE8nyz9XEwCrxH4BVyH',
+        '9jFrYi9qDDo6zUmaAd9YfLChiU8rzkFm+kFXXewydvEKiYk58EK1qEv866iEj3XU3s4hakcWWIV69KGEeQ4tJJ27i4+uSON5mYGv',
+        'm8yKaaMrVVgfj+RyolrgTbc+CkUJ5h5/zmQFvDSrOzYmXfT1VFMn514Fb7KhP8g3eQ/QkvChqMkfJ6NTCYu+WZwbcHsaFWZFk8Cq',
+        'b1fvhXbKGG0ch9+rfrebFW2lHRM59/cECIL3m/DB/gEfsWKdRgQziAAAAABJRU5ErkJggg=='))
+}
+$script:mascotCache = @{}
+function Get-Mascot([string]$lv, [string]$sz = 'f') {
+    $k = $lv + '_' + $sz
+    if (-not $script:mascotB64.ContainsKey($k)) { $k = 'unknown_' + $sz }
+    if ($script:mascotCache.ContainsKey($k)) { return $script:mascotCache[$k] }
+    $ms = New-Object System.IO.MemoryStream (, [Convert]::FromBase64String([string]$script:mascotB64[$k]))
+    $bi = New-Object System.Windows.Media.Imaging.BitmapImage
+    $bi.BeginInit(); $bi.CacheOption = 'OnLoad'; $bi.StreamSource = $ms; $bi.EndInit(); $bi.Freeze()
+    $script:mascotCache[$k] = $bi
+    return $bi
+}
+function Get-FaceKey([string]$lv) { if ($lv -in 'gut', 'mittel', 'schlecht') { return $lv } return 'unknown' }
+# Face of the room: the mascot image, or the emoji when "Emoji faces" is on or the image cannot be loaded.
+function Set-FaceView([string]$lv, [string]$emoji) {
+    $ui.Face.Text = $emoji
+    if (-not [bool]$state.emojiFaces -and $ui.FaceImg) {
+        try {
+            $key = Get-FaceKey $lv
+            $ui.FaceImg.Source = (Get-Mascot $key)
+            $ui.FaceImg.Visibility = 'Visible'; $ui.Face.Visibility = 'Collapsed'
+            $txt = $(switch ($key) { 'gut' { T 'lv_good' } 'mittel' { T 'lv_mid' } 'schlecht' { T 'lv_bad' } default { T 'no_vals' } })
+            [System.Windows.Automation.AutomationProperties]::SetName($ui.FaceImg, (T 'face_alt' $txt))
+            return
+        } catch { Write-Log ('Face: ' + $_.Exception.Message) }
+    }
+    if ($ui.FaceImg) { $ui.FaceImg.Visibility = 'Collapsed' }
+    $ui.Face.Visibility = 'Visible'
+}
+function Refresh-Faces { if ($script:last) { try { Show-Data $script:last } catch { Write-Log ('Refresh-Faces: ' + $_.Exception.Message) } } }
+function Toggle-Faces { $state.emojiFaces = -not [bool]$state.emojiFaces; $miFaces.IsChecked = [bool]$state.emojiFaces; Save-State; Refresh-Faces }
+# Tray icon: the mascot face with a small dot in the level colour (so colour still carries the level), or the plain coloured circle.
+function Get-TrayIcon([string]$hex, [string]$lv = '') {
+    $mascot = (-not [bool]$state.emojiFaces) -and $lv -ne ''
+    $ck = $hex + '|' + $(if ($mascot) { Get-FaceKey $lv } else { '' })
+    if ($script:trayIcons.ContainsKey($ck)) { return $script:trayIcons[$ck] }
     $bmp = New-Object System.Drawing.Bitmap(32, 32)
     $g = [System.Drawing.Graphics]::FromImage($bmp)
     $g.SmoothingMode = 'AntiAlias'
@@ -933,13 +1198,24 @@ function Get-TrayIcon([string]$hex) {
     $col = [System.Drawing.ColorTranslator]::FromHtml($hex)
     $br = New-Object System.Drawing.SolidBrush($col)
     $pen = New-Object System.Drawing.Pen([System.Drawing.Color]::White, 3)
-    $g.FillEllipse($br, 3, 3, 25, 25); $g.DrawEllipse($pen, 3, 3, 25, 25)
+    $drawn = $false
+    if ($mascot) {
+        try {
+            $ms = New-Object System.IO.MemoryStream (, [Convert]::FromBase64String([string]$script:mascotB64[((Get-FaceKey $lv) + '_t')]))
+            $img = [System.Drawing.Image]::FromStream($ms)
+            $g.DrawImage($img, 0, 0, 32, 32)
+            $pen.Width = 2
+            $g.FillEllipse($br, 17, 17, 14, 14); $g.DrawEllipse($pen, 17, 17, 14, 14)
+            $img.Dispose(); $ms.Dispose(); $drawn = $true
+        } catch { Write-Log ('Tray mascot: ' + $_.Exception.Message) }
+    }
+    if (-not $drawn) { $g.FillEllipse($br, 3, 3, 25, 25); $g.DrawEllipse($pen, 3, 3, 25, 25) }
     $g.Dispose(); $br.Dispose(); $pen.Dispose()
     $h = $bmp.GetHicon()
     $ic = [System.Drawing.Icon]::FromHandle($h)
-    $script:trayIcons[$hex] = @{ icon = $ic; handle = $h }
+    $script:trayIcons[$ck] = @{ icon = $ic; handle = $h }
     $bmp.Dispose()
-    return $script:trayIcons[$hex]
+    return $script:trayIcons[$ck]
 }
 function Init-Tray {
     try {
@@ -964,7 +1240,7 @@ function Init-Tray {
         $script:trayMiExit.Add_Click({ Exit-App })
         $script:tray.ContextMenuStrip = $cm
         $script:tray.Add_MouseClick({ param($s, $e) if ($e.Button -eq [System.Windows.Forms.MouseButtons]::Left) { Show-Window } })
-        $script:tray.Icon = (Get-TrayIcon '#9AA5B1').icon
+        $script:tray.Icon = (Get-TrayIcon '#9AA5B1' 'unknown').icon
         $script:tray.Text = 'Luftwächter'
         $script:tray.Visible = [bool]$state.tray
     } catch { Write-Log ('Tray: ' + $_.Exception.Message); $script:tray = $null }
@@ -983,7 +1259,7 @@ function Update-Tray($d, [string]$act) {
         if (-not $state.tray) { return }
         $hex = [string]$d.color
         if ($hex -notmatch '^#[0-9A-Fa-f]{6}$') { $hex = '#9AA5B1' }
-        $script:tray.Icon = (Get-TrayIcon $hex).icon
+        $script:tray.Icon = (Get-TrayIcon $hex ([string]$d.level)).icon
         $co2 = ''
         foreach ($v in @($d.values)) { if ([string]$v.key -like 'CO*') { $co2 = ' · ' + [string]$v.value + ' ' + [string]$v.unit; break } }
         $tip = [string]$d.room.name + $co2 + ' · ' + [string]$d.headline
@@ -1013,7 +1289,7 @@ $script:helpOpen = $false
 
 function Save-State {
     try {
-        $o = @{ quietOn = [bool]$state.quietOn; quietFrom = [int]$state.quietFrom; quietTo = [int]$state.quietTo; alerts = @($state.alerts); left = $win.Left; top = $win.Top; topmost = $state.topmost; topmostSet = $state.topmostSet; popup = $state.popup; tray = $state.tray; room = $state.room; size = $state.size; weatherOpen = $state.weatherOpen; drawerOpen = $state.drawerOpen; sound = $state.sound; sparkHours = $state.sparkHours; metric = $state.metric; hidden = @($state.hidden); lang = $state.lang; hist = $state.hist; hist7 = $state.hist7; sensors = $state.sensors; simple = $state.simple; tourDone = $state.tourDone; demo = $state.demo; theme = $state.theme; seenVer = $state.seenVer; snooze = [string]$state.snooze; opacity = $state.opacity; locked = $state.locked; taskbar = $state.taskbar; hoverFull = $state.hoverFull; snap = $state.snap; startHidden = $state.startHidden; symbols = $state.symbols; reduceMotion = $state.reduceMotion }
+        $o = @{ quietOn = [bool]$state.quietOn; quietFrom = [int]$state.quietFrom; quietTo = [int]$state.quietTo; alerts = @($state.alerts); left = $win.Left; top = $win.Top; topmost = $state.topmost; topmostSet = $state.topmostSet; popup = $state.popup; tray = $state.tray; room = $state.room; size = $state.size; weatherOpen = $state.weatherOpen; drawerOpen = $state.drawerOpen; sound = $state.sound; sparkHours = $state.sparkHours; metric = $state.metric; hidden = @($state.hidden); lang = $state.lang; hist = $state.hist; hist7 = $state.hist7; sensors = $state.sensors; simple = $state.simple; tourDone = $state.tourDone; demo = $state.demo; theme = $state.theme; seenVer = $state.seenVer; snooze = [string]$state.snooze; opacity = $state.opacity; locked = $state.locked; taskbar = $state.taskbar; hoverFull = $state.hoverFull; snap = $state.snap; startHidden = $state.startHidden; symbols = $state.symbols; reduceMotion = $state.reduceMotion; emojiFaces = $state.emojiFaces }
         $tmp = $stateFile + '.tmp'
         ($o | ConvertTo-Json -Depth 4) | Set-Content -Path $tmp -Encoding UTF8
         Move-Item -Force $tmp $stateFile
@@ -1554,7 +1830,7 @@ function Get-TargetOpacity([bool]$hover) {
     if ($hover -and [bool]$state.hoverFull) { return 1.0 }
     return [double]$state.opacity
 }
-$script:settingKeys = @('theme', 'lang', 'sound', 'popup', 'tray', 'simple', 'topmost', 'opacity', 'locked', 'taskbar', 'hoverFull', 'quietOn', 'quietFrom', 'quietTo', 'symbols', 'reduceMotion')
+$script:settingKeys = @('theme', 'lang', 'sound', 'popup', 'tray', 'simple', 'topmost', 'opacity', 'locked', 'taskbar', 'hoverFull', 'quietOn', 'quietFrom', 'quietTo', 'symbols', 'reduceMotion', 'emojiFaces')
 function Export-Settings([string]$path) {
     try {
         $o = [ordered]@{ app = $appName; version = $appVersion }
@@ -1569,7 +1845,7 @@ function Import-Settings([string]$path) {
         if ([string]$s.app -ne $appName) { return $false }
         if (@('auto', 'day', 'night') -contains [string]$s.theme) { $state.theme = [string]$s.theme }
         if (@('de', 'en') -contains [string]$s.lang) { $state.lang = [string]$s.lang }
-        foreach ($k in 'sound', 'popup', 'tray', 'simple', 'topmost', 'locked', 'taskbar', 'hoverFull', 'quietOn', 'symbols', 'reduceMotion') { if ($null -ne $s.$k) { $state[$k] = [bool]$s.$k } }
+        foreach ($k in 'sound', 'popup', 'tray', 'simple', 'topmost', 'locked', 'taskbar', 'hoverFull', 'quietOn', 'symbols', 'reduceMotion', 'emojiFaces') { if ($null -ne $s.$k) { $state[$k] = [bool]$s.$k } }
         foreach ($k in 'quietFrom', 'quietTo') { if ($null -ne $s.$k -and [int]$s.$k -ge 0 -and [int]$s.$k -le 23) { $state[$k] = [int]$s.$k } }
         if ($null -ne $s.opacity -and [double]$s.opacity -ge 0.5 -and [double]$s.opacity -le 1.0) { $state.opacity = [double]$s.opacity }
         return $true
@@ -1665,7 +1941,7 @@ function Get-Diagnostics {
         ('Window: opacity ' + [string]$state.opacity + ' · locked: ' + [string]$state.locked + ' · taskbar: ' + [string]$state.taskbar + ' · opaque on hover: ' + [string]$state.hoverFull),
         ('Quiet hours: ' + $(if ($state.quietOn) { [string]$state.quietFrom + '-' + [string]$state.quietTo } else { 'off' }) + ' · alerts logged: ' + @($state.alerts).Count),
         ('Running: ' + $(try { [int]((Get-Date) - $script:startedAt).TotalMinutes } catch { 0 }) + ' min · last good update: ' + $(if ($script:lastOkAt) { $script:lastOkAt.ToString('HH:mm:ss') } else { 'none' }) + ' · theme: ' + [string]$state.theme),
-        ('Display options: shapes ' + [string]$state.symbols + ' · reduce motion: ' + [string]$state.reduceMotion),
+        ('Display options: shapes ' + [string]$state.symbols + ' · reduce motion: ' + [string]$state.reduceMotion + ' · emoji faces: ' + [string]$state.emojiFaces),
         ('Window options: snap ' + [string]$state.snap + ' · start hidden: ' + [string]$state.startHidden),
         ('Files: settings ' + $(try { [int]((Get-Item $stateFile).Length / 1KB) } catch { 0 }) + ' KB · log ' + $(try { [int]((Get-Item $logFile).Length / 1KB) } catch { 0 }) + ' KB · history rooms ' + @($state.hist.Keys).Count),
         ('Config warnings: ' + $(if (@(Get-ConfigWarnings).Count) { (@(Get-ConfigWarnings) -join '; ') } else { 'none' })),
@@ -1784,7 +2060,7 @@ function Update-AlertHeader {
     $miAlerts.Header = (T 'm_alerts') + $(if ($n -gt 0) { ' (' + $n + ')' } else { '' })
 }
 function Clear-Alerts { $state.alerts = @(); Update-AlertHeader; Save-State }
-function Get-DefaultSettings { return @{ theme = 'auto'; sound = $true; popup = $true; tray = $true; simple = $true; topmost = $false; opacity = 1.0; locked = $false; taskbar = $true; hoverFull = $true; quietOn = $true; quietFrom = 22; quietTo = 7; symbols = $false; reduceMotion = $false; snap = $true; startHidden = $false } }
+function Get-DefaultSettings { return @{ theme = 'auto'; sound = $true; popup = $true; tray = $true; simple = $true; topmost = $false; opacity = 1.0; locked = $false; taskbar = $true; hoverFull = $true; quietOn = $true; quietFrom = 22; quietTo = 7; symbols = $false; reduceMotion = $false; emojiFaces = $false; snap = $true; startHidden = $false } }
 function Reset-Settings {
     try {
         $f = Join-Path $stateDir 'settings-before-reset.json'
@@ -1799,7 +2075,7 @@ function Reset-Settings {
 function Sync-MenuChecks {
     $miPop.IsChecked = [bool]$state.popup; $miTray.IsChecked = [bool]$state.tray; $miSound.IsChecked = [bool]$state.sound; $miTop.IsChecked = [bool]$state.topmost
     $miLock.IsChecked = [bool]$state.locked; $miTaskbar.IsChecked = [bool]$state.taskbar; $miHover.IsChecked = [bool]$state.hoverFull
-    $miSnap.IsChecked = [bool]$state.snap; $miStartHid.IsChecked = [bool]$state.startHidden; $miSymbols.IsChecked = [bool]$state.symbols; $miMotion.IsChecked = [bool]$state.reduceMotion
+    $miSnap.IsChecked = [bool]$state.snap; $miStartHid.IsChecked = [bool]$state.startHidden; $miSymbols.IsChecked = [bool]$state.symbols; $miMotion.IsChecked = [bool]$state.reduceMotion; $miFaces.IsChecked = [bool]$state.emojiFaces
 }
 function Hide-Widget {
     if ($state.tray -and $script:tray) { $win.Hide(); return $true }
@@ -1842,7 +2118,7 @@ function Show-Data($d) {
         'mittel'   { $lvl = (T 'lv_mid');   $face = [char]::ConvertFromUtf32(0x1F610) }
         'schlecht' { $lvl = (T 'lv_bad'); $face = [char]::ConvertFromUtf32(0x1F61F) }
     }
-    $ui.Level.Text = ((Get-Symbol ([string]$d.level)) + $lvl); $ui.Face.Text = $face
+    $ui.Level.Text = ((Get-Symbol ([string]$d.level)) + $lvl); Set-FaceView ([string]$d.level) $face
     $ui.Pill.BorderBrush = $b; $ui.PillDot.Foreground = $b
     $ui.PillText.Text = [string]$d.room.name + ' · ' + $(if ($d.values -and $d.values[0].value) { [string]$d.values[0].value + ' ppm' } else { (T 'pill_no') })
 
@@ -1981,7 +2257,7 @@ function Show-Data($d) {
 
 function Show-Setup {
     $g = Brush $grey
-    $ui.Card.BorderBrush = $g; $ui.Level.Text = '–'; $ui.Level.Foreground = $g; $ui.Face.Text = [char]::ConvertFromUtf32(0x1F527)
+    $ui.Card.BorderBrush = $g; $ui.Level.Text = '–'; $ui.Level.Foreground = $g; Set-FaceView 'unknown' ([char]::ConvertFromUtf32(0x1F527))
     $ui.PillText.Text = (T 'setup'); $ui.PillDot.Foreground = $g; Set-Ring 0.06 $g
     $ui.Panel.Background = Brush '#FF494E57'; if ($script:haMode) { $ui.Headline.Text = (T 'ha_norooms'); $ui.Detail.Text = (T 'ha_norooms_d') } else { $ui.Headline.Text = (T 'setup'); $ui.Detail.Text = (T 'setup_d') }
     $ui.RoomSub.Text = ''; $ui.Time.Text = ''; $script:pulse = $false
@@ -2543,12 +2819,12 @@ function Update-Widget {
             $g = Brush $grey
             $ui.Card.BorderBrush = $g
             $ui.Level.Text = (T 'offline'); $ui.PillText.Text = (T 'offline'); $ui.PillDot.Foreground = $g; $ui.Level.Foreground = $g
-            $ui.Face.Text = [char]::ConvertFromUtf32(0x1F50C)
+            Set-FaceView 'unknown' ([char]::ConvertFromUtf32(0x1F50C))
             Set-Ring 0.06 $g
             $ui.Panel.Background = Brush '#FF494E57'
             $ui.Headline.Text = (T 'no_conn'); $ui.Headline.ToolTip = (T 'offline_hint'); $ui.Detail.ToolTip = (T 'offline_hint')
             $script:pulse = $false
-            if ($script:tray -and $state.tray) { try { $script:tray.Icon = (Get-TrayIcon '#7A8594').icon; $script:tray.Text = (T 'offline_tip') } catch {} }
+            if ($script:tray -and $state.tray) { try { $script:tray.Icon = (Get-TrayIcon '#7A8594' 'unknown').icon; $script:tray.Text = (T 'offline_tip') } catch {} }
             if ($script:last) {
                 if ($script:lastOkAt) { $ui.Detail.Text = (T 'stale2' $script:lastOkAt.ToString('HH:mm') ([int][Math]::Floor(((Get-Date) - $script:lastOkAt).TotalMinutes))) } else { $ui.Detail.Text = (T 'stale') }
                 $ui.Time.Text = (T 'asof') + [string]$script:last.updated
@@ -2648,6 +2924,7 @@ $win.Add_KeyDown({ param($s, $e)
         'H' { if (-not [System.Windows.Input.Keyboard]::Modifiers) { [void](Hide-Widget); $e.Handled = $true } }
         'N' { if (Test-Snooze) { Set-Snooze 'off' } else { Set-Snooze 'morning' }; $e.Handled = $true }
         'Y' { Toggle-Symbols; $e.Handled = $true }
+        'M' { if (-not [System.Windows.Input.Keyboard]::Modifiers) { Toggle-Faces; $e.Handled = $true } }
         'OemQuestion' { $script:helpOpen = -not $script:helpOpen; if ($script:helpOpen) { Build-Help }; Apply-View; $e.Handled = $true }
         'F1' { $script:helpOpen = -not $script:helpOpen; if ($script:helpOpen) { Build-Help }; Apply-View; $e.Handled = $true }
         'Q' { Toggle-Snooze; $e.Handled = $true }
@@ -2748,6 +3025,7 @@ $miAlerts.Add_Click({ Show-Alerts })
 $miTestAl.Add_Click({ Send-TestAlert })
 $miSymbols = New-Object System.Windows.Controls.MenuItem; $miSymbols.IsCheckable = $true; $miSymbols.IsChecked = [bool]$state.symbols
 $miMotion = New-Object System.Windows.Controls.MenuItem; $miMotion.IsCheckable = $true; $miMotion.IsChecked = [bool]$state.reduceMotion
+$miFaces = New-Object System.Windows.Controls.MenuItem; $miFaces.IsCheckable = $true; $miFaces.IsChecked = [bool]$state.emojiFaces
 $miClrAl = New-Object System.Windows.Controls.MenuItem
 $miReset2 = New-Object System.Windows.Controls.MenuItem
 $miHover = New-Object System.Windows.Controls.MenuItem; $miHover.IsCheckable = $true; $miHover.IsChecked = [bool]$state.hoverFull
@@ -2781,6 +3059,7 @@ $miReport.Add_Click({ try { Copy-Diagnostics; Start-Process ($repoUrl + '/issues
 $miHover.Add_Click({ $state.hoverFull = [bool]$miHover.IsChecked; Save-State })
 $miSymbols.Add_Click({ $state.symbols = [bool]$miSymbols.IsChecked; Save-State; if ($script:last) { Show-Data $script:last } })
 $miMotion.Add_Click({ $state.reduceMotion = [bool]$miMotion.IsChecked; Save-State })
+$miFaces.Add_Click({ $state.emojiFaces = [bool]$miFaces.IsChecked; Save-State; Refresh-Faces })
 $miClrAl.Add_Click({ Clear-Alerts })
 $miReset2.Add_Click({
     try {
@@ -2800,7 +3079,7 @@ $miBkLoad.Add_Click({
         $d.Filter = 'Luftwächter (*.json)|*.json'; $d.InitialDirectory = [Environment]::GetFolderPath('MyDocuments')
         if ($d.ShowDialog() -eq 'OK' -and (Import-Settings $d.FileName)) {
             $miPop.IsChecked = [bool]$state.popup; $miTray.IsChecked = [bool]$state.tray; $miSound.IsChecked = [bool]$state.sound; $miTop.IsChecked = [bool]$state.topmost
-            $miLock.IsChecked = [bool]$state.locked; $miTaskbar.IsChecked = [bool]$state.taskbar; $miHover.IsChecked = [bool]$state.hoverFull; $miSymbols.IsChecked = [bool]$state.symbols; $miMotion.IsChecked = [bool]$state.reduceMotion
+            $miLock.IsChecked = [bool]$state.locked; $miTaskbar.IsChecked = [bool]$state.taskbar; $miHover.IsChecked = [bool]$state.hoverFull; $miSymbols.IsChecked = [bool]$state.symbols; $miMotion.IsChecked = [bool]$state.reduceMotion; $miFaces.IsChecked = [bool]$state.emojiFaces
             $win.Topmost = [bool]$state.topmost; Apply-Window; Apply-Theme; Apply-Lang; Save-State; Update-Widget
         }
     } catch { Write-Log ('Wiederherstellen: ' + $_.Exception.Message) }
@@ -2845,7 +3124,7 @@ $menuGroups = @(
     @($miMode, $miTheme, $miBig, $miSmall),
     @($miSnooze, $miSnoozeM, $miQuietH, $miPop, $miTray, $miSound, $miTop),
     @($miRefresh, $miCopy, $miCopyAll, $miExport),
-    @($miReset, $miLock, $miOpacity, $miHover, $miSymbols, $miMotion, $miTaskbar, $miSnap, $miStartHid, $miPicSave, $miPicCopy, $miAdv),
+    @($miReset, $miLock, $miOpacity, $miHover, $miSymbols, $miMotion, $miFaces, $miTaskbar, $miSnap, $miStartHid, $miPicSave, $miPicCopy, $miAdv),
     @($miHelp, $miNews, $miBug, $miAbout, $miCoffee, $miHaSup, $miUpd),
     @($miExit)
 )
@@ -2925,7 +3204,7 @@ function Apply-Lang {
     if ($state.lang -eq 'en') { $ui.LangEn.Foreground = Brush '#FFFFFFFF'; $ui.LangEn.FontWeight = 'Bold' } else { $ui.LangDe.Foreground = Brush '#FFFFFFFF'; $ui.LangDe.FontWeight = 'Bold' }
     $miCopy.Header = (T 'm_copy'); $miCopyAll.Header = (T 'm_copy_all'); $miExport.Header = (T 'm_export');
     if ($script:trayMiExit) { $script:trayMiOpacity.Text = (T 'm_opacity' ([int][Math]::Round([double]$state.opacity * 100))); $script:trayMiLock.Text = (T 'm_lock'); $script:trayMiLock.Checked = [bool]$state.locked; $script:trayMiExit.Text = (T 'm_exit'); $script:trayMiRefresh.Text = (T 'm_refresh'); $script:trayMiQuietM.Text = (T 'm_snooze_m'); $script:trayMiQuiet.Text = $(if (Test-Snooze) { T 'm_snooze_off' ($script:snoozeUntil.ToString('HH:mm')) } else { T 'm_snooze' }) }
- $miSnoozeM.Header = (T 'm_snooze_m'); $miSnooze.Header = $(if (Test-Snooze) { T 'm_snooze_off' ($script:snoozeUntil.ToString('HH:mm')) } else { T 'm_snooze' }); $miTheme.Header = $(switch ([string]$state.theme) { 'day' { T 'm_theme_day' } 'night' { T 'm_theme_night' } default { T 'm_theme_auto' } }); $miDemo.Header = $(if ($state.demo) { T 'm_demo_off' } else { T 'm_demo' }); $miHaSup.Header = (T 'm_ha_support'); $miBig.Header = (T 'm_bigger'); $miSmall.Header = (T 'm_smaller'); $miRefresh.Header = (T 'm_refresh'); $miTop.Header = (T 'm_top'); $miPop.Header = (T 'm_pop'); $miTray.Header = (T 'm_tray'); if ($script:trayMiOpen) { $script:trayMiOpen.Text = (T 'tray_open'); $script:trayMiExit.Text = (T 'm_exit') }; $miSound.Header = (T 'm_sound'); $miReset.Header = (T 'm_reset'); $miLog.Header = (T 'm_log'); $miHelp.Header = (T 'm_help'); $miHa.Header = (T 'm_ha'); $miHaOpen.Header = (T 'm_ha_open'); $miHaPanel.Header = (T 'm_ha_panel'); $miDiag.Header = (T 'm_diag'); $miNews.Header = (T 'm_news'); $miBug.Header = (T 'm_bug'); $miData.Header = (T 'm_data'); $miPicSave.Header = (T 'm_pic_save'); $miLock.Header = (T 'm_lock'); $miOpacity.Header = (T 'm_opacity' ([int][Math]::Round([double]$state.opacity * 100))); $miTaskbar.Header = (T 'm_taskbar'); $miAuto.Header = (T 'm_auto'); $miHover.Header = (T 'm_hover'); $miSnap.Header = (T 'm_snap'); $miStartHid.Header = (T 'm_starthid'); $miReport.Header = (T 'm_report'); $miCoffee.Header = (T 'm_coffee'); $miAlerts.Header = (T 'm_alerts'); $miTestAl.Header = (T 'm_test_alert'); $miQuietH.Header = (T 'm_quiet_h' $(if ($state.quietOn) { ('{0:00}–{1:00}' -f [int]$state.quietFrom, [int]$state.quietTo) } else { T 'm_quiet_off' })); $miBkSave.Header = (T 'm_bk_save'); $miBkLoad.Header = (T 'm_bk_load'); $miPicCopy.Header = (T 'm_pic_copy'); $miAbout.Header = (T 'm_about'); if ($script:trayMiHa) { $script:trayMiHa.Text = (T 'tray_ha') }; $miMode.Header = $(if ($state.simple) { T 'm_mode_full' } else { T 'm_mode_simple' }); $miSens.Header = (T 'm_sens'); $miCfg.Header = (T 'm_cfg'); $miUpd.Header = (T 'm_upd'); $miExit.Header = (T 'm_exit'); $miSymbols.Header = (T 'm_symbols'); $miMotion.Header = (T 'm_motion'); $miClrAl.Header = (T 'm_alerts_clear'); $miReset2.Header = (T 'm_reset2'); Update-AlertHeader
+ $miSnoozeM.Header = (T 'm_snooze_m'); $miSnooze.Header = $(if (Test-Snooze) { T 'm_snooze_off' ($script:snoozeUntil.ToString('HH:mm')) } else { T 'm_snooze' }); $miTheme.Header = $(switch ([string]$state.theme) { 'day' { T 'm_theme_day' } 'night' { T 'm_theme_night' } default { T 'm_theme_auto' } }); $miDemo.Header = $(if ($state.demo) { T 'm_demo_off' } else { T 'm_demo' }); $miHaSup.Header = (T 'm_ha_support'); $miBig.Header = (T 'm_bigger'); $miSmall.Header = (T 'm_smaller'); $miRefresh.Header = (T 'm_refresh'); $miTop.Header = (T 'm_top'); $miPop.Header = (T 'm_pop'); $miTray.Header = (T 'm_tray'); if ($script:trayMiOpen) { $script:trayMiOpen.Text = (T 'tray_open'); $script:trayMiExit.Text = (T 'm_exit') }; $miSound.Header = (T 'm_sound'); $miReset.Header = (T 'm_reset'); $miLog.Header = (T 'm_log'); $miHelp.Header = (T 'm_help'); $miHa.Header = (T 'm_ha'); $miHaOpen.Header = (T 'm_ha_open'); $miHaPanel.Header = (T 'm_ha_panel'); $miDiag.Header = (T 'm_diag'); $miNews.Header = (T 'm_news'); $miBug.Header = (T 'm_bug'); $miData.Header = (T 'm_data'); $miPicSave.Header = (T 'm_pic_save'); $miLock.Header = (T 'm_lock'); $miOpacity.Header = (T 'm_opacity' ([int][Math]::Round([double]$state.opacity * 100))); $miTaskbar.Header = (T 'm_taskbar'); $miAuto.Header = (T 'm_auto'); $miHover.Header = (T 'm_hover'); $miSnap.Header = (T 'm_snap'); $miStartHid.Header = (T 'm_starthid'); $miReport.Header = (T 'm_report'); $miCoffee.Header = (T 'm_coffee'); $miAlerts.Header = (T 'm_alerts'); $miTestAl.Header = (T 'm_test_alert'); $miQuietH.Header = (T 'm_quiet_h' $(if ($state.quietOn) { ('{0:00}–{1:00}' -f [int]$state.quietFrom, [int]$state.quietTo) } else { T 'm_quiet_off' })); $miBkSave.Header = (T 'm_bk_save'); $miBkLoad.Header = (T 'm_bk_load'); $miPicCopy.Header = (T 'm_pic_copy'); $miAbout.Header = (T 'm_about'); if ($script:trayMiHa) { $script:trayMiHa.Text = (T 'tray_ha') }; $miMode.Header = $(if ($state.simple) { T 'm_mode_full' } else { T 'm_mode_simple' }); $miSens.Header = (T 'm_sens'); $miCfg.Header = (T 'm_cfg'); $miUpd.Header = (T 'm_upd'); $miExit.Header = (T 'm_exit'); $miSymbols.Header = (T 'm_symbols'); $miMotion.Header = (T 'm_motion'); $miFaces.Header = (T 'm_faces'); $miClrAl.Header = (T 'm_alerts_clear'); $miReset2.Header = (T 'm_reset2'); Update-AlertHeader
     $ui.RoomName.Text = 'Luftwächter'; $ui.TitleTag.Text = (T 'tagline')
     $ui.Footer.Text = (Get-FooterText)
     $ui.Copy.Text = $copyright + ' · GitHub'; $ui.Copy.ToolTip = (T 'copy_tip'); $ui.Ver.ToolTip = (T 'ver_tip')
@@ -3170,6 +3449,7 @@ $win.Add_Closing({ Save-State; $timer.Stop(); $pulseTimer.Stop(); $saveTimer.Sto
 if ($dir -eq $installDir -and -not (Test-Path $startMenuLnk)) { New-StartMenuShortcut }
 $script:firstRun = $true
 $win.Add_ContentRendered({ if ($script:firstRun) { $script:firstRun = $false; if (-not $script:haMode -and $url -notmatch '^https?://') { Show-HaDialog } } })
+try { $win.Icon = (Get-Mascot 'neutral') } catch { Write-Log ('Window icon: ' + $_.Exception.Message) }
 Init-Tray
 Apply-Lang
 Apply-View
@@ -3265,13 +3545,16 @@ if ($SmokeTest) {
     Smoke 'shapes next to colours' { $state.demo = $true; $state.symbols = $false; $a0 = (Get-LevelText 'gut'); $state.symbols = $true; Update-Widget; $a1 = (Get-LevelText 'schlecht'); $a2 = [string]$ui.Level.Text; $state.symbols = $false; Update-Widget; ($a0 -notmatch '✓' -and $a1 -match '^✕ ' -and $a2 -match '^[✓!✕] ' -and [string]$ui.Level.Text -notmatch '^[✓!✕]') }
     Smoke 'shapes key and backup' { $o = $state.symbols; $state.symbols = $false; Toggle-Symbols; $on1 = [bool]$state.symbols; $f = Join-Path $stateDir 'shapes.json'; [void](Export-Settings $f); $state.symbols = $false; [void](Import-Settings $f); $ok = ($on1 -and [bool]$state.symbols -and $miSymbols.IsChecked); $state.symbols = $o; Save-State; Update-Widget; $ok }
     Smoke 'reduce motion' { $o = $state.reduceMotion; $state.reduceMotion = $true; Fade-In $ui.Panel; $s1 = $script:fadeSkipped; $state.reduceMotion = $false; Fade-In $ui.Panel; $s2 = $script:fadeSkipped; $state.reduceMotion = $o; ($s1 -and -not $s2) }
+    Smoke 'mascot faces' { $o = $state.emojiFaces; $state.demo = $true; $state.emojiFaces = $false; Update-Widget; $a1 = ($ui.FaceImg.Visibility -eq 'Visible' -and $ui.Face.Visibility -eq 'Collapsed' -and $null -ne $ui.FaceImg.Source); $state.emojiFaces = $true; Refresh-Faces; $a2 = ($ui.FaceImg.Visibility -eq 'Collapsed' -and $ui.Face.Visibility -eq 'Visible' -and $ui.Face.Text.Length -gt 0); $state.emojiFaces = $o; Refresh-Faces; $k = @('gut', 'mittel', 'schlecht', 'unknown', 'zzz' | ForEach-Object { (Get-Mascot (Get-FaceKey $_)).PixelWidth }); ($a1 -and $a2 -and (@($k | Where-Object { $_ -ne 96 }).Count -eq 0)) }
+    Smoke 'mascot tray icon' { $o = $state.emojiFaces; $state.emojiFaces = $false; $i1 = Get-TrayIcon '#2E9E5B' 'gut'; $i2 = Get-TrayIcon '#2E9E5B' 'schlecht'; $state.emojiFaces = $true; $i3 = Get-TrayIcon '#2E9E5B' 'gut'; $state.emojiFaces = $o; ($i1.icon -and $i2.icon -and $i3.icon -and $i1.handle -ne $i2.handle -and $i1.handle -ne $i3.handle -and $win.Icon) }
+    Smoke 'mascot key and backup' { $o = $state.emojiFaces; $state.emojiFaces = $false; Toggle-Faces; $on1 = [bool]$state.emojiFaces; $f = Join-Path $stateDir 'faces.json'; [void](Export-Settings $f); $state.emojiFaces = $false; [void](Import-Settings $f); $ok = ($on1 -and [bool]$state.emojiFaces -and $miFaces.IsChecked -and ($script:settingKeys -contains 'emojiFaces')); $state.emojiFaces = $o; Save-State; Refresh-Faces; Sync-MenuChecks; ($ok -and (Get-DefaultSettings).emojiFaces -eq $false) }
     Smoke 'house face in title' { $f1 = Get-HouseFace @([pscustomobject]@{ level = 'gut' }); $f2 = Get-HouseFace @([pscustomobject]@{ level = 'gut' }, [pscustomobject]@{ level = 'schlecht' }); $f3 = Get-HouseFace @([pscustomobject]@{ level = 'mittel' }); Update-Widget; ($f1 -ne $f2 -and $f2 -ne $f3 -and $f1 -ne $f3 -and [string]::IsNullOrEmpty((Get-HouseFace @())) -and $win.Title.Length -gt 10 -and $win.Title -match 'Luftwächter') }
     Smoke 'hide key' { $r = Hide-Widget; $hid = ((-not $win.IsVisible) -or $win.WindowState -eq 'Minimized'); try { $win.Show() } catch {}; $win.WindowState = 'Normal'; $win.UpdateLayout(); ($hid -and $win.IsVisible -and (($r -eq $true) -or ($r -eq $false))) }
     Smoke 'alert count and clear' { $keep = $state.alerts; $state.alerts = @(); Add-AlertLog 'oeffnen' 'A'; Add-AlertLog 'schliessen' 'B'; $h1 = [string]$miAlerts.Header; Clear-Alerts; $h2 = [string]$miAlerts.Header; $n = @($state.alerts).Count; $state.alerts = $keep; Update-AlertHeader; ($h1 -match '\(2\)' -and $h2 -notmatch '\(' -and $n -eq 0) }
     Smoke 'reset settings' { $bk = @{}; foreach ($k in $script:settingKeys) { $bk[$k] = $state[$k] }; $state.theme = 'night'; $state.locked = $true; $state.symbols = $true; $state.quietFrom = 20; $ok = (Reset-Settings); $r1 = ($state.theme -eq 'auto' -and -not $state.locked -and -not $state.symbols -and $state.quietFrom -eq 22 -and $state.opacity -eq 1.0); $bf = Join-Path $stateDir 'settings-before-reset.json'; $r2 = ((Test-Path $bf) -and ((Get-Content $bf -Raw) -match '"night"')); foreach ($k in $script:settingKeys) { $state[$k] = $bk[$k] }; Sync-MenuChecks; $win.Topmost = [bool]$state.topmost; ($ok -and $r1 -and $r2) }
     Smoke 'equal quiet hours warned' { $o1 = $state.quietOn; $o2 = $state.quietFrom; $o3 = $state.quietTo; $state.quietOn = $true; $state.quietFrom = 8; $state.quietTo = 8; $w1 = @(Get-ConfigWarnings); $state.quietTo = 9; $w2 = @(Get-ConfigWarnings); $state.quietOn = $o1; $state.quietFrom = $o2; $state.quietTo = $o3; (($w1 -join ' ') -match 'same hour' -and ($w2 -join ' ') -notmatch 'same hour') }
     Smoke 'diagnostics extras' { $dg = Get-Diagnostics; ($dg -match 'Running: \d+ min' -and $dg -match 'Display options: shapes' -and $dg -match 'reduce motion') }
-    Smoke 'new menu texts' { $ok = $true; foreach ($l in 'de', 'en') { $state.lang = $l; Apply-Lang; if ([string]$miSymbols.Header -eq '' -or [string]$miMotion.Header -eq '' -or [string]$miClrAl.Header -eq '' -or [string]$miReset2.Header -eq '' -or (T 'reset_ask').Length -lt 40) { $ok = $false } }; $state.lang = 'de'; Apply-Lang; $ok }
+    Smoke 'new menu texts' { $ok = $true; foreach ($l in 'de', 'en') { $state.lang = $l; Apply-Lang; if ([string]$miSymbols.Header -eq '' -or [string]$miMotion.Header -eq '' -or [string]$miFaces.Header -eq '' -or [string]$miClrAl.Header -eq '' -or [string]$miReset2.Header -eq '' -or (T 'reset_ask').Length -lt 40) { $ok = $false } }; $state.lang = 'de'; Apply-Lang; $ok }
     Smoke 'no errors logged' {
         $new = @(); if (Test-Path $logFile) { $new = @(Get-Content -Path $logFile -Encoding UTF8 | Select-Object -Skip $l0 | Where-Object { $_ -notmatch 'Start v' }) }
         foreach ($x in $new) { Write-Host ('      log: ' + $x) }

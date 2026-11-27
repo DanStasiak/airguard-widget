@@ -2,6 +2,16 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [5.33.0] - 2026-11-27
+- New: **the Luftwächter mascot.** The face in the main ring (good, medium, poor, no data), the tray icon and the window / taskbar / Alt+Tab icon now show the mascot instead of emoji. The tray icon keeps a small dot in the level colour.
+- DE: Neu: **das Luftwächter-Maskottchen.** Das Gesicht im Hauptring (gut, mittel, schlecht, keine Daten), das Symbol im Infobereich und das Fenster-, Taskleisten- und Alt+Tab-Symbol zeigen jetzt das Maskottchen statt Emoji. Das Infobereich-Symbol behält einen kleinen Punkt in der Farbe der Stufe.
+- New: right-click → *Emoji faces instead of the mascot* (or key **M**) switches back to the emoji faces and the coloured tray circle. The choice is part of *Back up settings…* and *Reset settings…*.
+- DE: Neu: Rechtsklick → *Emoji statt Maskottchen* (oder Taste **M**) schaltet auf die Emoji-Gesichter und den farbigen Kreis im Infobereich zurück. Die Wahl gehört zu *Einstellungen sichern…* und *Einstellungen zurücksetzen…*.
+- Improved: screen readers announce the face as "Luftwächter mascot: <level>"; if an image cannot be decoded the emoji is shown instead.
+- DE: Verbessert: Screenreader lesen das Gesicht als "Luftwächter-Maskottchen: <Stufe>" vor; lässt sich ein Bild nicht lesen, erscheint das Emoji.
+- Improved: three new self-tests (faces, tray icon, key and backup); the help and the GitHub page list the new key.
+- DE: Verbessert: drei neue Selbsttests (Gesichter, Infobereich-Symbol, Taste und Sicherung); Hilfe und GitHub-Seite nennen die neue Taste.
+
 ## [5.32.0] - 2026-11-27
 - New: **shapes next to the colours.** Right-click → *Shapes next to the colours* (or key **Y**) adds ✓ ! ✕ to the rating, in the tooltips and in copied text, so the widget can be read without telling green from red. Off by default.
 - New: **Reduce motion** turns off the fades and the pulsing. Off by default.

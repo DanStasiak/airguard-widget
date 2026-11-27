@@ -106,6 +106,7 @@ Click the widget once, then:
 | A | last alerts | N | quiet until tomorrow morning |
 | H | hide to the tray | R | refresh now (like F5) |
 | Y | shapes next to colours | ? | help (like F1) |
+| M | mascot or emoji faces | | |
 | L | language | U | check for updates |
 | O | transparency (100 / 85 / 70 %) | P | always on top |
 | W | weather row open / closed | E | save history as CSV |
@@ -120,7 +121,7 @@ When the advice changes to *open* or *close* the window, Luftwächter can play a
 
 Right-click the widget: **Lock position** (no accidental dragging), **Transparency** (also key **O**), **Show in the taskbar**. **Snap to screen edges** and **Start hidden in the tray** can be switched off or on. The tray menu also has *Transparency* and *Lock position*. **Fully opaque on hover** makes a see-through widget solid while the mouse is over it. Press **P** to keep it on top. Under **Advanced** you find **Start with Windows**, which adds or removes the autostart shortcut for you, and **Back up settings…** / **Restore settings…**, which save and load your look (theme, language, transparency, lock and so on) as a small file in *Documents*. That makes moving to a new PC a two-click job. Your Home Assistant token is never part of the backup.
 
-**Accessibility and comfort:** *Shapes next to the colours* (key **Y**) adds ✓ ! ✕ to the rating, so it can be read without telling green from red. *Reduce motion* turns off the fades and pulsing. The taskbar and Alt+Tab title starts with a face (🙂 😐 😷) for the whole house. **H** hides the widget in the tray, **N** keeps it quiet until tomorrow morning. *Reset settings…* (Advanced) restores all defaults after saving a backup (`settings-before-reset.json` in the data folder); your connection, rooms and history stay.
+**Accessibility and comfort:** *Shapes next to the colours* (key **Y**) adds ✓ ! ✕ to the rating, so it can be read without telling green from red. *Reduce motion* turns off the fades and pulsing. *Emoji faces instead of the mascot* (key **M**) brings the emoji back. The taskbar and Alt+Tab title starts with a face (🙂 😐 😷) for the whole house. **H** hides the widget in the tray, **N** keeps it quiet until tomorrow morning. *Reset settings…* (Advanced) restores all defaults after saving a backup (`settings-before-reset.json` in the data folder); your connection, rooms and history stay.
 
 ## Where settings are stored
 
