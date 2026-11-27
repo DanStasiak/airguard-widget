@@ -103,7 +103,9 @@ Click the widget once, then:
 | + / − | bigger / smaller | F5 | refresh now |
 | Ctrl+C | copy readings | Ctrl+Shift+C | copy all rooms |
 | Q | quiet time on/off | T | change theme |
-| A | last alerts | | |
+| A | last alerts | N | quiet until tomorrow morning |
+| H | hide to the tray | R | refresh now (like F5) |
+| Y | shapes next to colours | ? | help (like F1) |
 | L | language | U | check for updates |
 | O | transparency (100 / 85 / 70 %) | P | always on top |
 | W | weather row open / closed | E | save history as CSV |
@@ -112,11 +114,13 @@ Click the widget once, then:
 
 ## Alerts and quiet hours
 
-When the advice changes to *open* or *close* the window, Luftwächter can play a soft sound, show a balloon next to the clock and a pop-up. By default it stays silent from 22:00 to 07:00. Right-click → **Quiet hours** steps through 22–7, 23–6, 21–8, 20–9 and off. Key **Q** or *Quiet for an hour* mutes everything for a while. Key **A** (or Advanced → *Last alerts…*) lists the last 15 changes, even those that arrived while quiet. *Send a test alert* (Advanced) shows what an alert looks like. Details: [`docs/ALERTS.md`](docs/ALERTS.md).
+When the advice changes to *open* or *close* the window, Luftwächter can play a soft sound, show a balloon next to the clock and a pop-up. By default it stays silent from 22:00 to 07:00. Right-click → **Quiet hours** steps through 22–7, 23–6, 21–8, 20–9 and off. Key **Q** or *Quiet for an hour* mutes everything for a while. Key **A** (or Advanced → *Last alerts…*, which shows how many there are) lists the last 15 changes, even those that arrived while quiet; *Clear the alert list* empties it. *Send a test alert* (Advanced) shows what an alert looks like. Details: [`docs/ALERTS.md`](docs/ALERTS.md).
 
 ## Window options
 
 Right-click the widget: **Lock position** (no accidental dragging), **Transparency** (also key **O**), **Show in the taskbar**. **Snap to screen edges** and **Start hidden in the tray** can be switched off or on. The tray menu also has *Transparency* and *Lock position*. **Fully opaque on hover** makes a see-through widget solid while the mouse is over it. Press **P** to keep it on top. Under **Advanced** you find **Start with Windows**, which adds or removes the autostart shortcut for you, and **Back up settings…** / **Restore settings…**, which save and load your look (theme, language, transparency, lock and so on) as a small file in *Documents*. That makes moving to a new PC a two-click job. Your Home Assistant token is never part of the backup.
+
+**Accessibility and comfort:** *Shapes next to the colours* (key **Y**) adds ✓ ! ✕ to the rating, so it can be read without telling green from red. *Reduce motion* turns off the fades and pulsing. The taskbar and Alt+Tab title starts with a face (🙂 😐 😷) for the whole house. **H** hides the widget in the tray, **N** keeps it quiet until tomorrow morning. *Reset settings…* (Advanced) restores all defaults after saving a backup (`settings-before-reset.json` in the data folder); your connection, rooms and history stay.
 
 ## Where settings are stored
 
@@ -136,6 +140,7 @@ Uninstalling removes the app; delete the `%APPDATA%\Luftwaechter` folder to remo
 | `powershell -ExecutionPolicy Bypass -File Luftwaechter.ps1 -Install` | install for the current user (what `Installieren.bat` runs) |
 | `... -Uninstall` | remove the program and shortcuts (what `Deinstallieren.bat` runs) |
 | `... -SmokeTest` | run the built-in self-tests without showing the window (used by the CI) |
+| `... -ShowVersion` | print the version and exit (handy for support and scripts) |
 
 ## Verify your download
 
@@ -224,7 +229,7 @@ MIT License, Copyright (c) 2026 Dan Stasiak. You may use, change and share it fr
 
 **Sensoren wählen:** Hat ein Raum mehrere Sensoren derselben Art, zeigt das Widget den Mittelwert (Taupunkt, Geräte-Temperatur und veraltete Sensoren werden ignoriert). Rechtsklick → „Sensoren für diesen Raum wählen…“ legt je Messwert genau einen Sensor fest. Meldet ein Sensor 20 Minuten nichts, warnt die Fußzeile in Gelb.
 
-**Aktualisieren:** Knopf **⟳ Update** unten rechts. Das Widget vergleicht seine Version mit GitHub, zeigt die Änderungen, fragt nach deiner Bestätigung, prüft den Download und tauscht sich selbst aus. Einstellungen bleiben erhalten. Das Widget prüft auch von selbst (standardmäßig alle 60 Minuten, `updateCheckMinutes` in `config.json`): Gibt es eine neue Version, wird der Knopf grün und zeigt die Versionsnummer; zusätzlich erscheint einmal eine Hinweis-Meldung im Infobereich. Luftwächter gibt es dank [Home Assistant](https://www.home-assistant.io): Wenn es dir gefällt, unterstütze das Projekt (Open Home Foundation, Home Assistant Cloud). Luftwächter ist unabhängig und steht in keiner Verbindung zu Home Assistant oder der Open Home Foundation. **In 30 Sekunden ausprobieren, ohne Home Assistant:** Widget installieren, Rechtsklick → *Demo ausprobieren* zeigt drei simulierte Räume. Rechtsklick → *Ruhe für 1 Stunde* schaltet Pop-up, Hinweis und Ton für eine Stunde stumm. Rechtsklick → *Verlauf als CSV speichern* legt die letzten 7 Tage als Excel-Datei in „Dokumente“ ab. Tastatur: ← / → Raum, D Ansicht, + / − Größe, F5 aktualisieren, Esc schließen. Rechtsklick → *Werte kopieren* legt die aktuellen Werte in die Zwischenablage; das Mausrad über den Raum-Knöpfen wechselt den Raum. Beim ersten Start erklärt eine kurze Willkommenskarte die einfache Ansicht. Rechtsklick → *Größer anzeigen* (oder Strg + Mausrad) vergrößert das Widget bis „extra groß“, auch in der einfachen Ansicht. In der einfachen Ansicht zeigt eine Tagesnote, wie oft die Luft heute gut war (CO₂ unter 1000 ppm).
+**Aktualisieren:** Knopf **⟳ Update** unten rechts. Das Widget vergleicht seine Version mit GitHub, zeigt die Änderungen, fragt nach deiner Bestätigung, prüft den Download und tauscht sich selbst aus. Einstellungen bleiben erhalten. Das Widget prüft auch von selbst (standardmäßig alle 60 Minuten, `updateCheckMinutes` in `config.json`): Gibt es eine neue Version, wird der Knopf grün und zeigt die Versionsnummer; zusätzlich erscheint einmal eine Hinweis-Meldung im Infobereich. Luftwächter gibt es dank [Home Assistant](https://www.home-assistant.io): Wenn es dir gefällt, unterstütze das Projekt (Open Home Foundation, Home Assistant Cloud). Luftwächter ist unabhängig und steht in keiner Verbindung zu Home Assistant oder der Open Home Foundation. **In 30 Sekunden ausprobieren, ohne Home Assistant:** Widget installieren, Rechtsklick → *Demo ausprobieren* zeigt drei simulierte Räume. Rechtsklick → *Ruhe für 1 Stunde* schaltet Pop-up, Hinweis und Ton für eine Stunde stumm. Rechtsklick → *Verlauf als CSV speichern* legt die letzten 7 Tage als Excel-Datei in „Dokumente“ ab. Tastatur: ← / → Raum, D Ansicht, + / − Größe, F5 oder R aktualisieren, H ausblenden, N Ruhe bis morgen früh, Y Formen neben den Farben (✓ ! ✕), Esc schließen. Rechtsklick → *Weniger Bewegung* schaltet Überblendungen aus; *Einstellungen zurücksetzen…* (Erweitert) stellt die Standardwerte nach einer Sicherung wieder her. Rechtsklick → *Werte kopieren* legt die aktuellen Werte in die Zwischenablage; das Mausrad über den Raum-Knöpfen wechselt den Raum. Beim ersten Start erklärt eine kurze Willkommenskarte die einfache Ansicht. Rechtsklick → *Größer anzeigen* (oder Strg + Mausrad) vergrößert das Widget bis „extra groß“, auch in der einfachen Ansicht. In der einfachen Ansicht zeigt eine Tagesnote, wie oft die Luft heute gut war (CO₂ unter 1000 ppm).
 
 **Datenschutz:** Das Widget spricht nur mit deinem Home Assistant und fragt bei GitHub nach der neuesten Versionsnummer. Es gibt keine Telemetrie und kein Konto. Der Token liegt verschlüsselt für dein Windows-Konto (`ha-token.bin`).
 

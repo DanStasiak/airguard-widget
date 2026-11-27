@@ -2,6 +2,36 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [5.32.0] - 2026-11-27
+- New: **shapes next to the colours.** Right-click → *Shapes next to the colours* (or key **Y**) adds ✓ ! ✕ to the rating, in the tooltips and in copied text, so the widget can be read without telling green from red. Off by default.
+- New: **Reduce motion** turns off the fades and the pulsing. Off by default.
+- New: the window title (taskbar hover, Alt+Tab) starts with a face for the whole house: 🙂 😐 😷.
+- New: key **H** hides the widget in the tray, **N** keeps it quiet until tomorrow morning, **R** refreshes (like F5) and **?** opens the help (like F1).
+- New: the *Last alerts…* menu entry shows how many alerts are listed, and *Clear the alert list* empties them.
+- New: **Reset settings…** (Advanced) restores the defaults after saving a backup to `settings-before-reset.json`. Connection, rooms and history stay.
+- New: shapes, reduce motion and the quiet hours are part of *Back up settings…* and *Restore settings…*.
+- New: command line switch `-ShowVersion` prints the version and exits.
+- Improved: *Copy diagnostics* shows how long the widget has been running, the last good update and the new display options; it warns when quiet hours start and end at the same hour.
+- Improved: the in-app help lists the new keys.
+- Improved: GitHub page: keyboard table, accessibility paragraph, settings reference and alert guide cover the new options; the contributing guide explains the checks on Linux and macOS.
+- Improved: the bug report form asks for the Windows version, how it was installed and whether the demo shows the problem, and has a checklist; the feature form asks which area it concerns.
+- Improved: a stale-issue bot closes questions that stay unanswered; release notes link to the full list of changes since the last version.
+- Improved: the quality checks now also verify that `CITATION.cff` has the current version, that `-ShowVersion` works, that every letter key of the keyboard handler is in the README table and that every saved setting is documented. Nine more self-tests cover the new features.
+- DE: Neu: **Formen neben den Farben.** Rechtsklick → *Formen neben den Farben* (oder Taste **Y**) setzt ✓ ! ✕ vor die Bewertung, auch in Tooltips und kopiertem Text, damit man das Widget ohne Rot-Grün-Unterscheidung lesen kann. Standardmäßig aus.
+- DE: Neu: **Weniger Bewegung** schaltet Überblendungen und Pulsieren aus. Standardmäßig aus.
+- DE: Neu: Der Fenstertitel (Taskleiste, Alt+Tab) beginnt mit einem Gesicht für das ganze Haus: 🙂 😐 😷.
+- DE: Neu: Taste **H** blendet das Widget im Infobereich aus, **N** hält es bis morgen früh still, **R** aktualisiert (wie F5) und **?** öffnet die Hilfe (wie F1).
+- DE: Neu: Der Menüpunkt *Letzte Hinweise…* zeigt, wie viele Hinweise gelistet sind, und *Hinweisliste leeren* leert sie.
+- DE: Neu: **Einstellungen zurücksetzen…** (Erweitert) stellt die Standardwerte nach einer Sicherung in `settings-before-reset.json` wieder her. Verbindung, Räume und Verlauf bleiben.
+- DE: Neu: Formen, weniger Bewegung und Ruhezeit gehören zu *Einstellungen sichern…* und *Einstellungen wiederherstellen…*.
+- DE: Neu: Der Kommandozeilen-Schalter `-ShowVersion` gibt die Version aus und beendet sich.
+- DE: Verbessert: *Diagnose kopieren* zeigt, wie lange das Widget läuft, das letzte gute Update und die neuen Anzeigeoptionen; sie warnt, wenn Ruhezeit-Beginn und -Ende dieselbe Stunde sind.
+- DE: Verbessert: Die Hilfe im Widget nennt die neuen Tasten.
+- DE: Verbessert: GitHub-Seite: Tastentabelle, Absatz zur Barrierefreiheit, Einstellungsreferenz und Hinweis-Anleitung decken die neuen Optionen ab; die Mitwirken-Anleitung erklärt die Prüfungen unter Linux und macOS.
+- DE: Verbessert: Das Fehlerformular fragt nach Windows-Version, Installationsweg und ob die Demo das Problem zeigt und hat eine Checkliste; das Ideen-Formular fragt nach dem Bereich.
+- DE: Verbessert: Ein Bot schließt unbeantwortete Fragen; die Versionshinweise verlinken auf alle Änderungen seit der letzten Version.
+- DE: Verbessert: Die Qualitätsprüfungen kontrollieren jetzt auch, ob `CITATION.cff` die aktuelle Version hat, ob `-ShowVersion` funktioniert, ob jede Buchstabentaste der Tastaturbehandlung in der README-Tabelle steht und ob jede gespeicherte Einstellung dokumentiert ist. Neun weitere Selbsttests decken die neuen Funktionen ab.
+
 ## [5.31.0] - 2026-11-27
 - New: **one source of truth.** If the Luftwächter integration is installed in Home Assistant, the widget shows the integration's advice (including the close-window, rain and reminder logic) so desktop and phone never disagree. Without the integration, or with `"useIntegration": false` in the settings file, the widget uses its own built-in logic as before.
 - DE: Neu: **eine gemeinsame Quelle.** Ist die Luftwächter-Integration in Home Assistant installiert, zeigt das Widget deren Rat (mit Fenster-schließen-, Regen- und Erinnerungslogik), damit Desktop und Handy nie widersprüchlich sind. Ohne die Integration oder mit `"useIntegration": false` in der Einstellungsdatei nutzt das Widget wie bisher seine eigene Logik.

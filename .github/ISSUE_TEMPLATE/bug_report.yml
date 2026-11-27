@@ -1,13 +1,20 @@
 name: Bug report
 description: Something does not work
-labels: [bug]
+labels: [bug, needs-info]
 body:
   - type: input
     id: version
     attributes:
       label: Widget version
-      description: Shown at the bottom right of the widget (or right-click → More → Copy diagnostics).
-      placeholder: "5.21.0"
+      description: Shown at the bottom right of the widget (or right-click → Advanced → Copy diagnostics, first line).
+      placeholder: "5.32.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: windows
+    attributes:
+      label: Windows version
+      options: [Windows 11, Windows 10, Other or not sure]
     validations:
       required: true
   - type: dropdown
@@ -17,6 +24,16 @@ body:
       options: [Home Assistant directly, Server mode (own server), Demo only, Not sure]
     validations:
       required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How did you install it?
+      options: [Release ZIP with Installieren.bat, Updated with the Update button, Ran the script from the source, Not sure]
+  - type: dropdown
+    id: demo
+    attributes:
+      label: Does it also happen in the demo (right-click → Try the demo)?
+      options: [Yes, No, I did not try]
   - type: textarea
     id: what
     attributes:
@@ -24,8 +41,22 @@ body:
     validations:
       required: true
   - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: "1. Right-click the widget\n2. ..."
+  - type: textarea
     id: diag
     attributes:
       label: Diagnostics
-      description: Right-click the widget → More → Copy diagnostics, then paste here. It contains no token or Home Assistant address, but check the log lines for personal data first.
+      description: Right-click the widget → Advanced → Copy diagnostics, then paste here. It contains no token or Home Assistant address, but check the log lines for personal data first.
       render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you send
+      options:
+        - label: I looked at the Troubleshooting table in the README.
+          required: true
+        - label: I removed personal data from the text above.
+          required: true

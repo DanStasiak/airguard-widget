@@ -17,6 +17,8 @@
 | `locked` | position locked |
 | `taskbar` | show in the taskbar |
 | `snap` | snap to screen edges |
+| `symbols` | ✓ ! ✕ shapes next to the colours (key Y, default off) |
+| `reduceMotion` | no fades or pulsing (default off) |
 | `startHidden` | start hidden in the tray |
 | `popup`, `tray`, `sound` | pop-up alerts, tray icon, chime |
 | `simple` | simple view instead of details |
@@ -31,4 +33,8 @@ See `config.example.json`. Typical entries: `haUrl`, `refreshSeconds` (2 to 10),
 
 ## Backups
 
-*Back up settings…* writes only the look-and-feel keys (theme, language, transparency, lock, taskbar, hover, pop-up, tray, sound, simple, always on top) to `Luftwaechter-Einstellungen.json` in *Documents*. The Home Assistant token is never part of it.
+*Back up settings…* writes only the look-and-feel keys (theme, language, transparency, lock, taskbar, hover, pop-up, tray, sound, simple, always on top, quiet hours, shapes, reduce motion) to `Luftwaechter-Einstellungen.json` in *Documents*. The Home Assistant token is never part of it.
+
+## Resetting
+
+Advanced → *Reset settings…* sets the look-and-feel keys back to the defaults after saving the old values as `settings-before-reset.json` in the data folder. Connection, rooms, sensor choices and history are not touched. To undo, use *Restore settings…* with that file.

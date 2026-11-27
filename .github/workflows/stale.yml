@@ -1,0 +1,21 @@
+name: Stale questions
+# Closes issues that are waiting for an answer from the reporter and stay silent.
+on:
+  schedule:
+    - cron: '23 4 * * *'
+  workflow_dispatch:
+permissions:
+  issues: write
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v10
+        with:
+          only-labels: 'needs-info'
+          days-before-stale: 21
+          days-before-close: 14
+          stale-issue-message: 'This issue needs more information and has been quiet for 21 days. It will be closed in 14 days unless you reply. A reply with the diagnostics (right-click the widget, Advanced, Copy diagnostics) is enough.'
+          close-issue-message: 'Closed because the requested information did not arrive. Please open it again with the diagnostics whenever you can.'
+          days-before-pr-stale: -1
+          days-before-pr-close: -1

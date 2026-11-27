@@ -77,6 +77,39 @@ $smokeNames = @([regex]::Matches($text, "(?m)^\s*Smoke '([^']+)'") | ForEach-Obj
 $dupes = @($smokeNames | Group-Object | Where-Object { $_.Count -gt 1 } | ForEach-Object { $_.Name })
 if ($dupes.Count -gt 0) { Bad ('duplicate self-test names: ' + ($dupes -join ', ')) } else { Ok ($smokeNames.Count.ToString() + ' self-tests, names unique') }
 
+# 5f. CITATION.cff names the same version as VERSION
+$citFile = Join-Path $root 'CITATION.cff'
+if (Test-Path $citFile) {
+    $cm = [regex]::Match([System.IO.File]::ReadAllText($citFile), '(?m)^version:\s*"([^"]+)"')
+    if ($cm.Success -and $cm.Groups[1].Value -eq $ver) { Ok 'CITATION.cff version matches' } else { Bad ('CITATION.cff version differs from VERSION ' + $ver) }
+}
+
+# 5g. The command line switch -ShowVersion prints the version (works without Windows)
+try {
+    $pwExe = (Get-Process -Id $PID).Path
+    $sv = (& $pwExe -NoProfile -ExecutionPolicy Bypass -File $script -ShowVersion 2>&1 | Out-String)
+    if ($sv -match [regex]::Escape($ver)) { Ok '-ShowVersion prints the version' } else { Bad ('-ShowVersion printed: ' + $sv.Trim()) }
+} catch { Bad ('-ShowVersion failed: ' + $_.Exception.Message) }
+
+# 5h. Every letter key handled by the keyboard code is in the README key table
+$kd = [regex]::Match($text, '(?s)\$win\.Add_KeyDown\(\{.*?\r?\n\}\)')
+$readme = [System.IO.File]::ReadAllText((Join-Path $root 'README.md'), [System.Text.Encoding]::UTF8)
+$ks = [regex]::Match($readme, '(?s)## Keyboard shortcuts(.*?)\r?\n## ')
+if ($kd.Success -and $ks.Success) {
+    $keys = @([regex]::Matches($kd.Value, "(?m)^\s+'([A-Z])' \{") | ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique)
+    $undoc = @($keys | Where-Object { $ks.Groups[1].Value -notmatch ('\|\s*(?:Ctrl\+(?:Shift\+)?)?' + $_ + '\s*\|') })
+    if ($undoc.Count -gt 0) { Bad ('keys missing in the README key table: ' + ($undoc -join ', ')) } else { Ok ($keys.Count.ToString() + ' letter keys all in the README key table') }
+} else { Bad 'could not find the key handler or the README key table' }
+
+# 5i. Every setting that is saved in the settings backup is described in docs/SETTINGS.md
+$sk = [regex]::Match($text, '(?m)^\$script:settingKeys = @\((.*?)\)')
+$setDoc = [System.IO.File]::ReadAllText((Join-Path $root 'docs\SETTINGS.md'), [System.Text.Encoding]::UTF8)
+if ($sk.Success) {
+    $names = @([regex]::Matches($sk.Groups[1].Value, "'([A-Za-z0-9_]+)'") | ForEach-Object { $_.Groups[1].Value })
+    $undocS = @($names | Where-Object { $setDoc -notmatch ('`' + $_ + '`') })
+    if ($undocS.Count -gt 0) { Bad ('settings missing in docs/SETTINGS.md: ' + ($undocS -join ', ')) } else { Ok ($names.Count.ToString() + ' backed-up settings all documented') }
+} else { Bad 'could not read the settingKeys list' }
+
 # 6. Smoke test: start the widget with demo data, walk through every view, fail on any error (Windows only)
 if ($env:OS -eq 'Windows_NT' -and -not $env:LUFT_SKIP_SMOKE) {
     $tmp = Join-Path $env:TEMP ('luft-check-' + [guid]::NewGuid().ToString('N'))

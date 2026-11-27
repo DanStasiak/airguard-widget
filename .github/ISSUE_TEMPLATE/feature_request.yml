@@ -2,6 +2,13 @@ name: Feature request
 description: An idea to make Luftwächter better
 labels: [enhancement]
 body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part does it concern?
+      options: [Look and feel, Alerts and quiet hours, Rooms and sensors, Devices and switches, Updates and installer, Settings and backup, Documentation, Something else]
+    validations:
+      required: true
   - type: textarea
     id: idea
     attributes:

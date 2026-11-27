@@ -33,8 +33,11 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Build package
         if: steps.v.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           VER="${{ steps.v.outputs.ver }}"
+          PREV="$(gh release list --limit 1 --json tagName --jq '.[0].tagName' 2>/dev/null || true)"
           D="Luftwaechter-$VER"
           mkdir -p "dist/$D"
           cp src/* LICENSE README.md CHANGELOG.md VERSION "dist/$D/"
@@ -49,6 +52,7 @@ jobs:
             echo
             echo "**Verify the download (optional):** \`Get-FileHash .\\Luftwaechter-$VER.zip -Algorithm SHA256\` must match the line in \`SHA256SUMS.txt\`."
             echo
+            if [ -n "$PREV" ] && [ "$PREV" != "v$VER" ]; then echo "**All changes since $PREV:** https://github.com/${{ github.repository }}/compare/$PREV...v$VER"; echo; fi
             echo "Using Home Assistant? The matching integration and sidebar panel: https://github.com/DanStasiak/luftwaechter-ha"
           } >> notes.md
       - name: Publish release

@@ -21,3 +21,5 @@ Key **A** or Advanced → *Last alerts…* lists the last 15 changes with time. 
 ## Test
 
 Advanced → *Send a test alert* plays the sound and shows a balloon. If you hear and see nothing, check the Windows notification settings (focus assist / do not disturb).
+
+The menu entry shows how many alerts are listed; *Clear the alert list* (Advanced) empties it. Key **N** keeps the widget quiet until tomorrow morning (07:00), key **Q** for an hour.

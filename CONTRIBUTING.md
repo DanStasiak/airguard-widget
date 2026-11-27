@@ -24,3 +24,7 @@ Run `powershell -File tools\check.ps1` before you push. Mind two traps: a text k
 ## Release notes
 
 Each version gets a section in `CHANGELOG.md`. Write each point in English, then the same points again in German, prefixed with `- DE: `. The widget shows the German lines in the German view ("What's new" card and update window).
+
+## Running the checks without Windows
+
+The static checks (syntax, versions, translations, links, key table, settings table) also run with PowerShell 7 on Linux or macOS: `pwsh -File tools/check.ps1`. Only the smoke test needs Windows; it is skipped elsewhere and runs in the GitHub Action. `pwsh -File src/Luftwaechter.ps1 -ShowVersion` prints the version without starting the widget.
