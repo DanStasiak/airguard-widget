@@ -2,6 +2,14 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [5.29.0] - 2026-11-27
+- New: **smarter "close the window" advice.** A window that is open while the air is good again (CO₂ below 1000 ppm) now says "Please close the window" once it has been open 5 minutes or more and it is below 10 °C outside, or as soon as it rains. The text shows how long the window has been open.
+- Window contacts are found more reliably: device class window or opening, and door contacts whose name says window or Fenster.
+- Nothing is switched automatically; only the advice changes.
+- DE: Neu: **klügerer Rat „Fenster schließen“.** Ein offenes Fenster bei wieder guter Luft (CO₂ unter 1000 ppm) meldet jetzt „Bitte Fenster schließen“, wenn es seit 5 Minuten oder länger offen ist und draußen weniger als 10 °C sind, oder sobald es regnet. Der Text zeigt, wie lange das Fenster offen ist.
+- DE: Fensterkontakte werden besser erkannt: Geräteklasse Fenster oder Öffnung sowie Türkontakte, deren Name Fenster oder window enthält.
+- DE: Es wird nichts automatisch geschaltet; es ändert sich nur der Rat.
+
 ## [5.28.0] - 2026-11-26
 - New: an optional **Buy me a coffee** link in the About box and the right-click menu, a *Sponsor* button on the GitHub page and a "Support the project" section in the README. The widget never asks, never pops up and sends nothing.
 - DE: Neu: ein freiwilliger **Kaffee-Link** im „Über“-Fenster und im Rechtsklick-Menü, ein *Sponsor*-Button auf der GitHub-Seite und der Abschnitt „Support the project“ in der README. Das Widget fragt nie nach, blendet nichts ein und sendet nichts.

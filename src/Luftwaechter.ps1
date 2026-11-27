@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall, [switch]$SmokeTest)
 
 $appName = 'Luftwaechter'
-$appVersion = '5.28.0'
+$appVersion = '5.29.0'
 $appDate = '26.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 $repoOwner = 'DanStasiak'
@@ -536,7 +536,7 @@ $script:Strings = @{
     b17 = @('Luftwächter funktioniert dank Home Assistant, der freien, lokalen Smart-Home-Software, die dein Zuhause steuert. Wenn dir Home Assistant gefällt, kannst du das Projekt unterstützen: Besuche home-assistant.io (Rechtsklick → „Home Assistant unterstützen“), spende an die Open Home Foundation oder abonniere Home Assistant Cloud. Luftwächter ist ein unabhängiges Projekt und steht in keiner Verbindung zu Home Assistant oder zur Open Home Foundation und wird von ihnen nicht empfohlen oder unterstützt. „Home Assistant“ ist eine Marke der jeweiligen Inhaber.', 'Luftwächter works thanks to Home Assistant, the free, local smart-home software that runs your home. If you like Home Assistant, you can support the project: visit home-assistant.io (right-click → "Support Home Assistant"), donate to the Open Home Foundation or subscribe to Home Assistant Cloud. Luftwächter is an independent project and is not affiliated with, endorsed by or sponsored by Home Assistant or the Open Home Foundation. "Home Assistant" is a trademark of its respective owners.')
     m_ha_support = @('♥ Home Assistant unterstützen', '♥ Support Home Assistant')
     h16 = @('Home Assistant direkt', 'Home Assistant direct')
-    b16 = @('Das Widget spricht direkt mit deinem Home Assistant. Jeder Bereich (Area) mit einem CO₂- oder Feinstaub-Sensor wird ein Raum. Messwerte, Fensterkontakte (Geräteklasse "window"), Lichter, Steckdosen, Heizungen und Rollos des Bereichs werden automatisch gefunden. Das Wetter kommt aus der ersten Wetter-Entität. Stört ein Gerät: Rechtsklick auf die Zeile, Ausblenden (unten bringt "ausgeblendet · alle anzeigen" sie zurück). Typische Einstellungs-Schalter (Kindersicherung, Internetzugang, Kalibrierung) blendet das Widget selbst aus. Nur bestimmte Geräte anzeigen: In Home Assistant das Label "airguard" an diese Entitäten hängen. Verbindung ändern: Rechtsklick, "Mit Home Assistant verbinden…".', 'The widget talks directly to your Home Assistant. Every area with a CO₂ or fine-dust sensor becomes a room. Readings, window contacts (device class "window"), lights, plugs, heaters and blinds of the area are found automatically. Weather comes from the first weather entity. If a device is in the way: right-click its row and choose Hide ("{0} hidden · show all" at the bottom brings them back). Typical setting switches (child lock, internet access, calibration) are hidden automatically. To show only certain devices: give those entities the label "airguard" in Home Assistant. Change the connection: right-click, "Connect to Home Assistant…".')
+    b16 = @('Das Widget spricht direkt mit deinem Home Assistant. Jeder Bereich (Area) mit einem CO₂- oder Feinstaub-Sensor wird ein Raum. Messwerte, Fensterkontakte (Geräteklasse "window" oder "opening"; Türkontakte, wenn der Name Fenster enthält), Lichter, Steckdosen, Heizungen und Rollos des Bereichs werden automatisch gefunden. Das Wetter kommt aus der ersten Wetter-Entität. Stört ein Gerät: Rechtsklick auf die Zeile, Ausblenden (unten bringt "ausgeblendet · alle anzeigen" sie zurück). Typische Einstellungs-Schalter (Kindersicherung, Internetzugang, Kalibrierung) blendet das Widget selbst aus. Nur bestimmte Geräte anzeigen: In Home Assistant das Label "airguard" an diese Entitäten hängen. Verbindung ändern: Rechtsklick, "Mit Home Assistant verbinden…".', 'The widget talks directly to your Home Assistant. Every area with a CO₂ or fine-dust sensor becomes a room. Readings, window contacts (device class "window" or "opening"; door contacts when the name says window), lights, plugs, heaters and blinds of the area are found automatically. Weather comes from the first weather entity. If a device is in the way: right-click its row and choose Hide ("{0} hidden · show all" at the bottom brings them back). Typical setting switches (child lock, internet access, calibration) are hidden automatically. To show only certain devices: give those entities the label "airguard" in Home Assistant. Change the connection: right-click, "Connect to Home Assistant…".')
     m_cfg = @('Konfiguration öffnen', 'Open configuration')
     m_upd = @('Nach Updates suchen', 'Check for updates')
     day_good = @('Heute: {0} % der Zeit gute Luft ⭐', 'Today: good air {0} % of the time ⭐')
@@ -1942,8 +1942,8 @@ $script:HaTpl = @'
 {%- set dom = e.split('.')[0] -%}
 {%- if states[e] is not none -%}
 {%- set dc = state_attr(e, 'device_class') -%}
-{%- if (dom == 'sensor' and dc in ['carbon_dioxide', 'pm25', 'temperature', 'humidity']) or (dom == 'binary_sensor' and dc == 'window') or dom in ['light', 'switch', 'climate', 'cover', 'button'] -%}
-{%- set es.l = es.l + [{'i': e, 'd': dom, 'c': dc, 's': states(e), 'n': (state_attr(e, 'friendly_name') or e), 't': state_attr(e, 'temperature'), 'cu': state_attr(e, 'current_temperature'), 'ha': state_attr(e, 'hvac_action'), 'p': state_attr(e, 'current_position'), 'lr': as_timestamp(states[e].last_reported or states[e].last_updated, 0)}] -%}
+{%- if (dom == 'sensor' and dc in ['carbon_dioxide', 'pm25', 'temperature', 'humidity']) or (dom == 'binary_sensor' and dc in ['window', 'opening', 'door']) or dom in ['light', 'switch', 'climate', 'cover', 'button'] -%}
+{%- set es.l = es.l + [{'i': e, 'd': dom, 'c': dc, 's': states(e), 'n': (state_attr(e, 'friendly_name') or e), 't': state_attr(e, 'temperature'), 'cu': state_attr(e, 'current_temperature'), 'ha': state_attr(e, 'hvac_action'), 'p': state_attr(e, 'current_position'), 'lr': as_timestamp(states[e].last_reported or states[e].last_updated, 0), 'lc': as_timestamp(states[e].last_changed, 0)}] -%}
 {%- endif -%}
 {%- endif -%}
 {%- endfor -%}
@@ -2106,13 +2106,19 @@ function Build-HaData($data, [string]$wantRoom) {
 
     $ev = $chosen.ev
     $co2 = $ev.co2; $pm = $ev.pm; $tt = $ev.t; $hh = $ev.h; $worst = $ev.worst
-    $wins = @($chosen.raw.e | Where-Object { $_.d -eq 'binary_sensor' -and $_.c -eq 'window' })
+    $wins = @($chosen.raw.e | Where-Object { $_.d -eq 'binary_sensor' -and ($_.c -eq 'window' -or $_.c -eq 'opening' -or ($_.c -eq 'door' -and (([string]$_.i + ' ' + [string]$_.n) -match '(?i)fenster|window'))) })
     $hasWindow = ($wins.Count -gt 0)
     $wst = 'unbekannt'
     if ($hasWindow) {
         if (@($wins | Where-Object { $_.s -eq 'on' }).Count -gt 0) { $wst = 'offen' }
         elseif (@($wins | Where-Object { $_.s -eq 'off' }).Count -eq $wins.Count) { $wst = 'zu' }
     }
+    $openMin = 0
+    if ($wst -eq 'offen') {
+        $stamps = @($wins | Where-Object { $_.s -eq 'on' -and $_.lc -gt 0 } | ForEach-Object { [double]$_.lc })
+        if ($stamps.Count -gt 0) { $openMin = [int][Math]::Max(0, ([DateTimeOffset]::UtcNow.ToUnixTimeSeconds() - ($stamps | Measure-Object -Minimum).Minimum) / 60) }
+    }
+    $rainNow = ($cond -eq 'rainy' -or $cond -eq 'pouring' -or $cond -eq 'lightning-rainy' -or $cond -eq 'lightning' -or $cond -eq 'snowy' -or $cond -eq 'snowy-rainy' -or $cond -eq 'hail')
     $needVent = (($null -ne $co2) -and ($co2 -ge 1000)) -or (($null -ne $hh) -and ($hh -gt 60)) -or (($null -ne $tt) -and ($tt -ge 25) -and ($null -ne $ot) -and ($ot -lt ($tt - 2)))
     if ($null -ne $ot -and $ot -lt 5) { $howT = (Lx 'Ganz öffnen, 5 Minuten lüften.' 'Open fully, ventilate for 5 minutes.'); $howM = 5 }
     elseif ($null -ne $ot -and $ot -lt 15) { $howT = (Lx 'Ganz öffnen, 10 Minuten lüften.' 'Open fully, ventilate for 10 minutes.'); $howM = 10 }
@@ -2124,9 +2130,15 @@ function Build-HaData($data, [string]$wantRoom) {
         if (($null -ne $co2) -and ($co2 -lt 700) -and -not (($null -ne $tt) -and ($tt -ge 25)) -and -not (($null -ne $hh) -and ($hh -gt 60))) {
             $action = 'schliessen'; $headline = (Lx 'Bitte Fenster schließen' 'Please close the window'); $detail = (Lx 'Die Luft ist wieder frisch.' 'The air is fresh again.')
             if ($null -ne $ot -and $ot -lt 15) { $detail += (Lx ' Sonst wird es kalt im Zimmer.' ' Otherwise the room gets cold.') }
+        } elseif (($null -ne $co2) -and ($co2 -lt 1000) -and -not (($null -ne $tt) -and ($tt -ge 25)) -and -not (($null -ne $hh) -and ($hh -gt 60)) -and ((($null -ne $ot) -and ($ot -lt 10) -and ($openMin -ge 5)) -or $rainNow)) {
+            $action = 'schliessen'; $headline = (Lx 'Bitte Fenster schließen' 'Please close the window')
+            if (($null -ne $ot) -and ($ot -lt 10)) { $ots = [string][Math]::Round($ot); $detail = (Lx ('Die Luft ist in Ordnung und draußen sind ' + $ots + ' °C. Zu lassen spart Heizenergie.') ('The air is fine and it is ' + $ots + ' °C outside. Closing saves heating energy.')) }
+            else { $detail = (Lx 'Die Luft ist wieder frisch.' 'The air is fresh again.') }
+            if ($rainNow) { $detail += (Lx ' Es regnet draußen.' ' It is raining outside.') }
         } else {
             $action = 'offen_lassen'; $headline = (Lx 'Fenster offen lassen' 'Keep the window open'); $detail = (Lx 'Die Luft wird gerade besser.' 'The air is getting better.'); $ventMin = $howM
         }
+        if ($openMin -ge 5 -and ($action -eq 'schliessen' -or $action -eq 'offen_lassen')) { $detail += (Lx (' Fenster seit ' + $openMin + ' min offen.') (' Window open for ' + $openMin + ' min.')) }
     } elseif ($needVent) {
         if ($badOut) {
             $cd = $condDe[$cond]; if (-not $cd) { $cd = 'Unwetter' }
@@ -2216,7 +2228,7 @@ function Build-HaData($data, [string]$wantRoom) {
     return [pscustomobject]@{
         room = [pscustomobject]@{ key = $chosen.key; name = $chosen.name }; rooms = $rooms
         level = $wk; color = $wc; headline = $headline; detail = $detail; action = $action
-        window = $wst; hasWindow = $hasWindow; ventMin = $ventMin; values = $values; colors = $colors
+        window = $wst; hasWindow = $hasWindow; ventMin = $ventMin; openMin = $openMin; values = $values; colors = $colors
         mold = $false; warn = $ev.warn; nsrc = $ev.nsrc; outside = $outside; devices = $devices; updated = (Get-Date).ToString('HH:mm:ss')
     }
 }
@@ -3110,7 +3122,7 @@ if ($SmokeTest) {
     Smoke 'size picker highlight' { $state.size = 'L'; Apply-View; $okL = ($ui.SzBL.Background.Color.A -gt 0 -and $ui.SzBM.Background.Color.A -eq 0); $state.size = 'M'; Apply-View; ($okL -and $ui.SzBM.Background.Color.A -gt 0 -and $ui.SzBL.Background.Color.A -eq 0) }
     Smoke 'fade on room change' { $state.demo = $true; $script:lastShownRoom = 'zzz'; Update-Widget; Fade-In $ui.Panel; Fade-In $win 50; ($ui.Panel.Opacity -le 1.0) }
     Smoke 'grouped menu' { $nsep = @($menu.Items | Where-Object { $_ -is [System.Windows.Controls.Separator] }).Count; ($nsep -ge 4 -and $miAdv.Items.Count -eq 15 -and $menu.Items.Count -ge 20) }
-    Smoke 'diagnostics copy' { Copy-Diagnostics; ($script:lastDiag -match 'Luftwächter 5\.28\.0' -and $script:lastDiag -match 'opacity' -and $script:lastDiag -match 'Files: settings' -and $script:lastDiag -match 'PowerShell' -and $script:lastDiag -notmatch 'Bearer|token') }
+    Smoke 'diagnostics copy' { Copy-Diagnostics; ($script:lastDiag -match 'Luftwächter 5\.29\.0' -and $script:lastDiag -match 'opacity' -and $script:lastDiag -match 'Files: settings' -and $script:lastDiag -match 'PowerShell' -and $script:lastDiag -notmatch 'Bearer|token') }
     Smoke 'support menu items' { Apply-Lang; $okS = ([string]$miNews.Header -ne '' -and [string]$miBug.Header -ne '' -and [string]$miData.Header -ne ''); $state.lang = 'en'; Apply-Lang; $okE = ([string]$miBug.Header -match 'GitHub'); $state.lang = 'de'; Apply-Lang; ($okS -and $okE -and (Get-Diagnostics) -match 'Autostart') }
     Smoke 'opacity steps' { $state.opacity = 1.0; Step-Opacity; $a1 = [double]$state.opacity; Step-Opacity; $a2 = [double]$state.opacity; Step-Opacity; $a3 = [double]$state.opacity; ($a1 -eq 0.85 -and $a2 -eq 0.7 -and $a3 -eq 1.0 -and [Math]::Abs($win.Opacity - 1.0) -lt 0.01 -and ([string]$miOpacity.Header -match '100')) }
     Smoke 'taskbar and lock' { $state.taskbar = $false; $state.tray = $true; Apply-Window; $a = (-not $win.ShowInTaskbar); $state.tray = $false; Apply-Window; $b = $win.ShowInTaskbar; $state.tray = $true; $state.taskbar = $true; Apply-Window; $state.locked = $true; Save-State; $c = ((Get-Content $stateFile -Raw) -match '"locked":\s*true'); $state.locked = $false; Save-State; ($a -and $b -and $c) }
@@ -3124,7 +3136,7 @@ if ($SmokeTest) {
     Smoke 'config warnings' { $c0 = $cfg; $cfg = [pscustomobject]@{ refreshSeconds = 99; updateCheckMinutes = 5; haUrl = 'ftp://x'; url = '' }; $ww = @(Get-ConfigWarnings); $cfg = $c0; ($ww.Count -ge 3 -and (Get-Diagnostics) -match 'Config warnings') }
     Smoke 'last error is scrubbed' { $script:lastErr = 'The remote name could not be resolved: http://192.168.1.50:8123/api/states'; $dg = Get-Diagnostics; $script:lastErr = $null; ($dg -match '<address>' -and $dg -notmatch '192\.168') }
     Smoke 'offline hint text' { $state.lang = 'de'; $h1 = (T 'offline_hint'); $state.lang = 'en'; $h2 = (T 'offline_hint'); $state.lang = 'de'; ($h1 -match 'Diagnose' -and $h2 -match 'diagnostics') }
-    Smoke 'about text' { $state.lang = 'de'; $a1 = Get-AboutText; $state.lang = 'en'; $a2 = Get-AboutText; $state.lang = 'de'; ($a1 -match '5\.28\.0' -and $a1 -match 'Datenschutz' -and $a2 -match 'Privacy' -and $a2 -match 'github\.com/DanStasiak') }
+    Smoke 'about text' { $state.lang = 'de'; $a1 = Get-AboutText; $state.lang = 'en'; $a2 = Get-AboutText; $state.lang = 'de'; ($a1 -match '5\.29\.0' -and $a1 -match 'Datenschutz' -and $a2 -match 'Privacy' -and $a2 -match 'github\.com/DanStasiak') }
     Smoke 'picture export' { Update-Widget; $pp = Save-WidgetPicture $stateDir; $okP = ($pp -and (Test-Path $pp) -and ((Get-Item $pp).Length -gt 2000)); if ($okP) { $bb = [System.IO.File]::ReadAllBytes($pp); $okP = ($bb[0] -eq 0x89 -and $bb[1] -eq 0x50 -and $bb[2] -eq 0x4E -and $bb[3] -eq 0x47) }; $okP }
     Smoke 'picture to clipboard' { Update-Widget; (Copy-WidgetPicture) }
     Smoke 'ha menu items' { $script:haMode = $true; Update-HaMenu; $a = ($miHaOpen.Visibility -eq 'Visible'); $script:haMode = $false; Update-HaMenu; $b = ($miHaOpen.Visibility -eq 'Collapsed'); $script:haMode = [bool]($script:haUrl -and $script:haTok); ($a -and $b) }
