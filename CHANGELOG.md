@@ -2,6 +2,10 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [5.30.0] - 2026-11-27
+- New: **rain sensor.** If Home Assistant has a binary sensor whose name ends in rain or Regen (for example *Solar Rain Sensor #2 Rain*), the widget uses it. With rain, an open window with good air says "Please close the window", and a closed room that needs fresh air says "Do not ventilate yet, it is raining" (unless the air is already stale). Without a rain sensor everything works as before, using the weather.
+- DE: Neu: **Regensensor.** Hat Home Assistant einen Binärsensor, dessen Name auf rain oder Regen endet (zum Beispiel *Solar Rain Sensor #2 Rain*), nutzt das Widget ihn. Bei Regen meldet ein offenes Fenster mit guter Luft „Bitte Fenster schließen“, und ein geschlossener Raum, der frische Luft braucht, meldet „Jetzt noch nicht lüften, es regnet“ (außer die Luft ist schon verbraucht). Ohne Regensensor bleibt alles wie bisher über das Wetter.
+
 ## [5.29.0] - 2026-11-27
 - New: **smarter "close the window" advice.** A window that is open while the air is good again (CO₂ below 1000 ppm) now says "Please close the window" once it has been open 5 minutes or more and it is below 10 °C outside, or as soon as it rains. The text shows how long the window has been open.
 - Window contacts are found more reliably: device class window or opening, and door contacts whose name says window or Fenster.
