@@ -1,5 +1,7 @@
 # Luftwächter (airguard-widget)
 
+<p align="center"><img src="docs/mascot-faces.png" width="360" alt="The Luftwächter mascot: good, medium, poor and no data"></p>
+
 [![Latest release](https://img.shields.io/github/v/release/DanStasiak/airguard-widget)](https://github.com/DanStasiak/airguard-widget/releases/latest) [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE) [![Checks](https://github.com/DanStasiak/airguard-widget/actions/workflows/check.yml/badge.svg)](https://github.com/DanStasiak/airguard-widget/actions/workflows/check.yml) [![Downloads](https://img.shields.io/github/downloads/DanStasiak/airguard-widget/total)](https://github.com/DanStasiak/airguard-widget/releases) ![Windows 10/11](https://img.shields.io/badge/Windows-10%2F11-blue) ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-direct-41BDF5) [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-%E2%98%95-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/dstasiak)
 
 <p align="center"><img src="docs/screenshot-simple.png" width="32%" alt="Simple view with welcome card"> <img src="docs/screenshot-update.png" width="32%" alt="Update available on the button"> <img src="docs/screenshot-details.png" width="32%" alt="Details view"></p>

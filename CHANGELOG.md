@@ -9,8 +9,8 @@ All notable changes. Format: [Semantic Versioning](https://semver.org). The text
 - DE: Neu: Rechtsklick → *Emoji statt Maskottchen* (oder Taste **M**) schaltet auf die Emoji-Gesichter und den farbigen Kreis im Infobereich zurück. Die Wahl gehört zu *Einstellungen sichern…* und *Einstellungen zurücksetzen…*.
 - Improved: screen readers announce the face as "Luftwächter mascot: <level>"; if an image cannot be decoded the emoji is shown instead.
 - DE: Verbessert: Screenreader lesen das Gesicht als "Luftwächter-Maskottchen: <Stufe>" vor; lässt sich ein Bild nicht lesen, erscheint das Emoji.
-- Improved: three new self-tests (faces, tray icon, key and backup); the help and the GitHub page list the new key.
-- DE: Verbessert: drei neue Selbsttests (Gesichter, Infobereich-Symbol, Taste und Sicherung); Hilfe und GitHub-Seite nennen die neue Taste.
+- Improved: three new self-tests (faces, tray icon, key and backup); the help and the GitHub page list the new key. The GitHub page shows the mascot and has a new banner.
+- DE: Verbessert: drei neue Selbsttests (Gesichter, Infobereich-Symbol, Taste und Sicherung); Hilfe und GitHub-Seite nennen die neue Taste. Die GitHub-Seite zeigt das Maskottchen und hat ein neues Banner.
 
 ## [5.32.0] - 2026-11-27
 - New: **shapes next to the colours.** Right-click → *Shapes next to the colours* (or key **Y**) adds ✓ ! ✕ to the rating, in the tooltips and in copied text, so the widget can be read without telling green from red. Off by default.

@@ -110,6 +110,10 @@ if ($sk.Success) {
     if ($undocS.Count -gt 0) { Bad ('settings missing in docs/SETTINGS.md: ' + ($undocS -join ', ')) } else { Ok ($names.Count.ToString() + ' backed-up settings all documented') }
 } else { Bad 'could not read the settingKeys list' }
 
+# 5j. The self-tests must not hard-code a version number (a literal such as '5\.32\.0' breaks with the next release): use $appVersion
+$hardVer = @([regex]::Matches($text, "'\d+\\\.\d+\\\.\d+'") | ForEach-Object { $_.Value })
+if ($hardVer.Count -gt 0) { Bad ('hard-coded version in the script: ' + ($hardVer -join ', ')) } else { Ok 'no hard-coded version in the self-tests' }
+
 # 6. Smoke test: start the widget with demo data, walk through every view, fail on any error (Windows only)
 if ($env:OS -eq 'Windows_NT' -and -not $env:LUFT_SKIP_SMOKE) {
     $tmp = Join-Path $env:TEMP ('luft-check-' + [guid]::NewGuid().ToString('N'))
