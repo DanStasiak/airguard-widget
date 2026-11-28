@@ -5,7 +5,7 @@ param([switch]$Install, [switch]$Uninstall, [switch]$SmokeTest, [switch]$ShowVer
 
 $appName = 'Luftwaechter'
 $appVersion = '5.34.0'
-$appDate = '27.11.2026'
+$appDate = '28.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 if ($ShowVersion) { Write-Output ('Luftwaechter ' + $appVersion + ' (' + $appDate + ')'); exit 0 }
 $script:startedAt = Get-Date
