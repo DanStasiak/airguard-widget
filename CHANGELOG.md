@@ -2,6 +2,14 @@
 
 All notable changes. Format: [Semantic Versioning](https://semver.org). The text of each release section is shown to users in the in-app update dialog.
 
+## [5.34.0] - 2026-11-28
+- New: **the mascot is alive.** The face in the main ring breathes very gently (about 3 %) and gives a small cheer when a room's air turns good again (from medium or poor). Switching rooms or starting the widget never triggers a cheer.
+- DE: Neu: **das Maskottchen lebt.** Das Gesicht im Hauptring atmet ganz sanft (etwa 3 %) und freut sich kurz, wenn die Luft eines Raums wieder gut wird (von mittel oder schlecht). Raumwechsel und Start lösen keinen Jubel aus.
+- Improved: **Reduce motion** and the emoji faces turn the breathing and the cheer off; the setting is the same as before, nothing new to configure.
+- DE: Verbessert: **Weniger Bewegung** und die Emoji-Gesichter schalten Atmen und Jubel aus; die Einstellung ist dieselbe wie bisher, es gibt nichts Neues einzustellen.
+- Improved: two new self-tests (breathing on and off, cheer only for better air in the same room); the help and the GitHub page mention it.
+- DE: Verbessert: zwei neue Selbsttests (Atmen an und aus, Jubel nur bei besserer Luft im selben Raum); Hilfe und GitHub-Seite nennen es.
+
 ## [5.33.0] - 2026-11-27
 - New: **the Luftwächter mascot.** The face in the main ring (good, medium, poor, no data), the tray icon and the window / taskbar / Alt+Tab icon now show the mascot instead of emoji. The tray icon keeps a small dot in the level colour.
 - DE: Neu: **das Luftwächter-Maskottchen.** Das Gesicht im Hauptring (gut, mittel, schlecht, keine Daten), das Symbol im Infobereich und das Fenster-, Taskleisten- und Alt+Tab-Symbol zeigen jetzt das Maskottchen statt Emoji. Das Infobereich-Symbol behält einen kleinen Punkt in der Farbe der Stufe.

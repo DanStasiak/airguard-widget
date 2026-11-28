@@ -4,7 +4,7 @@
 param([switch]$Install, [switch]$Uninstall, [switch]$SmokeTest, [switch]$ShowVersion)
 
 $appName = 'Luftwaechter'
-$appVersion = '5.33.0'
+$appVersion = '5.34.0'
 $appDate = '27.11.2026'
 $version = 'v' + $appVersion + ' · ' + $appDate
 if ($ShowVersion) { Write-Output ('Luftwaechter ' + $appVersion + ' (' + $appDate + ')'); exit 0 }
@@ -570,7 +570,7 @@ $script:Strings = @{
     m_alerts = @('Letzte Hinweise…', 'Last alerts…')
     m_alerts_clear = @('Hinweisliste leeren', 'Clear the alert list')
     m_symbols = @('Formen neben den Farben (✓ ! ✕)', 'Shapes next to the colours (✓ ! ✕)')
-    m_motion = @('Weniger Bewegung (keine Überblendung)', 'Reduce motion (no fades)')
+    m_motion = @('Weniger Bewegung (keine Überblendung, kein Atmen)', 'Reduce motion (no fades, no breathing)')
     m_faces = @('Emoji statt Maskottchen (M)', 'Emoji faces instead of the mascot (M)')
     face_alt = @('Luftwächter-Maskottchen: {0}', 'Luftwächter mascot: {0}')
     m_reset2 = @('Einstellungen zurücksetzen…', 'Reset settings…')
@@ -1167,6 +1167,55 @@ function Get-Mascot([string]$lv, [string]$sz = 'f') {
     $script:mascotCache[$k] = $bi
     return $bi
 }
+$script:faceLevels = @{}
+$script:faceBreath = $false
+$script:faceCheers = 0
+function Get-FaceScale {
+    if (-not $ui.FaceImg) { return $null }
+    if ($ui.FaceImg.RenderTransform -isnot [Windows.Media.ScaleTransform]) {
+        $ui.FaceImg.RenderTransformOrigin = New-Object Windows.Point(0.5, 0.5)
+        $ui.FaceImg.RenderTransform = New-Object Windows.Media.ScaleTransform(1, 1)
+    }
+    return $ui.FaceImg.RenderTransform
+}
+# The mascot breathes very gently (about 3 %). Off with "Reduce motion" and with the emoji faces; the window never needs to be on top for it.
+function Set-FaceMotion {
+    try {
+        $want = (-not [bool]$state.reduceMotion) -and (-not [bool]$state.emojiFaces)
+        $st = Get-FaceScale
+        if ($null -eq $st) { return }
+        if ($want -eq $script:faceBreath) { return }
+        $script:faceBreath = $want
+        foreach ($pr in [Windows.Media.ScaleTransform]::ScaleXProperty, [Windows.Media.ScaleTransform]::ScaleYProperty) {
+            if ($want) {
+                $an = New-Object Windows.Media.Animation.DoubleAnimation(1.0, 1.035, [TimeSpan]::FromMilliseconds(2600))
+                $an.AutoReverse = $true
+                $an.RepeatBehavior = [Windows.Media.Animation.RepeatBehavior]::Forever
+                $an.EasingFunction = New-Object Windows.Media.Animation.SineEase
+                $st.BeginAnimation($pr, $an)
+            } else { $st.BeginAnimation($pr, $null) }
+        }
+    } catch { Write-Log ('Face motion: ' + $_.Exception.Message) }
+}
+# A short cheer (a small hop in size) when a room's air gets better; never with "Reduce motion" or the emoji faces.
+function Play-FaceCheer {
+    if ([bool]$state.reduceMotion -or [bool]$state.emojiFaces) { return $false }
+    try {
+        $st = Get-FaceScale
+        if ($null -eq $st) { return $false }
+        $script:faceCheers++
+        $script:faceBreath = $false
+        foreach ($pr in [Windows.Media.ScaleTransform]::ScaleXProperty, [Windows.Media.ScaleTransform]::ScaleYProperty) {
+            $an = New-Object Windows.Media.Animation.DoubleAnimation(1.0, 1.22, [TimeSpan]::FromMilliseconds(260))
+            $an.AutoReverse = $true
+            $an.RepeatBehavior = New-Object Windows.Media.Animation.RepeatBehavior(2)
+            $an.EasingFunction = New-Object Windows.Media.Animation.SineEase
+            if ($pr -eq [Windows.Media.ScaleTransform]::ScaleXProperty) { $an.Add_Completed({ Set-FaceMotion }) }
+            $st.BeginAnimation($pr, $an)
+        }
+        return $true
+    } catch { Write-Log ('Face cheer: ' + $_.Exception.Message); return $false }
+}
 function Get-FaceKey([string]$lv) { if ($lv -in 'gut', 'mittel', 'schlecht') { return $lv } return 'unknown' }
 # Face of the room: the mascot image, or the emoji when "Emoji faces" is on or the image cannot be loaded.
 function Set-FaceView([string]$lv, [string]$emoji) {
@@ -1176,6 +1225,11 @@ function Set-FaceView([string]$lv, [string]$emoji) {
             $key = Get-FaceKey $lv
             $ui.FaceImg.Source = (Get-Mascot $key)
             $ui.FaceImg.Visibility = 'Visible'; $ui.Face.Visibility = 'Collapsed'
+            $rk = [string]$state.room
+            $prevKey = $script:faceLevels[$rk]
+            $script:faceLevels[$rk] = $key
+            Set-FaceMotion
+            if ($prevKey -and $prevKey -ne $key -and $key -eq 'gut' -and $prevKey -in 'mittel', 'schlecht') { [void](Play-FaceCheer) }
             $txt = $(switch ($key) { 'gut' { T 'lv_good' } 'mittel' { T 'lv_mid' } 'schlecht' { T 'lv_bad' } default { T 'no_vals' } })
             [System.Windows.Automation.AutomationProperties]::SetName($ui.FaceImg, (T 'face_alt' $txt))
             return
@@ -1183,6 +1237,7 @@ function Set-FaceView([string]$lv, [string]$emoji) {
     }
     if ($ui.FaceImg) { $ui.FaceImg.Visibility = 'Collapsed' }
     $ui.Face.Visibility = 'Visible'
+    Set-FaceMotion
 }
 function Refresh-Faces { if ($script:last) { try { Show-Data $script:last } catch { Write-Log ('Refresh-Faces: ' + $_.Exception.Message) } } }
 function Toggle-Faces { $state.emojiFaces = -not [bool]$state.emojiFaces; $miFaces.IsChecked = [bool]$state.emojiFaces; Save-State; Refresh-Faces }
@@ -3058,7 +3113,7 @@ $miStartHid.Add_Click({ $state.startHidden = [bool]$miStartHid.IsChecked; Save-S
 $miReport.Add_Click({ try { Copy-Diagnostics; Start-Process ($repoUrl + '/issues/new?template=bug_report.yml') } catch { Write-Log ('Melden: ' + $_.Exception.Message) } })
 $miHover.Add_Click({ $state.hoverFull = [bool]$miHover.IsChecked; Save-State })
 $miSymbols.Add_Click({ $state.symbols = [bool]$miSymbols.IsChecked; Save-State; if ($script:last) { Show-Data $script:last } })
-$miMotion.Add_Click({ $state.reduceMotion = [bool]$miMotion.IsChecked; Save-State })
+$miMotion.Add_Click({ $state.reduceMotion = [bool]$miMotion.IsChecked; Save-State; Set-FaceMotion })
 $miFaces.Add_Click({ $state.emojiFaces = [bool]$miFaces.IsChecked; Save-State; Refresh-Faces })
 $miClrAl.Add_Click({ Clear-Alerts })
 $miReset2.Add_Click({
@@ -3545,6 +3600,8 @@ if ($SmokeTest) {
     Smoke 'shapes next to colours' { $state.demo = $true; $state.symbols = $false; $a0 = (Get-LevelText 'gut'); $state.symbols = $true; Update-Widget; $a1 = (Get-LevelText 'schlecht'); $a2 = [string]$ui.Level.Text; $state.symbols = $false; Update-Widget; ($a0 -notmatch '✓' -and $a1 -match '^✕ ' -and $a2 -match '^[✓!✕] ' -and [string]$ui.Level.Text -notmatch '^[✓!✕]') }
     Smoke 'shapes key and backup' { $o = $state.symbols; $state.symbols = $false; Toggle-Symbols; $on1 = [bool]$state.symbols; $f = Join-Path $stateDir 'shapes.json'; [void](Export-Settings $f); $state.symbols = $false; [void](Import-Settings $f); $ok = ($on1 -and [bool]$state.symbols -and $miSymbols.IsChecked); $state.symbols = $o; Save-State; Update-Widget; $ok }
     Smoke 'reduce motion' { $o = $state.reduceMotion; $state.reduceMotion = $true; Fade-In $ui.Panel; $s1 = $script:fadeSkipped; $state.reduceMotion = $false; Fade-In $ui.Panel; $s2 = $script:fadeSkipped; $state.reduceMotion = $o; ($s1 -and -not $s2) }
+    Smoke 'face motion' { $o1 = $state.reduceMotion; $o2 = $state.emojiFaces; $state.emojiFaces = $false; $state.reduceMotion = $true; $script:faceBreath = $true; Set-FaceMotion; $off = (-not $script:faceBreath); $c0 = Play-FaceCheer; $state.reduceMotion = $false; Set-FaceMotion; $on = $script:faceBreath; $n = $script:faceCheers; $c1 = Play-FaceCheer; $ok = ($off -and ($c0 -eq $false) -and $on -and ($c1 -eq $true) -and ($script:faceCheers -eq ($n + 1)) -and ($ui.FaceImg.RenderTransform -is [Windows.Media.ScaleTransform])); $state.reduceMotion = $true; Set-FaceMotion; $state.reduceMotion = $o1; $state.emojiFaces = $o2; Set-FaceMotion; $ok }
+    Smoke 'face cheer on better air' { $o1 = $state.reduceMotion; $o2 = $state.emojiFaces; $o3 = [string]$state.room; $state.reduceMotion = $false; $state.emojiFaces = $false; $state.room = 'cheer-test'; $script:faceLevels.Remove('cheer-test'); Set-FaceView 'schlecht' 'x'; $n = $script:faceCheers; Set-FaceView 'schlecht' 'x'; $same = ($script:faceCheers -eq $n); Set-FaceView 'gut' 'x'; $up = ($script:faceCheers -eq ($n + 1)); Set-FaceView 'schlecht' 'x'; $down = ($script:faceCheers -eq ($n + 1)); $state.room = 'cheer-test-2'; Set-FaceView 'gut' 'x'; $first = ($script:faceCheers -eq ($n + 1)); $script:faceLevels.Remove('cheer-test'); $script:faceLevels.Remove('cheer-test-2'); $state.room = $o3; $state.reduceMotion = $o1; $state.emojiFaces = $o2; Set-FaceMotion; ($same -and $up -and $down -and $first) }
     Smoke 'mascot faces' { $o = $state.emojiFaces; $state.demo = $true; $state.emojiFaces = $false; Update-Widget; $a1 = ($ui.FaceImg.Visibility -eq 'Visible' -and $ui.Face.Visibility -eq 'Collapsed' -and $null -ne $ui.FaceImg.Source); $state.emojiFaces = $true; Refresh-Faces; $a2 = ($ui.FaceImg.Visibility -eq 'Collapsed' -and $ui.Face.Visibility -eq 'Visible' -and $ui.Face.Text.Length -gt 0); $state.emojiFaces = $o; Refresh-Faces; $k = @('gut', 'mittel', 'schlecht', 'unknown', 'zzz' | ForEach-Object { (Get-Mascot (Get-FaceKey $_)).PixelWidth }); ($a1 -and $a2 -and (@($k | Where-Object { $_ -ne 96 }).Count -eq 0)) }
     Smoke 'mascot tray icon' { $o = $state.emojiFaces; $state.emojiFaces = $false; $i1 = Get-TrayIcon '#2E9E5B' 'gut'; $i2 = Get-TrayIcon '#2E9E5B' 'schlecht'; $state.emojiFaces = $true; $i3 = Get-TrayIcon '#2E9E5B' 'gut'; $state.emojiFaces = $o; ($i1.icon -and $i2.icon -and $i3.icon -and $i1.handle -ne $i2.handle -and $i1.handle -ne $i3.handle -and $win.Icon) }
     Smoke 'mascot key and backup' { $o = $state.emojiFaces; $state.emojiFaces = $false; Toggle-Faces; $on1 = [bool]$state.emojiFaces; $f = Join-Path $stateDir 'faces.json'; [void](Export-Settings $f); $state.emojiFaces = $false; [void](Import-Settings $f); $ok = ($on1 -and [bool]$state.emojiFaces -and $miFaces.IsChecked -and ($script:settingKeys -contains 'emojiFaces')); $state.emojiFaces = $o; Save-State; Refresh-Faces; Sync-MenuChecks; ($ok -and (Get-DefaultSettings).emojiFaces -eq $false) }

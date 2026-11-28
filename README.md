@@ -48,6 +48,7 @@ A small always-on-top **Windows desktop widget** that shows how good the air is 
 - **Chart hover:** move the mouse over the curve to read the exact time and value; daily min/max show their times; tooltips on the tiles explain the ranges; tray tooltip names the worst room; slower polling while minimized
 - **Home Assistant shortcuts:** right-click → *More* → *Open Home Assistant* or *Open the Luftwächter panel* (full-size view from the [integration](https://github.com/DanStasiak/luftwaechter-ha)), and *Copy diagnostics* for bug reports
 - **Copy readings** (right-click) for pasting into a message; tray menu with *Refresh now*, *Quiet for 1 hour* and *Quiet until tomorrow morning* (quiet time survives a restart); mouse wheel over the room buttons switches rooms
+- **Living mascot:** the face breathes very gently and gives a small cheer when a room's air turns good again. It stops with *Reduce motion* and with the emoji faces.
 - **Daily air score** in the simple view: "Today: good air 92 % of the time", counted from today's readings, plus a 7-day score
 
 Made by **Dan Stasiak** · MIT License · [github.com/DanStasiak/airguard-widget](https://github.com/DanStasiak/airguard-widget)
@@ -123,7 +124,7 @@ When the advice changes to *open* or *close* the window, Luftwächter can play a
 
 Right-click the widget: **Lock position** (no accidental dragging), **Transparency** (also key **O**), **Show in the taskbar**. **Snap to screen edges** and **Start hidden in the tray** can be switched off or on. The tray menu also has *Transparency* and *Lock position*. **Fully opaque on hover** makes a see-through widget solid while the mouse is over it. Press **P** to keep it on top. Under **Advanced** you find **Start with Windows**, which adds or removes the autostart shortcut for you, and **Back up settings…** / **Restore settings…**, which save and load your look (theme, language, transparency, lock and so on) as a small file in *Documents*. That makes moving to a new PC a two-click job. Your Home Assistant token is never part of the backup.
 
-**Accessibility and comfort:** *Shapes next to the colours* (key **Y**) adds ✓ ! ✕ to the rating, so it can be read without telling green from red. *Reduce motion* turns off the fades and pulsing. *Emoji faces instead of the mascot* (key **M**) brings the emoji back. The taskbar and Alt+Tab title starts with a face (🙂 😐 😷) for the whole house. **H** hides the widget in the tray, **N** keeps it quiet until tomorrow morning. *Reset settings…* (Advanced) restores all defaults after saving a backup (`settings-before-reset.json` in the data folder); your connection, rooms and history stay.
+**Accessibility and comfort:** *Shapes next to the colours* (key **Y**) adds ✓ ! ✕ to the rating, so it can be read without telling green from red. *Reduce motion* turns off the fades, the pulsing and the mascot's breathing and cheer. *Emoji faces instead of the mascot* (key **M**) brings the emoji back. The taskbar and Alt+Tab title starts with a face (🙂 😐 😷) for the whole house. **H** hides the widget in the tray, **N** keeps it quiet until tomorrow morning. *Reset settings…* (Advanced) restores all defaults after saving a backup (`settings-before-reset.json` in the data folder); your connection, rooms and history stay.
 
 ## Where settings are stored
 

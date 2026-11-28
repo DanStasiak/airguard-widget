@@ -19,7 +19,7 @@
 | `snap` | snap to screen edges |
 | `symbols` | ✓ ! ✕ shapes next to the colours (key Y, default off) |
 | `emojiFaces` | emoji faces instead of the Luftwächter mascot in the window (key M, default off = mascot) |
-| `reduceMotion` | no fades or pulsing (default off) |
+| `reduceMotion` | no fades, pulsing, breathing or cheering mascot (default off) |
 | `startHidden` | start hidden in the tray |
 | `popup`, `tray`, `sound` | pop-up alerts, tray icon, chime |
 | `simple` | simple view instead of details |
